@@ -47,9 +47,9 @@
 
 ## 🖥️ 系统界面
 
-![Main Dashboard](CMakePro_CUDA_SeisSim_V2/Pro_Picture/程序主页.png)
+![Main Dashboard](Pro_Picture/程序主页.png)
 
-![Main Dashboard2](CMakePro_CUDA_SeisSim_V2/Pro_Picture/初始模拟页面.png)
+![Main Dashboard2](Pro_Picture/初始模拟页面.png)
 
 ---
 
