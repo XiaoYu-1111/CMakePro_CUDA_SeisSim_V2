@@ -87,6 +87,7 @@
 // 警告：IMPLEMENTATION 宏只能在一个 .cpp 文件中定义，否则会导致符号重定义错误
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
+#define STBI_WINDOWS_UTF8
 #include "stb_image.h"
 #include "stb_image_write.h"
 
@@ -105,7 +106,7 @@ static void glfw_error_callback(int error, const char* description) {
 // =================================================================================
 // 初始化离屏渲染四边形几何体 VAO/VBO
 // =================================================================================
-void InitQuad(GLHandles& gl) {
+void initializeQuad(GLHandles& gl) {
     // 定义 4 个顶点：位置(x,y,z) + 纹理坐标(u,v)
     float vertices[] = {
         // 位置              // 纹理坐标
@@ -140,7 +141,17 @@ void InitQuad(GLHandles& gl) {
 // =================================================================================
 // 主函数入口
 // =================================================================================
-int main() {
+static int runApplication() {
+    // 启动前确认必要着色器可读，避免将空源码交给 OpenGL 并继续初始化。
+    const std::string vsSrc = loadShaderFromFile(resolveResourcePath("shader/vs_code.vert"));
+    const std::string fsSrc = loadShaderFromFile(resolveResourcePath("shader/fs_code.frag"));
+    const std::string seisVsSrc = loadShaderFromFile(resolveResourcePath("shader/seis_code.vert"));
+    const std::string seisFsSrc = loadShaderFromFile(resolveResourcePath("shader/seis_code.frag"));
+    if (vsSrc.empty() || fsSrc.empty() || seisVsSrc.empty() || seisFsSrc.empty()) {
+        std::cerr << "Startup failed: required shaders are missing or empty. "
+            << "Deploy resource_CUDA_V1 beside the executable.\n";
+        return -1;
+    }
     // -----------------------------------------------------------------------------
     // Stage 1: CUDA 硬件环境诊断
     // -----------------------------------------------------------------------------
@@ -149,7 +160,7 @@ int main() {
     // 可选：控制台输入也设UTF8
     SetConsoleCP(CP_UTF8);
     std::cout << "========= CUDA 硬件环境测试 =========" << std::endl;
-    GpuInfo info = GetCudaDeviceInfo();
+    GpuInfo info = getCudaDeviceInfo();
     if (info.success) {
         std::cout << "[成功] 找到 GPU 设备:" << std::endl;
         std::cout << "   - 设备名称: " << info.name << std::endl;
@@ -166,6 +177,24 @@ int main() {
     SimConfig config;       // 程序配置
     GLHandles gl;           // OpenGL 资源句柄
     AsyncLoader g_loader;   // 后台加载器
+    GLFWwindow* window = nullptr;
+    // 正常退出和异常展开共用清理路径；各资源句柄均从空状态开始。
+    struct ApplicationCleanup {
+        GLHandles& handles;
+        GLFWwindow*& window;
+        ~ApplicationCleanup() {
+            g_nvml.Unload();
+            cleanup(handles);
+            if (ImGui::GetCurrentContext()) {
+                if (ImGui::GetIO().BackendRendererUserData) ImGui_ImplOpenGL3_Shutdown();
+                if (ImGui::GetIO().BackendPlatformUserData) ImGui_ImplGlfw_Shutdown();
+            }
+            if (ImPlot::GetCurrentContext()) ImPlot::DestroyContext();
+            if (ImGui::GetCurrentContext()) ImGui::DestroyContext();
+            if (window) glfwDestroyWindow(window);
+            glfwTerminate();
+        }
+    } applicationCleanup{gl, window};
 
     // -----------------------------------------------------------------------------
     // Stage 2: GLFW 与 OpenGL 窗口环境搭建
@@ -184,7 +213,7 @@ int main() {
     // 隐藏窗口直到 CUDA/OpenGL/ImGui 初始化完成并提交首帧，避免系统先显示白色未绘制客户区。
     glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
 
-    GLFWwindow* window = glfwCreateWindow(config.winWidth, config.winHeight, "CMakePro_CUDA_SeisSim_V2", nullptr, nullptr);
+    window = glfwCreateWindow(config.winWidth, config.winHeight, "CMakePro_CUDA_SeisSim_V2", nullptr, nullptr);
     if (!window) {
         glfwTerminate();
         return -1;
@@ -197,7 +226,7 @@ int main() {
 
     // 加载窗口图标
     GLFWimage images[1];
-    std::string image_icon = "../resource_CUDA_V1/images/icon_Seis.png";
+    std::string image_icon = pathToUtf8(resolveResourcePath("images/icon_Seis.png"));
     images[0].pixels = stbi_load(image_icon.c_str(), &images[0].width, &images[0].height, 0, 4);
     if (images[0].pixels) {
         glfwSetWindowIcon(window, 1, images);
@@ -214,68 +243,17 @@ int main() {
     // -----------------------------------------------------------------------------
     // Stage 3: 离屏基础几何构建
     // -----------------------------------------------------------------------------
-    InitQuad(gl);
+    initializeQuad(gl);
 
     // -----------------------------------------------------------------------------
     // Stage 4: 着色器与纹理管线编译
     // -----------------------------------------------------------------------------
     // 1. 加载渲染着色器 (可视化热力图等)
-    gl.renderProg = glCreateProgram();
-    std::string vsSrc = loadShaderFromFile("../resource_CUDA_V1/shader/vs_code.vert");
-    std::string fsSrc = loadShaderFromFile("../resource_CUDA_V1/shader/fs_code.frag");
-    GLuint vs = createShader(vsSrc, GL_VERTEX_SHADER);
-    GLuint fs = createShader(fsSrc, GL_FRAGMENT_SHADER);
-    glAttachShader(gl.renderProg, vs);
-    glAttachShader(gl.renderProg, fs);
-    glLinkProgram(gl.renderProg);
+    gl.renderProg = createShaderProgram(vsSrc, fsSrc);
+    gl.seisProg = createShaderProgram(seisVsSrc, seisFsSrc);
 
-    // 链接成功后及时删除临时着色器对象，防止资源泄露
-    glDeleteShader(vs);
-    glDeleteShader(fs);
-
-    // 生成与注册 OpenGL 纹理（用于存储 0.0 ~ 1.0 的单通道热力值）
-    glGenTextures(1, &gl.lifeTex);
-    glBindTexture(GL_TEXTURE_2D, gl.lifeTex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, 1920, 1080, 0, GL_RED, GL_FLOAT, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-    // 2. 编译并加载地震专用渲染着色器 
-    gl.seisProg = glCreateProgram();
-    std::string seisVsSrc = loadShaderFromFile("../resource_CUDA_V1/shader/seis_code.vert");
-    std::string seisFsSrc = loadShaderFromFile("../resource_CUDA_V1/shader/seis_code.frag");
-    GLuint seisVs = createShader(seisVsSrc, GL_VERTEX_SHADER);
-    GLuint seisFs = createShader(seisFsSrc, GL_FRAGMENT_SHADER);
-    glAttachShader(gl.seisProg, seisVs);
-    glAttachShader(gl.seisProg, seisFs);
-    glLinkProgram(gl.seisProg);
-
-    // 及时释放临时着色器资源
-    glDeleteShader(seisVs);
-    glDeleteShader(seisFs);
-
-    // -----------------------------------------------------------------------------
-    // Stage 5: CUDA 互操作与内部缓冲区分配
-    // -----------------------------------------------------------------------------
-    // 将 OpenGL 纹理注册到 CUDA 互操作资源中
-    cudaGraphicsGLRegisterImage(&gl.cudaRes, gl.lifeTex, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard);
-
-    // 初始化 CUDA 内部生命模拟算法相关的状态及缓冲区
-    InitCudaLife(1920, 1080); // 初始化随机数生成器
-    cudaMalloc(&gl.d_current, 1920 * 1080);
-    cudaMalloc(&gl.d_next, 1920 * 1080);
-    cudaMalloc(&gl.d_heatData, 1920 * 1080 * sizeof(float));
-
-    // 植入初始种子数据
-    SeedCudaLife(gl.d_current, 1920, 1080, 0.3f);
-
-    // -----------------------------------------------------------------------------
-    // Stage 6: UI 框架（ImGui / ImPlot）环境构建
-    // -----------------------------------------------------------------------------
+    // 可选演示资源在进入对应页面时才分配，主程序仅初始化地震工作区所需资源。
     Init_Imgui(window);
-    ImPlot::CreateContext();
 
     // 初始运行状态设定 (强制开启启动屏逻辑)
     state.isIntroMode = true;
@@ -340,16 +318,16 @@ int main() {
     // =============================================================================
     // 资源销毁与环境释放
     // =============================================================================
-    g_nvml.Unload(); // <-- 【新增】：在退出程序时注销动态 NVML 句柄，释放 DLL 连接
-    cleanup(gl); // 调用原有资源释放函数释放句柄与 CUDA 缓冲区
-
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImPlot::DestroyContext();
-    ImGui::DestroyContext();
-
-    glfwDestroyWindow(window);
-    glfwTerminate();
-
     return 0;
+}
+
+// 将输入验证和 CUDA 异常转换为明确诊断，避免失败后继续计算损坏的波场。
+int main() {
+    try {
+        return runApplication();
+    }
+    catch (const std::exception& error) {
+        std::cerr << "Application stopped safely: " << error.what() << std::endl;
+        return 1;
+    }
 }

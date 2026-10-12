@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "Common.h"
+#include "SolverNumerics.h"
 #include <cuda_runtime.h>
 
 // =============================================================================
@@ -24,16 +25,26 @@ extern "C" {
 #endif
 
     // --- 硬件环境检测与诊断 ---
-    GpuInfo GetCudaDeviceInfo();
-    bool    RunCudaTest(float* h_a, float* h_b, float* h_c, int n);
+    /** Returns the active CUDA device properties, or a failed result if discovery fails. */
+    GpuInfo getCudaDeviceInfo();
+    /** Runs a small vector-add operation to verify CUDA allocation, launch, and copy paths. */
+    bool runCudaTest(float* hostA, float* hostB, float* hostC, int elementCount);
 
     // --- 生命游戏 CUDA 模块 ---
-    void InitCudaLife(int w, int h); // 初始化随机数状态
-    void SeedCudaLife(uint8_t* d_world, int w, int h, float density);
-    void UpdateLifeCuda(uint8_t* d_current, uint8_t* d_next, float* d_heatMap,
-        int w, int h, float deltaTime, bool paused, float decay, int b_mask, int s_mask);
-    void MousePaintCuda(uint8_t* d_world, float* d_heat, int w, int h, int mx, int my, int radius, bool erase);
-    int  GetPopulationCuda(uint8_t* d_world, int w, int h);
+    /** Initializes the CUDA random-state buffer used by the life-game demo. */
+    void initializeCudaLife(int width, int height);
+    /** Releases the legacy life-game random-state buffer, if allocated. */
+    void releaseCudaLife();
+    /** Seeds a life-game grid with the requested live-cell density. */
+    void seedCudaLife(uint8_t* deviceWorld, int width, int height, float density);
+    /** Advances the life-game cellular automaton and updates its heat map. */
+    void updateCudaLife(uint8_t* deviceCurrent, uint8_t* deviceNext, float* deviceHeatMap,
+        int width, int height, float deltaTime, bool paused, float decay, int birthMask, int survivalMask);
+    /** Applies a circular paint or erase operation to the device grid. */
+    void paintCudaLife(uint8_t* deviceWorld, float* deviceHeat, int width, int height,
+        int mouseX, int mouseY, int radius, bool erase);
+    /** Counts live cells in the life-game grid. */
+    int getCudaLifePopulation(uint8_t* deviceWorld, int width, int height);
 
 #ifdef __cplusplus
 }
@@ -42,13 +53,14 @@ extern "C" {
 // =============================================================================
 // 3. 辅助宏定义
 // =============================================================================
-#define CUDA_CHECK(call) \
-do { \
-    cudaError_t err = call; \
-    if (err != cudaSuccess) { \
-        fprintf(stderr, "CUDA Error at %s:%d: %s\n", __FILE__, __LINE__, cudaGetErrorString(err)); \
-    } \
-} while (0)
+// CUDA 失败时终止当前操作，让调用方清理资源，避免继续使用未分配的缓冲区。
+inline void checkCudaResult(cudaError_t result, const char* operation, const char* file, int line) {
+    if (result != cudaSuccess) {
+        throw std::runtime_error(std::string("CUDA failure: ") + operation + " at " + file +
+            ":" + std::to_string(line) + " | " + cudaGetErrorString(result));
+    }
+}
+#define CUDA_CHECK(call) checkCudaResult((call), #call, __FILE__, __LINE__)
 
 // =============================================================================
 // 4. 地震波场模拟 GPU 显存资源管理结构体
@@ -103,19 +115,35 @@ struct GPUSimData {
     float* d_record_vz_step = nullptr; // 大小：num_rcv * sizeof(float)
 
     GPUSource* d_active_sources = nullptr; // 活跃震源的显存缓冲区
-    int        src_angle = 0;
+    float      src_angle = 0.0f;
     int        src_type = 0; // <-- 【新增】：0:垂直集中力, 1:水平集中力, 2:膨胀源(纯P波), 3:剪切源(S波), 4:倾斜旋转力
+    int        receiverCapacity = 0;
 };
 
 // =============================================================================
 // 5. 地震波场 GPU 仿真计算核心接口函数
 // =============================================================================
-void initGPUSimulation(GPUSimData& gpu, const SimulationContext& ctx);
-void freeGPUSimulation(GPUSimData& gpu);
-void runGPUStep(GPUSimData& gpu, int current_it, const SimulationContext& ctx, int num_active_sources);
-void copyRecordFromGPU(GPUSimData& gpu, int num_rcv, int nt, int current_it, float* h_rec_vx, float* h_rec_vz);
-void copyWavefieldToHost(GPUSimData& gpu, float* h_vz_out);
-void generateWavefieldTextureCUDA(GPUSimData& gpu, uchar4* d_rgba_out, float color_scale, int show_component);
+/** Allocates and initializes device fields and material arrays for one 2D simulation context. */
+void initializeGpuSimulation(GPUSimData& gpuData, const SimulationContext& simulationContext);
+/** Releases all device allocations owned by the simulation data object. */
+void releaseGpuSimulation(GPUSimData& gpuData);
+/** Validates host arrays, dimensions, material values, and boundary preconditions. */
+void validateSimulationContext(const SimulationContext& simulationContext);
+/** Replaces receiver device buffers atomically, including clearing an empty receiver set. */
+void updateGpuReceivers(GPUSimData& gpuData, const std::vector<int>& receiverIndices);
+/** Advances one finite-difference time step and injects active sources. */
+void runGpuSimulationStep(GPUSimData& gpuData, int currentIteration,
+    const SimulationContext& simulationContext, int activeSourceCount);
+/** Copies the current wavefield component into a host buffer. */
+void copyWavefieldToHost(GPUSimData& gpuData, float* hostVzOutput);
+/** Copies recorded receiver samples from the device into host trace arrays. */
+void copyReceiverRecordsFromGpu(GPUSimData& gpuData, int receiverCount, int timeSampleCount,
+    int currentIteration, float* hostReceiverVx, float* hostReceiverVz);
+/** Converts the selected wavefield component into an RGBA display texture on the GPU. */
+void generateWavefieldTextureOnGpu(GPUSimData& gpuData, uchar4* deviceRgbaOutput,
+    float colorScale, int componentIndex);
 
 // --- 【新增：专用于数据采集单步捕获的 C++ 主机端包装接口】 ---
-void recordReceiverStepGPU(GPUSimData& gpu, int num_rcv, float* h_out_vx, float* h_out_vz);
+/** Extracts one time sample for every receiver and copies both velocity components to host buffers. */
+void recordReceiverStepOnGpu(GPUSimData& gpuData, int receiverCount,
+    float* hostVxOutput, float* hostVzOutput);

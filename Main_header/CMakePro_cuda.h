@@ -9,6 +9,7 @@
 
 //自己编写的头文件
 #include "Common.h"
+#include "ResourcePaths.h"
 #include"Seis_Sim.h"
 
 constexpr float PI = 3.14159265358979323846f;
@@ -109,6 +110,21 @@ void SetupImGuiStyle() {
     colors[ImGuiCol_PlotHistogramHovered] = accentHover;
 }
 
+// 跳过缺失字体；文件无法读取时让 ImGui 返回空指针，以便执行备用字体逻辑。
+inline ImFont* tryLoadFontFile(const std::filesystem::path& fontPath, float fontSize,
+    const ImFontConfig* fontConfig = nullptr, const ImWchar* glyphRanges = nullptr) {
+    std::error_code error;
+    if (!std::filesystem::is_regular_file(fontPath, error)) {
+        return nullptr;
+    }
+    ImFontConfig config = fontConfig ? *fontConfig : ImFontConfig();
+    config.Flags |= ImFontFlags_NoLoadError;
+    const std::string encodedPath = pathToUtf8(fontPath);
+    return ImGui::GetIO().Fonts->AddFontFromFileTTF(
+        encodedPath.c_str(), fontSize, &config, glyphRanges);
+}
+
+// 创建界面上下文、加载可用字体并初始化 GLFW/OpenGL 后端。
 void Init_Imgui(GLFWwindow* window) {
     // 1. 检查版本并创建上下文
     IMGUI_CHECKVERSION();
@@ -122,7 +138,7 @@ void Init_Imgui(GLFWwindow* window) {
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       
 
-    // ================= 修改开始：3. 字体加载策略 =================
+    // 3. 加载主字体后再合并中文字体，缺失字体时逐级回退。
     float baseSize = 14.0f;
     float scaleFactor = 1.5f;
     float fontSize = baseSize * scaleFactor;
@@ -130,14 +146,18 @@ void Init_Imgui(GLFWwindow* window) {
     // 获取 ImGui 内置的中文常用字形范围
     const ImWchar* glyph_ranges = io.Fonts->GetGlyphRangesChineseSimplifiedCommon();
 
-    std::string en_font_path = "../resource_CUDA_V1/font/consola.ttf";
-
-    // 第一步：加载英文字体 (Consolas)
-    ImFont* font = io.Fonts->AddFontFromFileTTF(en_font_path.c_str(), fontSize);
+    const std::filesystem::path systemFontDirectory = getSystemFontDirectory();
+    ImFont* font = tryLoadFontFile(resolveResourcePath("font/consola.ttf"), fontSize);
     if (font == nullptr) {
-        // 备用英文系统字体
-        font = io.Fonts->AddFontFromFileTTF("C:/Windows/Fonts/consola.ttf", fontSize);
+        font = tryLoadFontFile(systemFontDirectory / "consola.ttf", fontSize);
     }
+    if (font == nullptr) {
+        ImFontConfig defaultFontConfig;
+        defaultFontConfig.SizePixels = fontSize;
+        font = io.Fonts->AddFontDefault(&defaultFontConfig);
+        fprintf(stderr, "Warning: Base font unavailable, using ImGui default.\n");
+    }
+    io.FontDefault = font;
 
     // 第二步：配置字体合并选项
     ImFontConfig font_config;
@@ -145,18 +165,18 @@ void Init_Imgui(GLFWwindow* window) {
     font_config.PixelSnapH = true;       // 像素对齐，字体更清晰
 
     // 第三步：加载中文字体，并增加检测与备选方案
-    ImFont* cn_font = io.Fonts->AddFontFromFileTTF("../resource_CUDA_V1/font/msyh.ttc", fontSize, &font_config, glyph_ranges);
+    ImFont* cn_font = tryLoadFontFile(resolveResourcePath("font/msyh.ttc"), fontSize, &font_config, glyph_ranges);
 
     // [新增] 如果项目目录下的中文字体加载失败，尝试从 Windows 系统目录加载
     if (cn_font == nullptr) {
         fprintf(stderr, "Warning: Failed to load custom msyh.ttc, trying system fonts...\n");
 
         // 尝试 1：系统目录下的微软雅黑
-        cn_font = io.Fonts->AddFontFromFileTTF("C:/Windows/Fonts/msyh.ttc", fontSize, &font_config, glyph_ranges);
+        cn_font = tryLoadFontFile(systemFontDirectory / "msyh.ttc", fontSize, &font_config, glyph_ranges);
 
         if (cn_font == nullptr) {
             // 尝试 2：系统目录下的黑体（作为最后的防线）
-            cn_font = io.Fonts->AddFontFromFileTTF("C:/Windows/Fonts/simhei.ttf", fontSize, &font_config, glyph_ranges);
+            cn_font = tryLoadFontFile(systemFontDirectory / "simhei.ttf", fontSize, &font_config, glyph_ranges);
 
             // 如果所有的中文字体都失败了
             if (cn_font == nullptr) {
@@ -164,13 +184,6 @@ void Init_Imgui(GLFWwindow* window) {
             }
         }
     }
-
-    // 第四步：[安全检查] 如果连主字体（英文）都彻底失败，才使用 ImGui 默认像素字体
-    if (font == nullptr) {
-        io.Fonts->AddFontDefault();
-        fprintf(stderr, "Warning: Failed to load base custom font, using ImGui default.\n");
-    }
-    // ================= 修改结束 =================
 
     // 4. 设置样式
     SetupImGuiStyle();
@@ -832,15 +845,17 @@ void ReallocateSimulation(GLHandles& gl, int newW, int newH) {
     cudaGraphicsGLRegisterImage(&gl.cudaRes, gl.lifeTex, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard);
 
     // 7. 重新初始化 CUDA 内部随机数状态 (重要！)
-    InitCudaLife(gl.simW, gl.simH);
+    initializeCudaLife(gl.simW, gl.simH);
 
     // 8. 填充初始随机种子，防止黑屏
-    SeedCudaLife(gl.d_current, gl.simW, gl.simH, 0.2f);
+    seedCudaLife(gl.d_current, gl.simW, gl.simH, 0.2f);
 
     cudaDeviceSynchronize();
 }
 
 void RenderLifeGameScreen_GPU(SimState& state, int winW, int winH, GLHandles& gl, const GpuInfo& info) {
+    // 可选演示首次进入时才创建缓冲区，首页和地震模拟不承担其启动显存开销。
+    if (!gl.lifeTex) ReallocateSimulation(gl, gl.simW, gl.simH);
     ImGuiIO& io = ImGui::GetIO();
 
     const float scale = (float)winW / 1920.0f;
@@ -917,7 +932,7 @@ void RenderLifeGameScreen_GPU(SimState& state, int winW, int winH, GLHandles& gl
             int my = (int)(worldY * (float)gl.simH);
 
             if (mx >= 0 && mx < gl.simW && my >= 0 && my < gl.simH) {
-                MousePaintCuda(gl.d_current, gl.d_heatData, gl.simW, gl.simH, mx, my, brushRadius, ImGui::IsMouseDown(1));
+                paintCudaLife(gl.d_current, gl.d_heatData, gl.simW, gl.simH, mx, my, brushRadius, ImGui::IsMouseDown(1));
                 // 重要：为了让交互更即时，涂抹时也同步一下 d_next，防止被下一帧逻辑覆盖
                 cudaMemcpy(gl.d_next, gl.d_current, gl.simW * gl.simH, cudaMemcpyDeviceToDevice);
             }
@@ -947,7 +962,7 @@ void RenderLifeGameScreen_GPU(SimState& state, int winW, int winH, GLHandles& gl
             generation++;
 
             // 执行逻辑计算 (paused = false)
-            UpdateLifeCuda(gl.d_current, gl.d_next, gl.d_heatData, gl.simW, gl.simH, io.DeltaTime,
+            updateCudaLife(gl.d_current, gl.d_next, gl.d_heatData, gl.simW, gl.simH, io.DeltaTime,
                 false, trailDecay, rules[currentRuleIdx].b, rules[currentRuleIdx].s);
 
             // 交换细胞状态缓冲区
@@ -956,7 +971,7 @@ void RenderLifeGameScreen_GPU(SimState& state, int winW, int winH, GLHandles& gl
             logicStepPerformed = true;
 
             if (generation % 10 == 0) {
-                population = GetPopulationCuda(gl.d_current, gl.simW, gl.simH);
+                population = getCudaLifePopulation(gl.d_current, gl.simW, gl.simH);
             }
         }
     }
@@ -966,7 +981,7 @@ void RenderLifeGameScreen_GPU(SimState& state, int winW, int winH, GLHandles& gl
     // 这样做是为了：1. 保证尾迹平滑消失；2. 保证鼠标画上去的点立刻显示（即便暂停）。
     if (!logicStepPerformed) {
         // 仅视觉计算 (paused = true)
-        UpdateLifeCuda(gl.d_current, gl.d_next, gl.d_heatData, gl.simW, gl.simH, io.DeltaTime,
+        updateCudaLife(gl.d_current, gl.d_next, gl.d_heatData, gl.simW, gl.simH, io.DeltaTime,
             true, trailDecay, rules[currentRuleIdx].b, rules[currentRuleIdx].s);
     }
     // 更新历史曲线数据
@@ -1109,7 +1124,7 @@ void RenderLifeGameScreen_GPU(SimState& state, int winW, int winH, GLHandles& gl
                     if (ImGui::Selectable(rules[i].name, is_selected)) {
                         currentRuleIdx = i;
                         // 切换规则时通常自动重随机一次
-                        SeedCudaLife(gl.d_current, gl.simW, gl.simH, 0.2f);
+                        seedCudaLife(gl.d_current, gl.simW, gl.simH, 0.2f);
                     }
                 }
                 ImGui::EndCombo();
@@ -1191,14 +1206,14 @@ void RenderLifeGameScreen_GPU(SimState& state, int winW, int winH, GLHandles& gl
             // A. 初始化
             ImGui::TextColored(coreColor, "PRESET_BIOMASS");
             if (ImGui::Button("RANDOM_SEED", { -1, 35 * scale })) {
-                SeedCudaLife(gl.d_current, gl.simW, gl.simH, randomDensity);
+                seedCudaLife(gl.d_current, gl.simW, gl.simH, randomDensity);
                 generation = 0;
                 totalSimTime = 0;
             }
             ImGui::SliderFloat("DENSITY", &randomDensity, 0.01f, 0.5f);
 
             if (ImGui::Button("RESET WORLD", { -1, 35 * scale })) {
-                SeedCudaLife(gl.d_current, gl.simW, gl.simH, 0.0f);
+                seedCudaLife(gl.d_current, gl.simW, gl.simH, 0.0f);
                 generation = 0;
                 totalSimTime = 0;
                 cudaMemcpy(gl.d_next, gl.d_current, gl.simW * gl.simH, cudaMemcpyDeviceToDevice);
@@ -1854,7 +1869,7 @@ void RenderApp(AppScreen screen, SimState& state, const GpuInfo& info, int winW,
         break;
     case AppScreen::SeisSim_GPU:
         // 调用我们下面实现的专业地震模拟渲染窗口
-        RenderSeisSimScreen_GPU(state, winW, winH, gl, info);
+        renderSeisSimScreenGpu(state, winW, winH, gl, info);
         break;
 
     default: break;
@@ -1905,6 +1920,20 @@ void CheckIdleStatus(GLFWwindow* window, SimState& state) {
 
 //资源清理
 void cleanup(GLHandles& gl) {
+    releaseCudaLife();
+    releaseGpuSimulation(gpu_data);
+    is_seis_initialized = false;
+    if (gl.cudaSeisRes) {
+        cudaGraphicsUnregisterResource(gl.cudaSeisRes);
+        gl.cudaSeisRes = nullptr;
+    }
+    cudaFree(gl.deviceWavefieldRgba);
+    gl.deviceWavefieldRgba = nullptr;
+    gl.wavefieldRgbaCapacity = 0;
+    if (gl.seisTex) { glDeleteTextures(1, &gl.seisTex); gl.seisTex = 0; }
+    if (gl.seisProg) { glDeleteProgram(gl.seisProg); gl.seisProg = 0; }
+    if (g_modelTex) { glDeleteTextures(1, &g_modelTex); g_modelTex = 0; }
+    gl.cudaSeisArray = nullptr;
     // --- 1. 注销 CUDA 与 OpenGL 的互操作资源 ---
     if (gl.cudaRes) {
         // 在删除 OpenGL 纹理之前，必须先注销注册的资源

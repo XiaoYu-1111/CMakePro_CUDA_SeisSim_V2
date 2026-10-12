@@ -3,6 +3,9 @@
 # ==========================================
 cmake_minimum_required(VERSION 3.18) # 建议最低 3.18 以支持现代 CUDA 属性
 
+# 直接在 VS 中打开本目录时，也使用外层 out 存放编译产物。
+include("${CMAKE_CURRENT_LIST_DIR}/../cmake/BuildLayout.cmake")
+
 # [核心修复] 针对 MSVC + Ninja 环境下的 NVCC 路径转义 Bug
 if(POLICY CMP0141)
     cmake_policy(SET CMP0141 NEW)
@@ -55,6 +58,8 @@ add_executable(${TARGET_NAME}
     ${CUDA_USER_SOURCES}
     ${CUDA_USER_HEADERS}
     "Main_header/Common.h"
+    "Main_header/ResourcePaths.h"
+    "Main_cpp/ResourcePaths.cpp"
     "Main_cpp/SeismicIO.cpp")
 
 # ==========================================
@@ -71,8 +76,8 @@ set_target_properties(${TARGET_NAME} PROPERTIES
 if (MSVC)
     target_compile_options(${TARGET_NAME} PRIVATE
         $<$<COMPILE_LANGUAGE:CXX>:/FS>
+        $<$<COMPILE_LANGUAGE:CXX>:/utf-8>
     )
-    add_compile_options(/utf-8)
 endif()
 
 # 针对不同语言的特定编译选项
@@ -89,16 +94,17 @@ target_compile_options(${TARGET_NAME} PRIVATE
 # 6. 资源文件同步 (resource_CUDA_V1)
 # ==========================================
 set(RESOURCE_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/resource_CUDA_V1")
-set(RESOURCE_DEST_DIR "${CMAKE_BINARY_DIR}/resource_CUDA_V1")
+set(RESOURCE_DEST_DIR "$<TARGET_FILE_DIR:${TARGET_NAME}>/resource_CUDA_V1")
 
-file(GLOB_RECURSE RESOURCE_FILES "${RESOURCE_SRC_DIR}/*")
+file(GLOB_RECURSE RESOURCE_FILES CONFIGURE_DEPENDS "${RESOURCE_SRC_DIR}/*")
 
-add_custom_target(copy_resource_CUDA_V1
-    COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different ${RESOURCE_SRC_DIR} ${RESOURCE_DEST_DIR}
-    DEPENDS ${RESOURCE_FILES}
+add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different "${RESOURCE_SRC_DIR}" "${RESOURCE_DEST_DIR}"
     COMMENT "Syncing resource files..."
+    VERBATIM
 )
-add_dependencies(${TARGET_NAME} copy_resource_CUDA_V1)
+# 修改字体或着色器时也重新执行链接后的部署步骤。
+set_property(TARGET ${TARGET_NAME} APPEND PROPERTY LINK_DEPENDS ${RESOURCE_FILES})
 
 # ==========================================
 # 7. 配置头文件路径 (Include)
@@ -157,3 +163,20 @@ target_link_libraries(${TARGET_NAME} PRIVATE
 # ==========================================
 source_group("Source Files\\CUDA" FILES ${CUDA_USER_SOURCES} ${CUDA_USER_HEADERS})
 source_group("Source Files\\ImGui" FILES ${IMGUIDocking_SRCS})
+
+# 无图形窗口的数值回归程序，直接调用生产 CUDA 求解器。
+if(SEISSIM_BUILD_SOLVER_TESTS)
+    add_executable(SeisSimSolverRegression "tests/SolverRegression.cpp" ${CUDA_USER_SOURCES})
+    get_target_property(SOLVER_TEST_INCLUDES ${TARGET_NAME} INCLUDE_DIRECTORIES)
+    get_target_property(SOLVER_TEST_LINK_DIRS ${TARGET_NAME} LINK_DIRECTORIES)
+    get_target_property(SOLVER_TEST_OPTIONS ${TARGET_NAME} COMPILE_OPTIONS)
+    target_include_directories(SeisSimSolverRegression PRIVATE ${SOLVER_TEST_INCLUDES})
+    target_link_directories(SeisSimSolverRegression PRIVATE ${SOLVER_TEST_LINK_DIRS})
+    target_compile_options(SeisSimSolverRegression PRIVATE ${SOLVER_TEST_OPTIONS})
+    target_compile_definitions(SeisSimSolverRegression PRIVATE GLEW_STATIC)
+    set_target_properties(SeisSimSolverRegression PROPERTIES
+        CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON CUDA_STANDARD 17 MSVC_DEBUG_INFORMATION_FORMAT Embedded)
+    target_link_libraries(SeisSimSolverRegression PRIVATE cudart.lib)
+    add_test(NAME SolverRegression COMMAND SeisSimSolverRegression)
+    set_tests_properties(SolverRegression PROPERTIES TIMEOUT 120 SKIP_RETURN_CODE 77)
+endif()

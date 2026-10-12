@@ -22,13 +22,15 @@
 // =============================================================================
 
 // 加法核函数
+// Adds vector elements for the startup CUDA smoke test.
 __global__ void vectorAddKernel(const float* a, const float* b, float* c, int n) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < n) c[i] = a[i] + b[i];
 }
 
 // 辅助函数：根据架构计算核心数
-int _ConvertSMVerToCores(int major, int minor) {
+// Maps a compute-capability version to the estimated CUDA cores per multiprocessor.
+int convertSmVersionToCudaCoreCount(int major, int minor) {
     switch (major) {
     case 7:  return 64; // Volta, Turing (7.0, 7.5)
     case 8:  return (minor == 0) ? 64 : 128; // Ampere (8.0=64, 8.6/8.9=128)
@@ -38,7 +40,8 @@ int _ConvertSMVerToCores(int major, int minor) {
 }
 
 // 获取 GPU 设备信息
-extern "C" GpuInfo GetCudaDeviceInfo() {
+// Returns the properties of the active CUDA device for startup checks and diagnostics.
+extern "C" GpuInfo getCudaDeviceInfo() {
     GpuInfo info;
     memset(&info, 0, sizeof(info));
     int deviceCount = 0;
@@ -56,33 +59,33 @@ extern "C" GpuInfo GetCudaDeviceInfo() {
     info.clockRate = prop.clockRate;
 
     // 计算核心数：SMs * CoresPerSM
-    info.cudaCores = prop.multiProcessorCount * _ConvertSMVerToCores(prop.major, prop.minor);
+    info.cudaCores = prop.multiProcessorCount * convertSmVersionToCudaCoreCount(prop.major, prop.minor);
     info.success = true;
     return info;
 }
 
-// 实现 RunCudaTest
-extern "C" bool RunCudaTest(float* h_a, float* h_b, float* h_c, int n) {
+// Verifies a minimal host-to-device, kernel, and device-to-host execution path.
+extern "C" bool runCudaTest(float* hostA, float* hostB, float* hostC, int elementCount) {
     float* d_a = nullptr, * d_b = nullptr, * d_c = nullptr;
-    size_t bytes = n * sizeof(float);
+    size_t bytes = elementCount * sizeof(float);
 
     if (cudaMalloc(&d_a, bytes) != cudaSuccess) return false;
     if (cudaMalloc(&d_b, bytes) != cudaSuccess) { cudaFree(d_a); return false; }
     if (cudaMalloc(&d_c, bytes) != cudaSuccess) { cudaFree(d_a); cudaFree(d_b); return false; }
 
-    cudaMemcpy(d_a, h_a, bytes, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_b, h_b, bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_a, hostA, bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_b, hostB, bytes, cudaMemcpyHostToDevice);
 
     int threads = 256;
-    int blocks = (n + threads - 1) / threads;
-    vectorAddKernel << <blocks, threads >> > (d_a, d_b, d_c, n);
+    int blocks = (elementCount + threads - 1) / threads;
+    vectorAddKernel << <blocks, threads >> > (d_a, d_b, d_c, elementCount);
 
     if (cudaDeviceSynchronize() != cudaSuccess) {
         cudaFree(d_a); cudaFree(d_b); cudaFree(d_c);
         return false;
     }
 
-    cudaMemcpy(h_c, d_c, bytes, cudaMemcpyDeviceToHost);
+    cudaMemcpy(hostC, d_c, bytes, cudaMemcpyDeviceToHost);
 
     cudaFree(d_a);
     cudaFree(d_b);
@@ -96,24 +99,33 @@ extern "C" bool RunCudaTest(float* h_a, float* h_b, float* h_c, int n) {
 
 static curandState* d_states = nullptr; // 随机数状态缓冲区
 
-__global__ void kInitRand(curandState* states, unsigned long seed, int w, int h) {
+// 释放可选演示模块的随机状态，允许退出清理重复调用。
+extern "C" void releaseCudaLife() {
+    cudaFree(d_states);
+    d_states = nullptr;
+}
+
+// Initializes one CURAND state per cell for the life-game demonstration.
+__global__ void initializeRandomStatesKernel(curandState* states, unsigned long seed, int w, int h) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < w * h) {
         curand_init(seed, idx, 0, &states[idx]);
     }
 }
 
-extern "C" void InitCudaLife(int w, int h) {
+// Allocates and seeds the random states used by the standalone life-game demo.
+extern "C" void initializeCudaLife(int w, int h) {
     if (d_states) cudaFree(d_states);
     cudaMalloc(&d_states, w * h * sizeof(curandState));
 
     int threads = 256;
     int blocks = (w * h + threads - 1) / threads;
-    kInitRand << <blocks, threads >> > (d_states, (unsigned long)time(0), w, h);
+    initializeRandomStatesKernel << <blocks, threads >> > (d_states, (unsigned long)time(0), w, h);
     cudaDeviceSynchronize();
 }
 
-__global__ void kSeedKernel(uint8_t* world, curandState* states, float density, int w, int h) {
+// Writes a random binary state into each life-game cell.
+__global__ void seedLifeGridKernel(uint8_t* world, curandState* states, float density, int w, int h) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < w * h) {
         float r = curand_uniform(&states[idx]);
@@ -121,13 +133,15 @@ __global__ void kSeedKernel(uint8_t* world, curandState* states, float density, 
     }
 }
 
-extern "C" void SeedCudaLife(uint8_t* d_world, int w, int h, float density) {
+// Initializes every cell using the requested live-cell density.
+extern "C" void seedCudaLife(uint8_t* d_world, int w, int h, float density) {
     int n = w * h;
-    kSeedKernel << <(n + 255) / 256, 256 >> > (d_world, d_states, density, w, h);
+    seedLifeGridKernel << <(n + 255) / 256, 256 >> > (d_world, d_states, density, w, h);
     cudaDeviceSynchronize();
 }
 
-__global__ void kLifeUpdate(const uint8_t* current, uint8_t* next, float* heatMap, int w, int h, float dt,
+// Applies the configured birth/survival rules and decays the per-cell heat map.
+__global__ void updateLifeGridKernel(const uint8_t* current, uint8_t* next, float* heatMap, int w, int h, float dt,
     bool paused, float decay, int b_mask, int s_mask) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -162,14 +176,16 @@ __global__ void kLifeUpdate(const uint8_t* current, uint8_t* next, float* heatMa
     heatMap[idx] = hVal;
 }
 
-extern "C" void UpdateLifeCuda(uint8_t* d_current, uint8_t* d_next, float* d_heatMap, int w, int h, float deltaTime,
+// Advances one life-game frame and updates the heat-map buffer.
+extern "C" void updateCudaLife(uint8_t* d_current, uint8_t* d_next, float* d_heatMap, int w, int h, float deltaTime,
     bool paused, float decay, int b_mask, int s_mask) {
     dim3 block(16, 16);
     dim3 grid((w + 15) / 16, (h + 15) / 16);
-    kLifeUpdate << <grid, block >> > (d_current, d_next, d_heatMap, w, h, deltaTime, paused, decay, b_mask, s_mask);
+    updateLifeGridKernel << <grid, block >> > (d_current, d_next, d_heatMap, w, h, deltaTime, paused, decay, b_mask, s_mask);
 }
 
-__global__ void kMousePaint(uint8_t* world, float* heatMap, int w, int h, int mx, int my, int radius, bool erase) {
+// Applies a circular brush to cells within the image bounds.
+__global__ void paintLifeGridKernel(uint8_t* world, float* heatMap, int w, int h, int mx, int my, int radius, bool erase) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
     if (x >= w || y >= h) return;
@@ -182,13 +198,15 @@ __global__ void kMousePaint(uint8_t* world, float* heatMap, int w, int h, int mx
     }
 }
 
-extern "C" void MousePaintCuda(uint8_t* d_world, float* d_heat, int w, int h, int mx, int my, int radius, bool erase) {
+// Paints or erases cells within the requested circular brush on the GPU.
+extern "C" void paintCudaLife(uint8_t* d_world, float* d_heat, int w, int h, int mx, int my, int radius, bool erase) {
     dim3 block(16, 16);
     dim3 grid((w + 15) / 16, (h + 15) / 16);
-    kMousePaint << <grid, block >> > (d_world, d_heat, w, h, mx, my, radius, erase);
+    paintLifeGridKernel << <grid, block >> > (d_world, d_heat, w, h, mx, my, radius, erase);
 }
 
-extern "C" int GetPopulationCuda(uint8_t* d_world, int w, int h) {
+// Returns the number of live cells in the current life-game grid.
+extern "C" int getCudaLifePopulation(uint8_t* d_world, int w, int h) {
     thrust::device_ptr<uint8_t> ptr(d_world);
     try {
         return thrust::reduce(thrust::device, ptr, ptr + (w * h), (int)0, thrust::plus<int>());
@@ -203,7 +221,8 @@ extern "C" int GetPopulationCuda(uint8_t* d_world, int w, int h) {
 // =============================================================================
 
 // --- Type 1 PML Stress Update ---
-__global__ void update_type1_stress_kernel(GPUSimData g) {
+// Updates split stress fields using the full-domain split-field PML scheme.
+__global__ void updateType1StressKernel(GPUSimData g) {
     int j = blockIdx.x * blockDim.x + threadIdx.x;
     int i = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -247,7 +266,8 @@ __global__ void update_type1_stress_kernel(GPUSimData g) {
 }
 
 // --- Type 1 PML Velocity Update ---
-__global__ void update_type1_velocity_kernel(GPUSimData g) {
+// Updates split particle-velocity fields for the full-domain PML scheme.
+__global__ void updateType1VelocityKernel(GPUSimData g) {
     int j = blockIdx.x * blockDim.x + threadIdx.x;
     int i = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -291,7 +311,8 @@ __global__ void update_type1_velocity_kernel(GPUSimData g) {
 }
 
 // --- Type 2 PML/FDM Hybrid Stress Update ---
-__global__ void update_type2_stress_kernel(GPUSimData g) {
+// Updates stress fields for the interior-FDM and boundary-PML hybrid scheme.
+__global__ void updateType2StressKernel(GPUSimData g) {
     int j = blockIdx.x * blockDim.x + threadIdx.x;
     int i = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -343,7 +364,8 @@ __global__ void update_type2_stress_kernel(GPUSimData g) {
 }
 
 // --- Type 2 PML/FDM Hybrid Velocity Update ---
-__global__ void update_type2_velocity_kernel(GPUSimData g) {
+// Updates velocity fields for the interior-FDM and boundary-PML hybrid scheme.
+__global__ void updateType2VelocityKernel(GPUSimData g) {
     int j = blockIdx.x * blockDim.x + threadIdx.x;
     int i = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -367,9 +389,7 @@ __global__ void update_type2_velocity_kernel(GPUSimData g) {
         bool is_pml = (i < g.npml || i >= g.NZ - g.npml || j < g.npml || j >= g.NX - g.npml);
 
         if (!is_pml) {
-            if (g.d_rho_x_z_flat[k] > 1000.0f) {
-                g.d_vz[k] += g.dt * (dsigxz_dx + dsigzz_dz) / g.d_rho_x_z_flat[k];
-            }
+            g.d_vz[k] += g.dt * (dsigxz_dx + dsigzz_dz) / g.d_rho_x_z_flat[k];
             g.d_vx[k] += g.dt * (dsigxx_dx + dsigxz_dz) / g.d_rho_orig_flat[k];
         }
         else {
@@ -392,7 +412,8 @@ __global__ void update_type2_velocity_kernel(GPUSimData g) {
 }
 
 // --- Type 3 Free Surface Stress Update ---
-__global__ void update_type3_stress_kernel(GPUSimData g) {
+// Updates split stress fields while enforcing the traction-free surface condition.
+__global__ void updateType3StressKernel(GPUSimData g) {
     int j = blockIdx.x * blockDim.x + threadIdx.x;
     int i = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -466,7 +487,8 @@ __global__ void update_type3_stress_kernel(GPUSimData g) {
 }
 
 // --- Type 3 Stress Mirroring ---
-__global__ void type3_stress_mirror_kernel(GPUSimData g) {
+// Mirrors stress values across the free surface to provide antisymmetric stencil samples.
+__global__ void mirrorType3StressKernel(GPUSimData g) {
     int j = blockIdx.x * blockDim.x + threadIdx.x;
     if (j >= 4 && j < g.NX - 4) {
         for (int l = 1; l <= 4; ++l) {
@@ -486,7 +508,8 @@ __global__ void type3_stress_mirror_kernel(GPUSimData g) {
 }
 
 // --- Type 3 Free Surface Velocity Update ---
-__global__ void update_type3_velocity_kernel(GPUSimData g) {
+// Updates velocity fields for the free-surface solver and clears the air region.
+__global__ void updateType3VelocityKernel(GPUSimData g) {
     int j = blockIdx.x * blockDim.x + threadIdx.x;
     int i = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -529,8 +552,8 @@ __global__ void update_type3_velocity_kernel(GPUSimData g) {
 
             float dsigzz_dz = g.c1_h * (g.d_szz_1[row_dn1 + j] + g.d_szz_2[row_dn1 + j] - g.d_szz_1[k] - g.d_szz_2[k])
                 + g.c2_h * (g.d_szz_1[row_dn2 + j] + g.d_szz_2[row_dn2 + j] - g.d_szz_1[row_up1 + j] - g.d_szz_2[row_up1 + j])
-                + g.c3_h * (g.d_szz_1[row_dn1 + g.NX + j] + g.d_szz_2[row_dn1 + g.NX + j] - g.d_szz_1[row_up2 + j] - g.d_szz_2[row_up2 + j])
-                + g.c4_h * (g.d_szz_1[row_dn1 + 2 * g.NX + j] + g.d_szz_2[row_dn1 + 2 * g.NX + j] - g.d_szz_1[row_up3 + j] - g.d_szz_2[row_up3 + j]);
+                + g.c3_h * (g.d_szz_1[row_dn3 + j] + g.d_szz_2[row_dn3 + j] - g.d_szz_1[row_up2 + j] - g.d_szz_2[row_up2 + j])
+                + g.c4_h * (g.d_szz_1[row_dn4 + j] + g.d_szz_2[row_dn4 + j] - g.d_szz_1[row_up3 + j] - g.d_szz_2[row_up3 + j]);
 
             float rho_avg = 0.25f * (g.d_rho[k] + g.d_rho[k + 1] + g.d_rho[row_dn1 + j] + g.d_rho[row_dn1 + j + 1]);
             g.d_vz_1[k] = (g.d_vz_1[k] * (inv_dt - d_x_half_val) + dsigxz_dx / rho_avg) / (inv_dt + d_x_half_val);
@@ -540,7 +563,14 @@ __global__ void update_type3_velocity_kernel(GPUSimData g) {
 }
 
 // --- Source Injection ---
-__global__ void inject_source_kernel(GPUSimData g, float wavelet_val, int src_idx) {
+// Injects one time-sampled source into the selected stress or velocity field.
+__device__ void applyPointSource(GPUSimData g, float wavelet_val, int src_idx) {
+    if (src_idx < 0 || src_idx >= g.total_grid || !isfinite(wavelet_val)) return;
+    const int sourceX = src_idx % g.NX;
+    const int sourceZ = src_idx / g.NX;
+    if (sourceX < kStencilRadius || sourceX >= g.NX - kStencilRadius ||
+        sourceZ < kStencilRadius || sourceZ >= g.NZ - kStencilRadius ||
+        (g.flag_type == 3 && g.upFlag && sourceZ <= g.fs_idx)) return;
     // g.src_type:
     // 0: Vertical Force (Tzz) - 垂直方向集中力，直接作用于 Vz 分量
     // 1: Horizontal Force (Txx) - 水平方向集中力，直接作用于 Vx 分量
@@ -552,59 +582,65 @@ __global__ void inject_source_kernel(GPUSimData g, float wavelet_val, int src_id
         float force_z = wavelet_val;
         if (g.flag_type == 1 || g.flag_type == 3) {
             float rho_avg = 0.25f * (g.d_rho[src_idx] + g.d_rho[src_idx + 1] + g.d_rho[src_idx + g.NX] + g.d_rho[src_idx + g.NX + 1]);
-            g.d_vz_1[src_idx] += force_z * g.dt / rho_avg;
+            atomicAdd(&g.d_vz_1[src_idx], force_z * g.dt / rho_avg);
         }
         else if (g.flag_type == 2) {
-            g.d_vz[src_idx] += force_z * g.dt / g.d_rho_x_z_flat[src_idx];
+            atomicAdd(&g.d_vz[src_idx], force_z * g.dt / g.d_rho_x_z_flat[src_idx]);
         }
     }
     else if (g.src_type == 1) { // 水平集中力
         float force_x = wavelet_val;
         if (g.flag_type == 1 || g.flag_type == 3) {
-            g.d_vx_1[src_idx] += force_x * g.dt / g.d_rho[src_idx];
+            atomicAdd(&g.d_vx_1[src_idx], force_x * g.dt / g.d_rho[src_idx]);
         }
         else if (g.flag_type == 2) {
-            g.d_vx[src_idx] += force_x * g.dt / g.d_rho_orig_flat[src_idx];
+            atomicAdd(&g.d_vx[src_idx], force_x * g.dt / g.d_rho_orig_flat[src_idx]);
         }
     }
     else if (g.src_type == 2) { // 膨胀震源 (纯压缩 P 波，无横波分量) -> 作用于对角应力张量 [2]
         if (g.flag_type == 1 || g.flag_type == 3) {
-            g.d_sxx_1[src_idx] += wavelet_val * 0.5f;
-            g.d_sxx_2[src_idx] += wavelet_val * 0.5f;
-            g.d_szz_1[src_idx] += wavelet_val * 0.5f;
-            g.d_szz_2[src_idx] += wavelet_val * 0.5f;
+            atomicAdd(&g.d_sxx_1[src_idx], wavelet_val * 0.5f);
+            atomicAdd(&g.d_sxx_2[src_idx], wavelet_val * 0.5f);
+            atomicAdd(&g.d_szz_1[src_idx], wavelet_val * 0.5f);
+            atomicAdd(&g.d_szz_2[src_idx], wavelet_val * 0.5f);
         }
         else if (g.flag_type == 2) {
-            g.d_sigmaxx[src_idx] += wavelet_val;
-            g.d_sigmazz[src_idx] += wavelet_val;
+            atomicAdd(&g.d_sigmaxx[src_idx], wavelet_val);
+            atomicAdd(&g.d_sigmazz[src_idx], wavelet_val);
         }
     }
     else if (g.src_type == 3) { // 剪切震源 (剪切波) -> 作用于离角剪切应力张量 Sxz
         if (g.flag_type == 1 || g.flag_type == 3) {
-            g.d_sxz_1[src_idx] += wavelet_val * 0.5f;
-            g.d_sxz_2[src_idx] += wavelet_val * 0.5f;
+            atomicAdd(&g.d_sxz_1[src_idx], wavelet_val * 0.5f);
+            atomicAdd(&g.d_sxz_2[src_idx], wavelet_val * 0.5f);
         }
         else if (g.flag_type == 2) {
-            g.d_sigmaxz[src_idx] += wavelet_val;
+            atomicAdd(&g.d_sigmaxz[src_idx], wavelet_val);
         }
     }
     else if (g.src_type == 4) { // 任意倾斜力源 (Rotated Force)
         float force_x = sinf(g.src_angle * M_PI / 180.0f) * wavelet_val;
         float force_z = cosf(g.src_angle * M_PI / 180.0f) * wavelet_val;
         if (g.flag_type == 1 || g.flag_type == 3) {
-            g.d_vx_1[src_idx] += force_x * g.dt / g.d_rho[src_idx];
+            atomicAdd(&g.d_vx_1[src_idx], force_x * g.dt / g.d_rho[src_idx]);
             float rho_avg = 0.25f * (g.d_rho[src_idx] + g.d_rho[src_idx + 1] + g.d_rho[src_idx + g.NX] + g.d_rho[src_idx + g.NX + 1]);
-            g.d_vz_1[src_idx] += force_z * g.dt / rho_avg;
+            atomicAdd(&g.d_vz_1[src_idx], force_z * g.dt / rho_avg);
         }
         else if (g.flag_type == 2) {
-            g.d_vx[src_idx] += force_x * g.dt / g.d_rho_orig_flat[src_idx];
-            g.d_vz[src_idx] += force_z * g.dt / g.d_rho_x_z_flat[src_idx];
+            atomicAdd(&g.d_vx[src_idx], force_x * g.dt / g.d_rho_orig_flat[src_idx]);
+            atomicAdd(&g.d_vz[src_idx], force_z * g.dt / g.d_rho_x_z_flat[src_idx]);
         }
     }
 }
 
 // --- Zero Dirichlet Boundary ---
-__global__ void zero_boundary_kernel(GPUSimData g) {
+// 单点和多点震源共用同一种场注入方式，避免震源类型在两条路径中不一致。
+__global__ void injectSourceKernel(GPUSimData g, float waveletValue, int sourceIndex) {
+    applyPointSource(g, waveletValue, sourceIndex);
+}
+
+// Clears the outer stencil guard cells to prevent invalid edge reads.
+__global__ void zeroBoundaryKernel(GPUSimData g) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < g.NX) {
         int top = idx;
@@ -660,7 +696,8 @@ __device__ float get_vz(const GPUSimData& g, int i, int j) {
 // =============================================================================
 // 【自适应物理平衡】：7 分量多重波场自适应实时色彩映射核函数
 // =============================================================================
-__global__ void generate_colormap_kernel(GPUSimData g, uchar4* rgba_out, float scale, int component) {
+// Converts a selected physical field component into an RGBA visualization buffer.
+__global__ void generateColorMapKernel(GPUSimData g, uchar4* rgba_out, float scale, int component) {
     int j = blockIdx.x * blockDim.x + threadIdx.x;
     int i = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -752,17 +789,23 @@ __global__ void generate_colormap_kernel(GPUSimData g, uchar4* rgba_out, float s
     }
 }
 
-__global__ void extract_receivers_kernel(
+// Gathers Vx and Vz from flattened receiver indices for one simulation time step.
+__global__ void extractReceiverSamplesKernel(
     const float* __restrict__ vx_1, const float* __restrict__ vx_2,
     const float* __restrict__ vz_1, const float* __restrict__ vz_2,
     const float* __restrict__ vx, const float* __restrict__ vz,
     const int* __restrict__ rcv_grid_idx,
     float* d_record_vx_step, float* d_record_vz_step,
-    int num_rcv, int flag_type
+    int num_rcv, int flag_type, int gridElementCount
 ) {
     int r = blockIdx.x * blockDim.x + threadIdx.x;
     if (r < num_rcv) {
         int k = rcv_grid_idx[r];
+        if (k < 0 || k >= gridElementCount) {
+            d_record_vx_step[r] = 0.0f;
+            d_record_vz_step[r] = 0.0f;
+            return;
+        }
         if (flag_type == 1 || flag_type == 3) {
             d_record_vx_step[r] = vx_1[k] + vx_2[k];
             d_record_vz_step[r] = vz_1[k] + vz_2[k];
@@ -775,28 +818,18 @@ __global__ void extract_receivers_kernel(
 }
 
 // --- Multi-source Injection Kernel ---
-__global__ void inject_multi_sources_kernel(GPUSimData g, const GPUSource* d_sources, int num_sources) {
+// Injects all active point sources from the device-side source array.
+__global__ void injectMultipleSourcesKernel(GPUSimData g, const GPUSource* d_sources, int num_sources) {
     int r = threadIdx.x;
     if (r < num_sources) {
         GPUSource src = d_sources[r];
+        if (!isfinite(src.f_peak) || src.f_peak <= 0.0f || !isfinite(src.t)) return;
 
         float t_peak = 1.0f / src.f_peak;
         float x = M_PI * src.f_peak * (src.t - t_peak);
         float val = src.amp * (1.0f - 2.0f * x * x) * expf(-x * x);
 
-        int src_idx = src.idx;
-        float force_x = sinf(g.src_angle * M_PI / 180.0f) * val * 1e7f;
-        float force_z = cosf(g.src_angle * M_PI / 180.0f) * val * 1e7f;
-
-        if (g.flag_type == 1 || g.flag_type == 3) {
-            g.d_vx_1[src_idx] += force_x * g.dt / g.d_rho[src_idx];
-            float rho_avg = 0.25f * (g.d_rho[src_idx] + g.d_rho[src_idx + 1] + g.d_rho[src_idx + g.NX] + g.d_rho[src_idx + g.NX + 1]);
-            g.d_vz_1[src_idx] += force_z * g.dt / rho_avg;
-        }
-        else if (g.flag_type == 2) {
-            g.d_vx[src_idx] += force_x * g.dt / g.d_rho_orig_flat[src_idx];
-            g.d_vz[src_idx] += force_z * g.dt / g.d_rho_x_z_flat[src_idx];
-        }
+        applyPointSource(g, val * 1e7f, src.idx);
     }
 }
 
@@ -804,7 +837,57 @@ __global__ void inject_multi_sources_kernel(GPUSimData g, const GPUSource* d_sou
 // 主机驱动接口实现 (Host Drivers)
 // =============================================================================
 
-void initGPUSimulation(GPUSimData& gpu, const SimulationContext& ctx) {
+// 在任何 CUDA 分配前拒绝非法尺寸、数组长度和非物理材料参数。
+void validateSimulationContext(const SimulationContext& ctx) {
+    const size_t elementCount = checkedGridElementCount(ctx.NX, ctx.NZ);
+    validateBoundaryGeometry(ctx.NX, ctx.NZ, ctx.npml, ctx.flag_type == 3 && ctx.upFlag);
+    if (ctx.flag_type < 1 || ctx.flag_type > 3 || ctx.total_grid != elementCount ||
+        !std::isfinite(ctx.dt) || ctx.dt <= 0.0f || !std::isfinite(ctx.h) || ctx.h <= 0.0f || ctx.nt <= 0) {
+        throw std::invalid_argument("Invalid solver, time grid, or spatial grid");
+    }
+    if (ctx.rho.size() != elementCount || ctx.mu.size() != elementCount ||
+        ctx.lambda.size() != elementCount || ctx.lambda2mu.size() != elementCount ||
+        ctx.dx.size() != ctx.NX || ctx.dx_half.size() != ctx.NX ||
+        ctx.dz.size() != ctx.NZ || ctx.dz_half.size() != ctx.NZ ||
+        (ctx.flag_type == 3 && ctx.dp_flat.size() != ctx.NX) ||
+        ctx.wavelet.size() < static_cast<size_t>(ctx.nt) || ctx.num_rcv < 0 ||
+        ctx.rcv_grid_idx.size() != static_cast<size_t>(ctx.num_rcv)) {
+        throw std::invalid_argument("Simulation array lengths do not match the grid or receiver count");
+    }
+    float maximumVp = 0.0f;
+    for (size_t k = 0; k < elementCount; ++k) {
+        if (!std::isfinite(ctx.rho[k]) || ctx.rho[k] <= 0.0f ||
+            !std::isfinite(ctx.mu[k]) || ctx.mu[k] < 0.0f ||
+            !std::isfinite(ctx.lambda[k]) || !std::isfinite(ctx.lambda2mu[k]) || ctx.lambda2mu[k] <= 0.0f) {
+            throw std::invalid_argument("Density/stiffness must be finite with rho > 0, mu >= 0, lambda2mu > 0");
+        }
+        maximumVp = std::max(maximumVp, std::sqrt(ctx.lambda2mu[k] / ctx.rho[k]));
+        if (ctx.lambda2mu[k] - (4.0f / 3.0f) * ctx.mu[k] <= 0.0f) {
+            throw std::invalid_argument("Elastic bulk modulus must be positive");
+        }
+    }
+    if (!std::isfinite(maximumVp) || ctx.dt * maximumVp / ctx.h > kCourantLimit2d) {
+        throw std::invalid_argument("The time step exceeds the 2D staggered-grid CFL limit");
+    }
+    for (const auto* profile : {&ctx.dx, &ctx.dx_half, &ctx.dz, &ctx.dz_half}) {
+        for (float damping : *profile) {
+            if (!std::isfinite(damping) || damping < 0.0f) {
+                throw std::invalid_argument("PML damping must be finite and nonnegative");
+            }
+        }
+    }
+    for (int receiverIndex : ctx.rcv_grid_idx) {
+        if (receiverIndex < 0 || receiverIndex >= ctx.total_grid) {
+            throw std::invalid_argument("A receiver lies outside the simulation grid");
+        }
+    }
+}
+
+// Allocates device buffers; failure releases every allocation made by this attempt.
+void initializeGpuSimulation(GPUSimData& gpu, const SimulationContext& ctx) {
+    validateSimulationContext(ctx);
+    releaseGpuSimulation(gpu);
+    try {
     gpu.NX = ctx.NX; gpu.NZ = ctx.NZ; gpu.total_grid = ctx.total_grid;
     gpu.dt = ctx.dt; gpu.inv_dt = 1.0f / ctx.dt;
     gpu.flag_type = ctx.flag_type; gpu.npml = ctx.npml;
@@ -834,7 +917,7 @@ void initGPUSimulation(GPUSimData& gpu, const SimulationContext& ctx) {
     CUDA_CHECK(cudaMalloc(&gpu.d_dz, ctx.NZ * sizeof(float))); CUDA_CHECK(cudaMemcpy(gpu.d_dz, ctx.dz.data(), ctx.NZ * sizeof(float), cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMalloc(&gpu.d_dz_half, ctx.NZ * sizeof(float))); CUDA_CHECK(cudaMemcpy(gpu.d_dz_half, ctx.dz_half.data(), ctx.NZ * sizeof(float), cudaMemcpyHostToDevice));
 
-    CUDA_CHECK(cudaMalloc(&gpu.d_active_sources, 200 * sizeof(GPUSource)));
+    CUDA_CHECK(cudaMalloc(&gpu.d_active_sources, kMaximumActiveSources * sizeof(GPUSource)));
 
     if (gpu.flag_type == 2) {
         CUDA_CHECK(cudaMalloc(&gpu.d_vx, bytes)); CUDA_CHECK(cudaMemset(gpu.d_vx, 0, bytes));
@@ -857,7 +940,6 @@ void initGPUSimulation(GPUSimData& gpu, const SimulationContext& ctx) {
                 mu_z[k] = 0.5f * (ctx.mu[k] + ctx.mu[k_next_z]);
                 int k_dr = (i < ctx.NZ - 1 && j < ctx.NX - 1) ? k + ctx.NX + 1 : k;
                 rho_xz[k] = 0.25f * (ctx.rho[k] + ctx.rho[k_next_x] + ctx.rho[k_next_z] + ctx.rho[k_dr]);
-                if (rho_xz[k] < 1.0f) rho_xz[k] = 1000.0f;
             }
         }
         CUDA_CHECK(cudaMalloc(&gpu.d_mu_x_flat, bytes)); CUDA_CHECK(cudaMemcpy(gpu.d_mu_x_flat, mu_x.data(), bytes, cudaMemcpyHostToDevice));
@@ -876,19 +958,16 @@ void initGPUSimulation(GPUSimData& gpu, const SimulationContext& ctx) {
     CUDA_CHECK(cudaMalloc(&gpu.d_wavelet, ctx.wavelet.size() * sizeof(float)));
     CUDA_CHECK(cudaMemcpy(gpu.d_wavelet, ctx.wavelet.data(), ctx.wavelet.size() * sizeof(float), cudaMemcpyHostToDevice));
 
-    if (ctx.num_rcv > 0) {
-        CUDA_CHECK(cudaMalloc(&gpu.d_rcv_grid_idx, ctx.num_rcv * sizeof(int)));
-        CUDA_CHECK(cudaMemcpy(gpu.d_rcv_grid_idx, ctx.rcv_grid_idx.data(), ctx.num_rcv * sizeof(int), cudaMemcpyHostToDevice));
-
-        // 分配检波器临时单步记录缓冲区
-        CUDA_CHECK(cudaMalloc(&gpu.d_record_vx_step, ctx.num_rcv * sizeof(float)));
-        CUDA_CHECK(cudaMemset(gpu.d_record_vx_step, 0, ctx.num_rcv * sizeof(float)));
-        CUDA_CHECK(cudaMalloc(&gpu.d_record_vz_step, ctx.num_rcv * sizeof(float)));
-        CUDA_CHECK(cudaMemset(gpu.d_record_vz_step, 0, ctx.num_rcv * sizeof(float)));
+    updateGpuReceivers(gpu, ctx.rcv_grid_idx);
+    }
+    catch (...) {
+        releaseGpuSimulation(gpu);
+        throw;
     }
 }
 
-void freeGPUSimulation(GPUSimData& gpu) {
+// Releases device buffers owned by the selected solver scheme.
+void releaseGpuSimulation(GPUSimData& gpu) {
     cudaFree(gpu.d_vx_1); cudaFree(gpu.d_vx_2); cudaFree(gpu.d_vz_1); cudaFree(gpu.d_vz_2);
     cudaFree(gpu.d_sxx_1); cudaFree(gpu.d_sxx_2); cudaFree(gpu.d_szz_1); cudaFree(gpu.d_szz_2);
     cudaFree(gpu.d_sxz_1); cudaFree(gpu.d_sxz_2);
@@ -901,18 +980,54 @@ void freeGPUSimulation(GPUSimData& gpu) {
     cudaFree(gpu.d_record_vx_step);
     cudaFree(gpu.d_record_vz_step);
 
-    if (gpu.flag_type == 2) {
         cudaFree(gpu.d_vx); cudaFree(gpu.d_vz);
         cudaFree(gpu.d_sigmaxx); cudaFree(gpu.d_sigmazz); cudaFree(gpu.d_sigmaxz);
         cudaFree(gpu.d_mu_x_flat); cudaFree(gpu.d_lambda_x_flat); cudaFree(gpu.d_lambda2mu_x_flat);
         cudaFree(gpu.d_mu_z_flat); cudaFree(gpu.d_rho_x_z_flat); cudaFree(gpu.d_rho_orig_flat);
-    }
-    if (gpu.flag_type == 3) {
         cudaFree(gpu.d_dp_flat);
-    }
+    gpu = GPUSimData{};
 }
 
-void runGPUStep(GPUSimData& gpu, int current_it, const SimulationContext& ctx, int num_active_sources) {
+// 先准备新的检波器缓冲区，全部成功后才替换旧资源；空数组会清除旧采集布局。
+void updateGpuReceivers(GPUSimData& gpu, const std::vector<int>& receiverIndices) {
+    if (receiverIndices.size() > static_cast<size_t>((std::numeric_limits<int>::max)())) {
+        throw std::invalid_argument("Too many receivers");
+    }
+    for (int index : receiverIndices) {
+        if (index < 0 || index >= gpu.total_grid) {
+            throw std::invalid_argument("Receiver index is outside the active GPU grid");
+        }
+    }
+    int* newIndices = nullptr;
+    float* newVx = nullptr;
+    float* newVz = nullptr;
+    try {
+        if (!receiverIndices.empty()) {
+            const size_t sampleBytes = receiverIndices.size() * sizeof(float);
+            CUDA_CHECK(cudaMalloc(&newIndices, receiverIndices.size() * sizeof(int)));
+            CUDA_CHECK(cudaMemcpy(newIndices, receiverIndices.data(), receiverIndices.size() * sizeof(int), cudaMemcpyHostToDevice));
+            CUDA_CHECK(cudaMalloc(&newVx, sampleBytes));
+            CUDA_CHECK(cudaMalloc(&newVz, sampleBytes));
+            CUDA_CHECK(cudaMemset(newVx, 0, sampleBytes));
+            CUDA_CHECK(cudaMemset(newVz, 0, sampleBytes));
+        }
+    }
+    catch (...) {
+        cudaFree(newIndices); cudaFree(newVx); cudaFree(newVz);
+        throw;
+    }
+    cudaFree(gpu.d_rcv_grid_idx); cudaFree(gpu.d_record_vx_step); cudaFree(gpu.d_record_vz_step);
+    gpu.d_rcv_grid_idx = newIndices;
+    gpu.d_record_vx_step = newVx;
+    gpu.d_record_vz_step = newVz;
+    gpu.receiverCapacity = static_cast<int>(receiverIndices.size());
+}
+
+// Launches stress, velocity, source-injection, and boundary kernels for one time step.
+void runGpuSimulationStep(GPUSimData& gpu, int current_it, const SimulationContext& ctx, int num_active_sources) {
+    if (gpu.total_grid <= 0 || current_it < 0 || num_active_sources > kMaximumActiveSources) {
+        throw std::invalid_argument("Invalid GPU simulation state, iteration, or source count");
+    }
     dim3 block(16, 16);
     dim3 grid((gpu.NX + block.x - 1) / block.x, (gpu.NZ + block.y - 1) / block.y);
 
@@ -920,136 +1035,157 @@ void runGPUStep(GPUSimData& gpu, int current_it, const SimulationContext& ctx, i
     gpu.src_type = ctx.src_type;
     gpu.src_angle = ctx.src_angle;
 
-    if (gpu.flag_type == 1) {
-        update_type1_stress_kernel << <grid, block >> > (gpu);
+    if (gpu.flag_type == 1 || (gpu.flag_type == 3 && !gpu.upFlag)) {
+        updateType1StressKernel << <grid, block >> > (gpu);
     }
     else if (gpu.flag_type == 2) {
-        update_type2_stress_kernel << <grid, block >> > (gpu);
+        updateType2StressKernel << <grid, block >> > (gpu);
     }
     else if (gpu.flag_type == 3) {
-        update_type3_stress_kernel << <grid, block >> > (gpu);
+        updateType3StressKernel << <grid, block >> > (gpu);
         if (gpu.upFlag) {
-            type3_stress_mirror_kernel << <(gpu.NX + 255) / 256, 256 >> > (gpu);
+            mirrorType3StressKernel << <(gpu.NX + 255) / 256, 256 >> > (gpu);
         }
     }
+    CUDA_CHECK(cudaGetLastError());
 
-    if (gpu.flag_type == 1) {
-        update_type1_velocity_kernel << <grid, block >> > (gpu);
+    if (gpu.flag_type == 1 || (gpu.flag_type == 3 && !gpu.upFlag)) {
+        updateType1VelocityKernel << <grid, block >> > (gpu);
     }
     else if (gpu.flag_type == 2) {
-        update_type2_velocity_kernel << <grid, block >> > (gpu);
+        updateType2VelocityKernel << <grid, block >> > (gpu);
     }
     else if (gpu.flag_type == 3) {
-        update_type3_velocity_kernel << <grid, block >> > (gpu);
+        updateType3VelocityKernel << <grid, block >> > (gpu);
     }
+    CUDA_CHECK(cudaGetLastError());
 
     // 3. Source Injection
     if (num_active_sources >= 0) {
         if (num_active_sources > 0) {
-            inject_multi_sources_kernel << <1, num_active_sources >> > (gpu, gpu.d_active_sources, num_active_sources);
+            injectMultipleSourcesKernel << <1, num_active_sources >> > (gpu, gpu.d_active_sources, num_active_sources);
         }
     }
     else {
-        if (current_it < ctx.nt) {
+        if (current_it < ctx.nt && current_it < static_cast<int>(ctx.wavelet.size())) {
             // 在注入时，直接将基础子波值乘以幅值增益系数 ctx.src_amp，实现零时延实时调控
             float wavelet_val = ctx.wavelet[current_it] * ctx.src_amp * 1e7f;
 
-            int safe_src_z = (gpu.flag_type == 3) ? std::max(ctx.src_z_idx, gpu.fs_idx + 1) : ctx.src_z_idx;
+            int safe_src_z = (gpu.flag_type == 3 && gpu.upFlag) ? std::max(ctx.src_z_idx, gpu.fs_idx + 1) : ctx.src_z_idx;
             int src_idx = safe_src_z * gpu.NX + (ctx.src_idx % gpu.NX);
 
-            inject_source_kernel << <1, 1 >> > (gpu, wavelet_val, src_idx);
+            injectSourceKernel << <1, 1 >> > (gpu, wavelet_val, src_idx);
         }
     }
+    CUDA_CHECK(cudaGetLastError());
 
     int max_dim = std::max(gpu.NX, gpu.NZ);
-    zero_boundary_kernel << <(max_dim + 255) / 256, 256 >> > (gpu);
+    zeroBoundaryKernel << <(max_dim + 255) / 256, 256 >> > (gpu);
+    CUDA_CHECK(cudaGetLastError());
 }
 
+// Copies the vertical-velocity component to host memory, recombining split fields when required.
 void copyWavefieldToHost(GPUSimData& gpu, float* h_vz_out) {
+    if (!h_vz_out || gpu.total_grid <= 0) throw std::invalid_argument("Invalid wavefield output buffer");
     size_t bytes = gpu.total_grid * sizeof(float);
     if (gpu.flag_type == 1 || gpu.flag_type == 3) {
-        float* temp_v1 = (float*)malloc(bytes);
-        float* temp_v2 = (float*)malloc(bytes);
-        CUDA_CHECK(cudaMemcpy(temp_v1, gpu.d_vz_1, bytes, cudaMemcpyDeviceToHost));
-        CUDA_CHECK(cudaMemcpy(temp_v2, gpu.d_vz_2, bytes, cudaMemcpyDeviceToHost));
+        std::vector<float> temp_v1(gpu.total_grid);
+        std::vector<float> temp_v2(gpu.total_grid);
+        CUDA_CHECK(cudaMemcpy(temp_v1.data(), gpu.d_vz_1, bytes, cudaMemcpyDeviceToHost));
+        CUDA_CHECK(cudaMemcpy(temp_v2.data(), gpu.d_vz_2, bytes, cudaMemcpyDeviceToHost));
         for (int i = 0; i < gpu.total_grid; i++) {
             h_vz_out[i] = temp_v1[i] + temp_v2[i];
         }
-        free(temp_v1); free(temp_v2);
     }
     else {
         CUDA_CHECK(cudaMemcpy(h_vz_out, gpu.d_vz, bytes, cudaMemcpyDeviceToHost));
     }
 }
 
-void copyRecordFromGPU(GPUSimData& gpu, int num_rcv, int nt, int current_it, float* h_rec_vx, float* h_rec_vz) {
+// Extracts receiver values for a specified time index into host trace arrays.
+void copyReceiverRecordsFromGpu(GPUSimData& gpu, int num_rcv, int nt, int current_it, float* h_rec_vx, float* h_rec_vz) {
     if (num_rcv <= 0) return;
+    if (num_rcv > gpu.receiverCapacity || nt <= 0 || current_it < 0 || current_it >= nt || !h_rec_vx || !h_rec_vz) {
+        throw std::invalid_argument("Invalid receiver trace count, time index, or host output buffer");
+    }
 
     int threads = 128;
     int blocks = (num_rcv + threads - 1) / threads;
-    extract_receivers_kernel << <blocks, threads >> > (
+    extractReceiverSamplesKernel << <blocks, threads >> > (
         gpu.d_vx_1, gpu.d_vx_2, gpu.d_vz_1, gpu.d_vz_2,
         gpu.d_vx, gpu.d_vz,
         gpu.d_rcv_grid_idx,
         gpu.d_record_vx_step,
         gpu.d_record_vz_step,
-        num_rcv, gpu.flag_type
+        num_rcv, gpu.flag_type, gpu.total_grid
         );
 
     std::vector<float> h_step_vx(num_rcv);
     std::vector<float> h_step_vz(num_rcv);
-    cudaMemcpy(h_step_vx.data(), gpu.d_record_vx_step, num_rcv * sizeof(float), cudaMemcpyDeviceToHost);
-    cudaMemcpy(h_step_vz.data(), gpu.d_record_vz_step, num_rcv * sizeof(float), cudaMemcpyDeviceToHost);
+    CUDA_CHECK(cudaGetLastError());
+    CUDA_CHECK(cudaMemcpy(h_step_vx.data(), gpu.d_record_vx_step, num_rcv * sizeof(float), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(h_step_vz.data(), gpu.d_record_vz_step, num_rcv * sizeof(float), cudaMemcpyDeviceToHost));
 
     for (int r = 0; r < num_rcv; ++r) {
-        h_rec_vx[r * nt + current_it] = h_step_vx[r];
-        h_rec_vz[r * nt + current_it] = h_step_vz[r];
+        h_rec_vx[static_cast<size_t>(r) * nt + current_it] = h_step_vx[r];
+        h_rec_vz[static_cast<size_t>(r) * nt + current_it] = h_step_vz[r];
     }
 }
 
-void generateWavefieldTextureCUDA(GPUSimData& gpu, uchar4* d_rgba_out, float color_scale, int show_component) {
+// Converts the requested wavefield component to RGBA pixels for CUDA-OpenGL display.
+void generateWavefieldTextureOnGpu(GPUSimData& gpu, uchar4* d_rgba_out, float color_scale, int show_component) {
     dim3 block(16, 16);
     dim3 grid((gpu.NX + block.x - 1) / block.x, (gpu.NZ + block.y - 1) / block.y);
-    generate_colormap_kernel << <grid, block >> > (gpu, d_rgba_out, color_scale, show_component);
+    generateColorMapKernel << <grid, block >> > (gpu, d_rgba_out, color_scale, show_component);
+    CUDA_CHECK(cudaGetLastError());
 }
 
 // =============================================================================
-// 【新增】： recordReceiverStepGPU 的主机端包装实现 (MSVC 与 NVCC 之间的安全桥梁)
+// 【新增】： recordReceiverStepOnGpu 的主机端包装实现 (MSVC 与 NVCC 之间的安全桥梁)
 // =============================================================================
-void recordReceiverStepGPU(GPUSimData& gpu, int num_rcv, float* h_out_vx, float* h_out_vz) {
+// Extracts one receiver sample per channel and synchronously copies Vx and Vz arrays to host.
+void recordReceiverStepOnGpu(GPUSimData& gpu, int num_rcv, float* h_out_vx, float* h_out_vz) {
     if (num_rcv <= 0) return;
+    if (num_rcv > gpu.receiverCapacity || !h_out_vx || !h_out_vz) {
+        throw std::invalid_argument("Invalid receiver count or host output buffer");
+    }
 
     // 1. 在 GPU 端高并发提取当前时步下所有接收器的振幅
     int threads = 128;
     int blocks = (num_rcv + threads - 1) / threads;
-    extract_receivers_kernel << <blocks, threads >> > (
+    extractReceiverSamplesKernel << <blocks, threads >> > (
         gpu.d_vx_1, gpu.d_vx_2, gpu.d_vz_1, gpu.d_vz_2,
         gpu.d_vx, gpu.d_vz,
         gpu.d_rcv_grid_idx,
         gpu.d_record_vx_step,
         gpu.d_record_vz_step,
-        num_rcv, gpu.flag_type
+        num_rcv, gpu.flag_type, gpu.total_grid
         );
 
     // 2. 将 GPU 提取出的单步振幅拷回由 C++ 传入的 Host 临时数组中 (瞬间完成，无任何总线拥堵)
-    cudaMemcpy(h_out_vx, gpu.d_record_vx_step, num_rcv * sizeof(float), cudaMemcpyDeviceToHost);
-    cudaMemcpy(h_out_vz, gpu.d_record_vz_step, num_rcv * sizeof(float), cudaMemcpyDeviceToHost);
+    CUDA_CHECK(cudaGetLastError());
+    CUDA_CHECK(cudaMemcpy(h_out_vx, gpu.d_record_vx_step, num_rcv * sizeof(float), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(h_out_vz, gpu.d_record_vz_step, num_rcv * sizeof(float), cudaMemcpyDeviceToHost));
 }
 
 // =============================================================================
-// 【解决循环依赖】：实现 Common.h 中声明的 ReplayManager::uploadFrameToGPU 成员函数
+// 【解决循环依赖】：实现 Common.h 中声明的 ReplayManager::uploadFrameToGpu 成员函数
 // =============================================================================
-void ReplayManager::uploadFrameToGPU(int frameIdx, GPUSimData& gpu) {
+// Restores a cached replay frame into the active solver's vertical-velocity fields.
+void ReplayManager::uploadFrameToGpu(int frameIdx, GPUSimData& gpu) {
     if (frameIdx < 0 || frameIdx >= static_cast<int>(frames.size())) return;
+    if (frames[frameIdx].size() != static_cast<size_t>(gpu.total_grid)) {
+        throw std::invalid_argument("Replay frame dimensions do not match the active model");
+    }
     size_t bytes = gpu.total_grid * sizeof(float);
 
     if (gpu.flag_type == 1 || gpu.flag_type == 3) {
         // 覆盖 vz_1，并将 vz_2 抹零，使其和正好等于当前帧数据
-        cudaMemcpy(gpu.d_vz_1, frames[frameIdx].data(), bytes, cudaMemcpyHostToDevice);
-        cudaMemset(gpu.d_vz_2, 0, bytes);
+        CUDA_CHECK(cudaMemcpy(gpu.d_vz_1, frames[frameIdx].data(), bytes, cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMemset(gpu.d_vz_2, 0, bytes));
     }
     else if (gpu.flag_type == 2) {
-        cudaMemcpy(gpu.d_vz, frames[frameIdx].data(), bytes, cudaMemcpyHostToDevice);
+        CUDA_CHECK(cudaMemcpy(gpu.d_vz, frames[frameIdx].data(), bytes, cudaMemcpyHostToDevice));
     }
 }
 

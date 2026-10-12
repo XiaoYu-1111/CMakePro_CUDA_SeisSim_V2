@@ -1,14 +1,14 @@
-#pragma once
+ï»¿#pragma once
 #include <iostream>
 #include <vector>
 #include <algorithm>
 #include <cmath>
 
 // =================================================================================
-// 1. Æ½Ì¨Ïà¹Ø¶¨ÒåÓëÏµÍ³Í·ÎÄ¼þ (Platform Specifics)
+// 1. Æ½Ì¨ï¿½ï¿½Ø¶ï¿½ï¿½ï¿½ï¿½ï¿½ÏµÍ³Í·ï¿½Ä¼ï¿½ (Platform Specifics)
 // =================================================================================
 #ifdef _WIN32
-#define NOMINMAX          // ½ûÓÃ Windows.h ×Ô´øµÄ min/max ºê£¬±ÜÃâÓë std::min/max ³åÍ»
+#define NOMINMAX          // ï¿½ï¿½ï¿½ï¿½ Windows.h ï¿½Ô´ï¿½ï¿½ï¿½ min/max ï¿½ê£¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ std::min/max ï¿½ï¿½Í»
 #include <windows.h>      // Windows API
 #include <direct.h>       // _mkdir
 #include <io.h>           // _access
@@ -19,27 +19,29 @@
 #endif
 
 #include "Common.h"
-#include "Cuda_Check.cuh" // CUDA ¼ÆËã½Ó¿Ú
+#include "Cuda_Check.cuh" // CUDA ï¿½ï¿½ï¿½ï¿½Ó¿ï¿½
 #include "SeismicIO.h"
 
-// ÉùÃ÷Íâ²¿Î´°ó¶¨µÄ FDM Ö÷»ú¶ËÎïÀíÅäÖÃº¯Êý
+// ï¿½ï¿½ï¿½ï¿½ï¿½â²¿Î´ï¿½ó¶¨µï¿½ FDM ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ãºï¿½ï¿½ï¿½
 extern "C" {
+    // Creates the host-side simulation context from the selected 2D parameters.
     void setupTestContext(SimulationContext& ctx, const Parameters& par);
+    // Generates the source time function for the requested sampling interval.
     void generateRickerWavelet(std::vector<float>& wavelet, int nt, float dt, float f0, float t0);
 }
 
 // =============================================================================
-// 2. È«¾Ö³Ö¾Ã»¯×´Ì¬¿ØÖÆ±äÁ¿ (File-level Global State Variables)
+// 2. È«ï¿½Ö³Ö¾Ã»ï¿½×´Ì¬ï¿½ï¿½ï¿½Æ±ï¿½ï¿½ï¿½ (File-level Global State Variables)
 // =============================================================================
 static SimulationContext ctx;
 static GPUSimData        gpu_data;
 static bool              is_seis_initialized = false;
 
-// È«¾Ö¿ØÖÆÐÅºÅ
-inline bool g_resetSimRequested = false; // C ¼üÖØÖÃÄ£ÄâÐÅºÅ
-inline bool g_resetViewportRequested = false; // R ¼üÖØÖÃÊÓ¿ÚÐÅºÅ
+// È«ï¿½Ö¿ï¿½ï¿½ï¿½ï¿½Åºï¿½
+inline bool g_resetSimRequested = false; // C ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä£ï¿½ï¿½ï¿½Åºï¿½
+inline bool g_resetViewportRequested = false; // R ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¿ï¿½ï¿½Åºï¿½
 
-// --- ÎïÀíÓëÍø¸ñ´óÐ¡¿ØÖÆ ---
+// --- ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¡ï¿½ï¿½ï¿½ï¿½ ---
 inline int   edit_w = 1000;
 inline int   edit_h = 500;
 inline float edit_f0 = 100.0f;
@@ -50,37 +52,37 @@ inline float temp_dx = 1.0f;
 inline int   temp_nt = 10000;
 inline int   temp_pml = 50;
 
-// --- Ê±¼äÑÝ»¯ÓëäÖÈ¾ÊôÐÔ ---
+// --- Ê±ï¿½ï¿½ï¿½Ý»ï¿½ï¿½ï¿½ï¿½ï¿½È¾ï¿½ï¿½ï¿½ï¿½ ---
 inline int   current_it = 0;
 inline float accumulated_compute_time = 0.0f;
 inline float color_scale = 20.0f;
 inline int   show_component = 2;     // 0: Vz, 1: Vx
-inline int   waveStyle = 4;     // Ä¬ÈÏ²ÉÓÃ Style 7 (Turbo)
-inline int   modelStyle = 1; // 0: îÑ½ð»Ò, 1: ¿ÆÑ§µØÖÊÍ¼, 2: »Ò¶ÈVp, 3: ¸úËæ²¨³¡, 4: ¿ÆÑ§°×±³¾°
+inline int   waveStyle = 4;     // Ä¬ï¿½Ï²ï¿½ï¿½ï¿½ Style 7 (Turbo)
+inline int   modelStyle = 1; // 0: ï¿½Ñ½ï¿½ï¿½, 1: ï¿½ï¿½Ñ§ï¿½ï¿½ï¿½ï¿½Í¼, 2: ï¿½Ò¶ï¿½Vp, 3: ï¿½ï¿½ï¿½æ²¨ï¿½ï¿½, 4: ï¿½ï¿½Ñ§ï¿½×±ï¿½ï¿½ï¿½
 inline int   steps_per_frame = 20;
 inline bool  showHUD = true;
 inline bool  show_Monitor_par = false;
 
 
-// --- ÎïÀíÕðÔ´Î»ÖÃÓëÊÜÁ¦½Ç¶È ---
+// --- ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô´Î»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç¶ï¿½ ---
 inline int   edit_src_x = 500;
 inline int   edit_src_z = 125;
 inline float edit_angle = 0.0f;
-inline float edit_amp = 1.0f; // È«¾Ö¹²Ïí£º¼¤·¢·ùÖµ±¶Êý (0.1 ~ 10.0x)
-inline int   edit_source_type = 0;    // È«¾Ö¹²Ïí£º¼¤·¢ÕðÔ´ÀàÐÍ (0:´¹Ö±Á¦, 1:Ë®Æ½Á¦, 2:ÅòÕÍÔ´, 3:¼ôÇÐÔ´, 4:ÇãÐ±Á¦)
+inline float edit_amp = 1.0f; // È«ï¿½Ö¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ (0.1 ~ 10.0x)
+inline int   edit_source_type = 0;    // È«ï¿½Ö¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô´ï¿½ï¿½ï¿½ï¿½ (0:ï¿½ï¿½Ö±ï¿½ï¿½, 1:Ë®Æ½ï¿½ï¿½, 2:ï¿½ï¿½ï¿½ï¿½Ô´, 3:ï¿½ï¿½ï¿½ï¿½Ô´, 4:ï¿½ï¿½Ð±ï¿½ï¿½)
 
-// --- ÊÓ¿ÚÆ½ÒÆÓë¹öÂÖËõ·Å ---
+// --- ï¿½Ó¿ï¿½Æ½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ---
 inline float      viewZoom = 1.0f;
 inline ImVec2     viewOffset = { 0.0f, 0.0f };
 inline bool       first_align_needed = false;
 inline Parameters par;
 
-// --- ¶¯Ì¬¶àÕðÔ´ÓëÎÞÏÞÄ£Ê½ ---
+// --- ï¿½ï¿½Ì¬ï¿½ï¿½ï¿½ï¿½Ô´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä£Ê½ ---
 inline bool                  multi_source_mode = false;
 inline std::vector<GPUSource> active_sources;
 inline bool                  infinite_mode = false;
 
-// --- Êó±êÐüÍ£ÊµÊ±¼à¿ØÊý¾Ý ---
+// --- ï¿½ï¿½ï¿½ï¿½ï¿½Í£ÊµÊ±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ---
 inline int   hover_mx = 0;
 inline int   hover_my = 0;
 inline float hover_Vp = 0.0f;
@@ -88,46 +90,46 @@ inline float hover_Vs = 0.0f;
 inline float hover_Rho = 0.0f;
 inline bool  hover_valid = false;
 
-// --- È«¾Ö UI Ó«¹âÖ÷ÌâÉ« (Ä¬ÈÏÂÌÉ«Ó«¹â) ---
+// --- È«ï¿½ï¿½ UI Ó«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É« (Ä¬ï¿½ï¿½ï¿½ï¿½É«Ó«ï¿½ï¿½) ---
 inline ImVec4 uiAccent = ImVec4(0.5f, 1.0f, 0.5f, 1.0f);
 
 inline bool is_mouse_inside = false;
 
-inline int current_scene = SCENE_TWO_LAYER; // µ±Ç°¼ÓÔØµÄÎïÀí³¡¾°
+inline int current_scene = SCENE_TWO_LAYER; // ï¿½ï¿½Ç°ï¿½ï¿½ï¿½Øµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-// --- ¹²ÏíÎïÐÔ²ÎÊý ---
-inline float edit_Vp = 2000.0f; // È«¾Ö¹²Ïí£º×Ý²¨ËÙ¶È
-inline float edit_Vs = 1400.0f; // È«¾Ö¹²Ïí£ººá²¨ËÙ¶È
-inline float edit_Density = 2000.0f; // È«¾Ö¹²Ïí£ºÃÜ¶È
+// --- ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô²ï¿½ï¿½ï¿½ ---
+inline float edit_Vp = 2000.0f; // È«ï¿½Ö¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý²ï¿½ï¿½Ù¶ï¿½
+inline float edit_Vs = 1400.0f; // È«ï¿½Ö¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½á²¨ï¿½Ù¶ï¿½
+inline float edit_Density = 2000.0f; // È«ï¿½Ö¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü¶ï¿½
 
-inline GLuint g_modelTex = 0; // ÀëÆÁµØÖÊÎïÐÔÎÆÀí¾ä±ú
+inline GLuint g_modelTex = 0; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-inline bool  showGrid = true;  // Ä¬ÈÏ¿ªÆô±³¾°Íø¸ñÓë¾ØÕóµãÏÔÊ¾
-inline float ui_gridSpacing = 10.0f; // ÍÆ¼öÄ¬ÈÏ 10.0f
-inline float ui_gridOpacity = 1.0f;  // ÍÆ¼öÄ¬ÈÏ 1.0f (¿ÉÔÚ UI ÖÐÎÞ¼¶±ä°µ»ò±äÁÁ)
+inline bool  showGrid = true;  // Ä¬ï¿½Ï¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾
+inline float ui_gridSpacing = 10.0f; // ï¿½Æ¼ï¿½Ä¬ï¿½ï¿½ 10.0f
+inline float ui_gridOpacity = 1.0f;  // ï¿½Æ¼ï¿½Ä¬ï¿½ï¿½ 1.0f (ï¿½ï¿½ï¿½ï¿½ UI ï¿½ï¿½ï¿½Þ¼ï¿½ï¿½ä°µï¿½ï¿½ï¿½ï¿½ï¿½)
 
 inline static bool        show_success_popup = false;
 inline static bool        show_error_popup = false;
 inline static std::string popup_message = "";
 
-// --- ¸ß¼¶ÎïÀí²ÎÊý»º´æ (±Ü¿ªÃ¿Ö¡Ñ­»· 400 Íòµãµ¼ÖÂµÄ FPS ±©½µÆ¿¾±) ---
+// --- ï¿½ß¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (ï¿½Ü¿ï¿½Ã¿Ö¡Ñ­ï¿½ï¿½ 400 ï¿½ï¿½ãµ¼ï¿½Âµï¿½ FPS ï¿½ï¿½ï¿½ï¿½Æ¿ï¿½ï¿½) ---
 inline float cached_max_vp = 0.0f;
 inline float cached_min_vp = 0.0f;
 inline float cached_max_vs = 0.0f;
 inline float cached_min_vs = 0.0f;
 inline float cached_max_rho = 0.0f;
 inline float cached_min_rho = 0.0f;
-inline float cached_vram_mb = 0.0f; // ¹ÀËãÏÔ´æÕ¼ÓÃ
+inline float cached_vram_mb = 0.0f; // ï¿½ï¿½ï¿½ï¿½ï¿½Ô´ï¿½Õ¼ï¿½ï¿½
 
 inline bool convert_rho=true;
 
-inline float edit_segy_dx = 1.0f; // Íâ²¿µ¼Èë SEG-Y Ê±Êµ¼ÊÎïÀíµÀ¼ä¾à (Ã×)
-inline float export_target_dx = 1.0f; // µ¼³öÄ¿±êÍø¸ñ¼ä¾à (Ã×£¬Ä¬ÈÏÓëµ±Ç°Ä£Äâ²½³¤¶ÔÆë)
+inline float edit_segy_dx = 1.0f; // ï¿½â²¿ï¿½ï¿½ï¿½ï¿½ SEG-Y Ê±Êµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½)
+inline float export_target_dx = 1.0f; // ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (ï¿½×£ï¿½Ä¬ï¿½ï¿½ï¿½ëµ±Ç°Ä£ï¿½â²½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½)
 
-inline ReplayManager g_replay; // È«¾ÖÎ¨Ò»µÄ²¨³¡»Ø·Å¹ÜÀíÊµÀý
+inline ReplayManager g_replay; // È«ï¿½ï¿½Î¨Ò»ï¿½Ä²ï¿½ï¿½ï¿½ï¿½Ø·Å¹ï¿½ï¿½ï¿½Êµï¿½ï¿½
 
 // =============================================================================
-// ¡¾Êý¾Ý²É¼¯ºËÐÄ¡¿£º¼ì²¨Æ÷µ¥µãÎ»ÖÃ
+// ï¿½ï¿½ï¿½ï¿½ï¿½Ý²É¼ï¿½ï¿½ï¿½ï¿½Ä¡ï¿½ï¿½ï¿½ï¿½ì²¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½
 // =============================================================================
 struct ReceiverPos {
     int x;
@@ -135,44 +137,54 @@ struct ReceiverPos {
 };
 
 // =============================================================================
-// ¡¾Êý¾Ý²É¼¯ºËÐÄ¡¿£ºÊý¾Ý²É¼¯ÓëµÀ¼¯Â¼ÖÆ¹ÜÀíÆ÷
+// ï¿½ï¿½ï¿½ï¿½ï¿½Ý²É¼ï¿½ï¿½ï¿½ï¿½Ä¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý²É¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¼ï¿½Æ¹ï¿½ï¿½ï¿½ï¿½ï¿½
 // =============================================================================
 struct AcquisitionManager {
-    float samplingRateHz = 10000.0f; // ²ÉÑùÂÊ
-    float totalDurationSec = 0.5f;    // Â¼ÖÆ×ÜÊ±³¤ (Ãë)
+    float samplingRateHz = 10000.0f; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    float totalDurationSec = 0.5f;    // Â¼ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ (ï¿½ï¿½)
     float exportIntervalSec = 0.5f;
-    int   numChannels = 100;     // µÀÊý
-    int   startX = 100;     // Æðµã X Íø¸ñ
-    int   endX = 900;     // ÖÕµã X Íø¸ñ
-    int   receiverDepth = 150;     // ÅÅÁÐËùÔÚÉî¶È Z
+    int   numChannels = 100;     // ï¿½ï¿½ï¿½ï¿½
+    int   startX = 100;     // ï¿½ï¿½ï¿½ X ï¿½ï¿½ï¿½ï¿½
+    int   endX = 900;     // ï¿½Õµï¿½ X ï¿½ï¿½ï¿½ï¿½
+    int   receiverDepth = 150;     // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Z
 
-    std::vector<ReceiverPos> receivers; // ¼ì²¨Æ÷ÎïÀíÍø¸ñ×ø±êÊý×é
-    bool isShowarray = true;            // ÊÇ·ñÔÚ²¨³¡ÉÏÍ¼²ã¸ßÁÁÏÔÊ¾¼ì²¨Æ÷
-    bool isRecording = false;           // ÊÇ·ñ´¦ÓÚÂ¼ÖÆ×´Ì¬
+    std::vector<ReceiverPos> receivers; // ï¿½ì²¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    bool isShowarray = true;            // ï¿½Ç·ï¿½ï¿½Ú²ï¿½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ì²¨ï¿½ï¿½
+    bool isRecording = false;           // ï¿½Ç·ï¿½ï¿½ï¿½Â¼ï¿½ï¿½×´Ì¬
 
-    float totalTimer = 0.0f;      // Â¼ÖÆ¼ÆÊ±Æ÷ (Ãë)
+    float totalTimer = 0.0f;      // Â¼ï¿½Æ¼ï¿½Ê±ï¿½ï¿½ (ï¿½ï¿½)
     float exportTimer = 0.0f;
     float timer = 0.0f;
     int   currentFileIndex = 1;
+    int samplingStepStride = 1;
+    float actualSampleInterval = 0.0f;
 
-    // ¶þÎ¬²É¼¯Êý¾Ý»º³åÇø [channel][sample]
+    // ï¿½ï¿½Î¬ï¿½É¼ï¿½ï¿½ï¿½ï¿½Ý»ï¿½ï¿½ï¿½ï¿½ï¿½ [channel][sample]
     std::vector<std::vector<float>> recorded_vx;
     std::vector<std::vector<float>> recorded_vz;
 
-    // ³õÊ¼»¯/Çå¿Õ²É¼¯»º³åÇø
+    // ï¿½ï¿½Ê¼ï¿½ï¿½/ï¿½ï¿½Õ²É¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     void initBuffer() {
-        int expectedPoints = static_cast<int>(samplingRateHz * totalDurationSec);
-        if (expectedPoints <= 0) expectedPoints = 1000;
+        if (numChannels <= 0 || !std::isfinite(totalDurationSec) || totalDurationSec <= 0.0f) {
+            throw std::invalid_argument("Recording requires positive duration and channel count");
+        }
+        samplingStepStride = getReceiverSamplingStride(ctx.dt, samplingRateHz);
+        actualSampleInterval = samplingStepStride * ctx.dt;
+        const double sampleCount = std::ceil(totalDurationSec / static_cast<double>(actualSampleInterval));
+        if (!std::isfinite(sampleCount) || sampleCount > (std::numeric_limits<int>::max)()) {
+            throw std::overflow_error("Recording sample count is too large");
+        }
+        int expectedPoints = std::max(1, static_cast<int>(sampleCount));
         recorded_vx.assign(numChannels, std::vector<float>(expectedPoints, 0.0f));
         recorded_vz.assign(numChannels, std::vector<float>(expectedPoints, 0.0f));
     }
 };
 
-// È«¾ÖÎ¨Ò»µÄ²É¼¯¿ØÖÆÆ÷ÊµÀý
+// È«ï¿½ï¿½Î¨Ò»ï¿½Ä²É¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½
 inline AcquisitionManager rec;
 
 // =============================================================================
-// ¡¾Êý¾Ý²É¼¯ºËÐÄ¡¿£ºÈ«×Ô¶¯¶àÅÚÑ­»·²É¼¯×´Ì¬»ú
+// ï¿½ï¿½ï¿½ï¿½ï¿½Ý²É¼ï¿½ï¿½ï¿½ï¿½Ä¡ï¿½ï¿½ï¿½È«ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½Ñ­ï¿½ï¿½ï¿½É¼ï¿½×´Ì¬ï¿½ï¿½
 // =============================================================================
 enum AutoAcqState {
     AUTO_ACQ_IDLE = 0,
@@ -181,42 +193,42 @@ enum AutoAcqState {
 };
 
 // =============================================================================
-// ¡¾Êý¾Ý²É¼¯ºËÐÄ¡¿£ºÈ«×Ô¶¯¶àÅÚÑ­»·²É¼¯×´Ì¬»ú (ÐÞÕý°æ£ºÖ§³Ö¶ÀÁ¢¼¤·¢Éî¶È¿ØÖÆ)
+// ï¿½ï¿½ï¿½ï¿½ï¿½Ý²É¼ï¿½ï¿½ï¿½ï¿½Ä¡ï¿½ï¿½ï¿½È«ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½Ñ­ï¿½ï¿½ï¿½É¼ï¿½×´Ì¬ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ï¿½æ£ºÖ§ï¿½Ö¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¿ï¿½ï¿½ï¿½)
 // =============================================================================
 struct AutoAcquisition {
     AutoAcqState state = AUTO_ACQ_IDLE;
-    int          startX = 100;       // µÚÒ»ÅÚÆðÊ¼ X Íø¸ñ×ø±ê
-    int          shotDepthZ = 60;        // ¡¾ºËÐÄÐÂÔö¡¿£º×Ô¶¯¶àÅÚ¼¤·¢Éî¶È Z Íø¸ñ×ø±ê
-    int          shotIntervalX = 60;        // ÅÚ¼ä¾à (¸ñÊý)
-    int          totalShots = 10;        // ×Ü²É¼¯ÅÚÊý
-    int          currentShotIdx = 0;         // µ±Ç°ÕýÔÚÂ¼ÖÆµÚ¼¸ÅÚ
-    std::string  exportFolder = "exports/"; // ×Ô¶¯´´½¨µÄ SEG-Y ±£´æÎÄ¼þ¼Ð
+    int          startX = 100;       // ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½Ê¼ X ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    int          shotDepthZ = 60;        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½Ú¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Z ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    int          shotIntervalX = 60;        // ï¿½Ú¼ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½)
+    int          totalShots = 10;        // ï¿½Ü²É¼ï¿½ï¿½ï¿½ï¿½ï¿½
+    int          currentShotIdx = 0;         // ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½Â¼ï¿½ÆµÚ¼ï¿½ï¿½ï¿½
+    std::string  exportFolder = "exports/"; // ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ SEG-Y ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½
 
     void Start() {
         if (totalShots <= 0) return;
         state = AUTO_ACQ_RUNNING;
         currentShotIdx = 0;
 
-        // Ê×ÅÚ×ø±ê×Ô¶¯¶ÔÆëÉè¶¨µÄÎïÀíÆðµãÓë¼¤·¢Éî¶È
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½è¶¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ë¼¤ï¿½ï¿½ï¿½ï¿½ï¿½
         edit_src_x = startX;
         edit_src_z = shotDepthZ;
 
         // =====================================================================
-        // ¡¾ºËÐÄÐÂÔö¡¿£ºÈ«×Ô¶¯Ê±²½Êý¼ÆËã¶ÔÆë (CFL ²½ÊýËø)
-        //  ¸ù¾Ý²É¼¯Ê±³¤×Ô¶¯ÍÆËã²¢ÐÞ¸Ä ctx.nt£¬ÈÃ FDM ÑÝ»¯²½ÊýÓë²É¼¯µãÊý 100% ÎïÀí¶Ô³Æ£¡
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È«ï¿½Ô¶ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (CFL ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½)
+        //  ï¿½ï¿½ï¿½Ý²É¼ï¿½Ê±ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ã²¢ï¿½Þ¸ï¿½ ctx.ntï¿½ï¿½ï¿½ï¿½ FDM ï¿½Ý»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É¼ï¿½ï¿½ï¿½ï¿½ï¿½ 100% ï¿½ï¿½ï¿½ï¿½ï¿½Ô³Æ£ï¿½
         // =====================================================================
         int required_steps = static_cast<int>(rec.totalDurationSec / ctx.dt);
         if (required_steps > 0) {
             ctx.nt = required_steps;
-            temp_nt = required_steps; // Í¬²½¸øÇ°Ì¨»¬Ìõ
+            temp_nt = required_steps; // Í¬ï¿½ï¿½ï¿½ï¿½Ç°Ì¨ï¿½ï¿½ï¿½ï¿½
 
-            // ÖØÐÂ»æÖÆÍêÃÀ¶ÔÆëÎïÀí²½ÊýµÄ´ó×Ó²¨Êý×é£¬·ÀÖ¹Êý×éÔ½½çºÍÆµÂÊ»û±ä
+            // ï¿½ï¿½ï¿½Â»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä´ï¿½ï¿½Ó²ï¿½ï¿½ï¿½ï¿½é£¬ï¿½ï¿½Ö¹ï¿½ï¿½ï¿½ï¿½Ô½ï¿½ï¿½ï¿½Æµï¿½Ê»ï¿½ï¿½ï¿½
             generateRickerWavelet(ctx.wavelet, ctx.nt, ctx.dt, edit_f0, edit_t0);
         }
     }
 };
 
-inline AutoAcquisition g_autoAcq; // È«¾ÖÎ¨Ò»µÄ¶àÅÚ×Ô¶¯²É¼¯×´Ì¬»úÊµÀý
+inline AutoAcquisition g_autoAcq; // È«ï¿½ï¿½Î¨Ò»ï¿½Ä¶ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½É¼ï¿½×´Ì¬ï¿½ï¿½Êµï¿½ï¿½
 
 
 #ifdef _WIN32
@@ -226,7 +238,7 @@ inline AutoAcquisition g_autoAcq; // È«¾ÖÎ¨Ò»µÄ¶àÅÚ×Ô¶¯²É¼¯×´Ì¬»úÊµÀý
 #endif
 
 // =============================================================================
-// ¡¾°²È«Ó²¼þ¼à¿Ø¡¿£ºC ¼æÈÝµÄ NVML ½á¹¹ÌåÓëÀàÐÍ¶¨Òå (±ÜÃâÒýÈëµÚÈý·½ .h ²úÉú±àÒë³åÍ»)
+// ï¿½ï¿½ï¿½ï¿½È«Ó²ï¿½ï¿½ï¿½ï¿½Ø¡ï¿½ï¿½ï¿½C ï¿½ï¿½ï¿½Ýµï¿½ NVML ï¿½á¹¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¶ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ .h ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í»)
 // =============================================================================
 typedef int nvmlReturn_t;
 #define NVML_SUCCESS 0
@@ -239,7 +251,7 @@ typedef struct {
 
 typedef void* nvmlDevice_t;
 
-// º¯ÊýÖ¸ÕëÀàÐÍ¶¨Òå
+// ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½ï¿½ï¿½Í¶ï¿½ï¿½ï¿½
 typedef nvmlReturn_t(*pfn_nvmlInit)();
 typedef nvmlReturn_t(*pfn_nvmlShutdown)();
 typedef nvmlReturn_t(*pfn_nvmlDeviceGetHandleByIndex)(unsigned int, nvmlDevice_t*);
@@ -248,7 +260,7 @@ typedef nvmlReturn_t(*pfn_nvmlDeviceGetTemperature)(nvmlDevice_t, int, unsigned 
 typedef nvmlReturn_t(*pfn_nvmlDeviceGetPowerUsage)(nvmlDevice_t, unsigned int*);
 
 // =============================================================================
-// ¡¾°²È«Ó²¼þ¼à¿Ø¡¿£º¶¯Ì¬ÔËÐÐÆÚ NVML Á¬½ÓÆ÷ (Symmetric GPU Loader)
+// ï¿½ï¿½ï¿½ï¿½È«Ó²ï¿½ï¿½ï¿½ï¿½Ø¡ï¿½ï¿½ï¿½ï¿½ï¿½Ì¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ NVML ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (Symmetric GPU Loader)
 // =============================================================================
 struct DynamicNVML {
     bool loaded = false;
@@ -267,13 +279,13 @@ struct DynamicNVML {
 
     nvmlDevice_t devHandle = nullptr;
 
-    // ¶¯Ì¬ÔØÈëÏµÍ³²ã NVIDIA ¹ÜÀíÇý¶¯
+    // ï¿½ï¿½Ì¬ï¿½ï¿½ï¿½ï¿½ÏµÍ³ï¿½ï¿½ NVIDIA ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     void Load() {
         if (loaded) return;
 #ifdef _WIN32
-        handle = LoadLibraryA("nvml.dll"); // Windows Çý¶¯Ä¿Â¼ÏÂ×Ô´ø
+        handle = LoadLibraryA("nvml.dll"); // Windows ï¿½ï¿½ï¿½ï¿½Ä¿Â¼ï¿½ï¿½ï¿½Ô´ï¿½
 #else
-        handle = dlopen("libnvidia-ml.so", RTLD_LAZY); // Linux ÏµÍ³¿â
+        handle = dlopen("libnvidia-ml.so", RTLD_LAZY); // Linux ÏµÍ³ï¿½ï¿½
 #endif
         if (!handle) return;
 
@@ -317,13 +329,14 @@ struct DynamicNVML {
     }
 };
 
-// È«¾ÖÎ¨Ò»µÄ¶¯Ì¬Ó²¼þ¼à¿ØÆ÷ÊµÀý
+// È«ï¿½ï¿½Î¨Ò»ï¿½Ä¶ï¿½Ì¬Ó²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½
 inline DynamicNVML g_nvml;
 
 // =============================================================================
-// 3. ºËÐÄ¼ÆËã×´Ì¬Óë¼«Öµ¹ÀËã»º´æÖØËã
+// 3. ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½×´Ì¬ï¿½ë¼«Öµï¿½ï¿½ï¿½ã»ºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 // =============================================================================
-inline void RecalculateCachedModelMetrics() {
+// Recomputes cached model statistics after the underlying material grid changes.
+inline void recalculateCachedModelMetrics() {
     if (ctx.total_grid <= 0) return;
 
     float max_p = -1e20f, min_p = 1e20f;
@@ -339,7 +352,7 @@ inline void RecalculateCachedModelMetrics() {
             vs = sqrtf(ctx.mu[i] / rho);
         }
 
-        // ±Ü¿ª×î¶¥¶ËµÄµÍËÙ¿ÕÆø²ã£¬ÒÔÏÔÊ¾ÕæÊµµØÏÂÑÒ²ãµÄËÙ¶È·¶Î§
+        // ï¿½Ü¿ï¿½ï¿½î¶¥ï¿½ËµÄµï¿½ï¿½Ù¿ï¿½ï¿½ï¿½ï¿½ã£¬ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½Êµï¿½ï¿½ï¿½ï¿½ï¿½Ò²ï¿½ï¿½ï¿½Ù¶È·ï¿½Î§
         if (vp > 350.0f) {
             if (vp > max_p) max_p = vp;
             if (vp < min_p) min_p = vp;
@@ -350,7 +363,7 @@ inline void RecalculateCachedModelMetrics() {
         }
     }
 
-    // ·À´ô±£»¤
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     if (max_p == -1e20f) {
         max_p = 2000.0f; min_p = 2000.0f;
         max_s = 1400.0f; min_s = 1400.0f;
@@ -364,17 +377,18 @@ inline void RecalculateCachedModelMetrics() {
     cached_max_rho = max_r;
     cached_min_rho = min_r;
 
-    // ¹ÀËã GPU ÔÚ´Ë³ß´çÏÂ·ÖÅäµÄËùÓÐ 2D ÎïÀí³¡ÓëÏµÊýÏÔ´æ
-    // °üº¬Ó¦Á¦¡¢ËÙ¶È¡¢PML ·ÖÁÑ³¡¡¢ÎïÐÔµÈ¹²Ô¼ 20 ¸öµ¥¾«¶È¶þÎ¬¸¡µãÏÔ´æ¿é
+    // ï¿½ï¿½ï¿½ï¿½ GPU ï¿½Ú´Ë³ß´ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 2D ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ïµï¿½ï¿½ï¿½Ô´ï¿½
+    // ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶È¡ï¿½PML ï¿½ï¿½ï¿½Ñ³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÔµÈ¹ï¿½Ô¼ 20 ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¶ï¿½Î¬ï¿½ï¿½ï¿½ï¿½ï¿½Ô´ï¿½ï¿½
     size_t estimated_bytes = ctx.total_grid * sizeof(float) * 20;
     cached_vram_mb = static_cast<float>(estimated_bytes) / (1024.0f * 1024.0f);
 }
 
 
 // =============================================================================
-// 11. ÀëÆÁ·Ç¾ùÔÈµØÖÊÎïÐÔÎÆÀí´ò°üÉÏ´«Æ÷
+// 11. ï¿½ï¿½ï¿½ï¿½ï¿½Ç¾ï¿½ï¿½Èµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½ï¿½ï¿½
 // =============================================================================
-inline void UpdateModelTexture() {
+// Rebuilds the visualization texture from the current model and graphics context.
+inline void updateModelTexture() {
     if (g_modelTex == 0) {
         glGenTextures(1, &g_modelTex);
     }
@@ -390,11 +404,11 @@ inline void UpdateModelTexture() {
             vs = sqrtf(ctx.mu[i] / rho);
         }
 
-        // ¹éÒ»»¯ºó´æÈë¶ÔÓ¦Í¨µÀ
-        temp_data[i * 4 + 0] = vp / 6000.0f;  // R Í¨µÀ: ×Ý²¨ËÙ¶È Vp (Ó³ÉäÖÁ 6000m/s)
-        temp_data[i * 4 + 1] = vs / 3500.0f;  // G Í¨µÀ: ºá²¨ËÙ¶È Vs
-        temp_data[i * 4 + 2] = rho / 3000.0f; // B Í¨µÀ: ÃÜ¶È Rho
-        temp_data[i * 4 + 3] = 1.0f;          // A Í¨µÀ
+        // ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦Í¨ï¿½ï¿½
+        temp_data[i * 4 + 0] = vp / 6000.0f;  // R Í¨ï¿½ï¿½: ï¿½Ý²ï¿½ï¿½Ù¶ï¿½ Vp (Ó³ï¿½ï¿½ï¿½ï¿½ 6000m/s)
+        temp_data[i * 4 + 1] = vs / 3500.0f;  // G Í¨ï¿½ï¿½: ï¿½á²¨ï¿½Ù¶ï¿½ Vs
+        temp_data[i * 4 + 2] = rho / 3000.0f; // B Í¨ï¿½ï¿½: ï¿½Ü¶ï¿½ Rho
+        temp_data[i * 4 + 3] = 1.0f;          // A Í¨ï¿½ï¿½
     }
 
     glBindTexture(GL_TEXTURE_2D, g_modelTex);
@@ -406,20 +420,21 @@ inline void UpdateModelTexture() {
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 // =============================================================================
-// ¡¾ºËÐÄÐÂÔö¡¿£ºÒ»¼üÍ¬²½ CPU µØ²ãÐÞ¸ÄÖÁ GPU ²¢Ë¢ÐÂµØÖÊ±³¾°ÎÆÀíÍ¼²ã
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½Í¬ï¿½ï¿½ CPU ï¿½Ø²ï¿½ï¿½Þ¸ï¿½ï¿½ï¿½ GPU ï¿½ï¿½Ë¢ï¿½Âµï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ï¿½
 // =============================================================================
-inline void UploadMaterialToGPU() {
+// Uploads current material fields to the simulation's device buffers.
+inline void uploadMaterialToGpu() {
     if (ctx.total_grid <= 0) return;
 
     size_t bytes = ctx.total_grid * sizeof(float);
 
-    // 1. ½«ÐÞ¸ÄºóµÄ»ù´¡µ¯ÐÔÀ­Ã·³£ÊýÓëÃÜ¶È¾ØÕóÖØÐÂ¿½ÈëÏÔ´æ
+    // 1. ï¿½ï¿½ï¿½Þ¸Äºï¿½Ä»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü¶È¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¿ï¿½ï¿½ï¿½ï¿½Ô´ï¿½
     CUDA_CHECK(cudaMemcpy(gpu_data.d_rho, ctx.rho.data(), bytes, cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(gpu_data.d_mu, ctx.mu.data(), bytes, cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(gpu_data.d_lambda, ctx.lambda.data(), bytes, cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(gpu_data.d_lambda2mu, ctx.lambda2mu.data(), bytes, cudaMemcpyHostToDevice));
 
-    // 2. Èç¹ûµ±Ç°ÔËÐÐÔÚ Type 2 PML (·Ç·ÖÁÑ»ìºÏ) ÏÂ£¬±ØÐëÖØÐÂÖØ×é²¢¿½ÈëÆ½Õ¹µÄ°ë²½³¤¸÷ÏòÒìÐÔ½éÖÊ³¡ [3]
+    // 2. ï¿½ï¿½ï¿½ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Type 2 PML (ï¿½Ç·ï¿½ï¿½Ñ»ï¿½ï¿½) ï¿½Â£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½é²¢ï¿½ï¿½ï¿½ï¿½Æ½Õ¹ï¿½Ä°ë²½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô½ï¿½ï¿½Ê³ï¿½ [3]
     if (gpu_data.flag_type == 2) {
         std::vector<float> mu_x(ctx.total_grid, 0.0f), lambda_x(ctx.total_grid, 0.0f), l2m_x(ctx.total_grid, 0.0f);
         std::vector<float> mu_z(ctx.total_grid, 0.0f), rho_xz(ctx.total_grid, 0.0f), rho_orig(ctx.total_grid, 0.0f);
@@ -435,7 +450,6 @@ inline void UploadMaterialToGPU() {
                 mu_z[k] = 0.5f * (ctx.mu[k] + ctx.mu[k_next_z]);
                 int k_dr = (i < ctx.NZ - 1 && j < ctx.NX - 1) ? k + ctx.NX + 1 : k;
                 rho_xz[k] = 0.25f * (ctx.rho[k] + ctx.rho[k_next_x] + ctx.rho[k_next_z] + ctx.rho[k_dr]);
-                if (rho_xz[k] < 1.0f) rho_xz[k] = 1000.0f;
             }
         }
         CUDA_CHECK(cudaMemcpy(gpu_data.d_mu_x_flat, mu_x.data(), bytes, cudaMemcpyHostToDevice));
@@ -446,7 +460,7 @@ inline void UploadMaterialToGPU() {
         CUDA_CHECK(cudaMemcpy(gpu_data.d_rho_orig_flat, rho_orig.data(), bytes, cudaMemcpyHostToDevice));
     }
 
-    // 3. Èç¹ûµ±Ç°ÔÚ Type 3 PML (×ÔÓÉ±íÃæ) ÏÂ£¬ÖØÐÂ¼ÆËã×ÔÓÉ±íÃæ dp_flat ×è¿¹
+    // 3. ï¿½ï¿½ï¿½ï¿½ï¿½Ç°ï¿½ï¿½ Type 3 PML (ï¿½ï¿½ï¿½É±ï¿½ï¿½ï¿½) ï¿½Â£ï¿½ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É±ï¿½ï¿½ï¿½ dp_flat ï¿½è¿¹
     if (gpu_data.flag_type == 3) {
         ctx.dp_flat.assign(ctx.NX, 0.0f);
         int fs_idx = ctx.npml;
@@ -461,18 +475,18 @@ inline void UploadMaterialToGPU() {
         CUDA_CHECK(cudaMemcpy(gpu_data.d_dp_flat, ctx.dp_flat.data(), ctx.NX * sizeof(float), cudaMemcpyHostToDevice));
     }
 
-    // 4. ÖØËã CPU ²àÎïÀí¼«ÖµÓëÏÔ´æ¹ÀËã»º´æ [3]
-    RecalculateCachedModelMetrics();
+    // 4. ï¿½ï¿½ï¿½ï¿½ CPU ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½Ô´ï¿½ï¿½ï¿½ã»ºï¿½ï¿½ [3]
+    recalculateCachedModelMetrics();
 
-    // 5. ÖØÐÂÉÏ´«²¢Ë¢ÐÂÀëÆÁ±³¾°µØ²ãÎÆÀíÍ¼²ã£¬Ê¹ OpenGL ÊÓ¿ÚÁ¢¼´ÏÔÊ¾³ö»­±Ê»®¹ýµÄ²ãÎ»ÑÕÉ«£¡
-    UpdateModelTexture();
+    // 5. ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½ï¿½ï¿½Ë¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø²ï¿½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ã£¬Ê¹ OpenGL ï¿½Ó¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½ï¿½Ê»ï¿½ï¿½ï¿½ï¿½Ä²ï¿½Î»ï¿½ï¿½É«ï¿½ï¿½
+    updateModelTexture();
 }
 
 // =============================================================================
-// ¡¾ÖØ¹¹°æ¡¿£º¸ß±£ÕæÎïÀí±ê³ßäÖÈ¾Æ÷ (»ùÓÚÆÁÄ»Ä¿±êÏñËØ¼ä¾à·´Ïò×ÔÊÊÓ¦½âËã)
-//  Ö§³ÖÔÚÈÎÒâ³¬´óÍø¸ñ³ß¶ÈÏÂÍêÃÀ¡¢¾ùÔÈ¡¢ÓÀ²»ÖØµþµØ³ÊÏÖÕû°Ù/ÕûÇ§±ê¶¨Êý×Ö
+// ï¿½ï¿½ï¿½Ø¹ï¿½ï¿½æ¡¿ï¿½ï¿½ï¿½ß±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¾ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä»Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½Ø¼ï¿½à·´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½)
+//  Ö§ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½â³¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Øµï¿½ï¿½Ø³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½/ï¿½ï¿½Ç§ï¿½ê¶¨ï¿½ï¿½ï¿½ï¿½
 // =============================================================================
-inline void RenderGridRulerOnBackbuffer(
+inline void renderGridRulerOnBackbuffer(
     const SimulationContext& ctx,
     const SimState& state,
     int                      winW,
@@ -482,8 +496,8 @@ inline void RenderGridRulerOnBackbuffer(
     float                    viewZoom
 ) {
     ImDrawList* draw_list = ImGui::GetBackgroundDrawList();
-    ImU32       textCol = IM_COL32(220, 220, 220, 225); // Ó«¹â°×
-    ImU32       tickCol = IM_COL32(0, 255, 200, 100);   // ÇàÉ«¿Ì¶ÈÏß
+    ImU32       textCol = IM_COL32(220, 220, 220, 225); // Ó«ï¿½ï¿½ï¿½
+    ImU32       tickCol = IM_COL32(0, 255, 200, 100);   // ï¿½ï¿½É«ï¿½Ì¶ï¿½ï¿½ï¿½
 
     float  winAspect = (float)winW / (float)winH;
     float  simAspect = (float)ctx.NX / (float)ctx.NZ;
@@ -497,19 +511,19 @@ inline void RenderGridRulerOnBackbuffer(
     }
 
     // =========================================================================
-    // ¡¾ºËÐÄÐÂÔö¡¿£º»ùÓÚ 100 ÏñËØÄ¿±ê¼ä¾àµÄ X / Y ÖáÎïÀí²½³¤×ÔÊÊÓ¦½âËãÆ÷
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 100 ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½ X / Y ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     // =========================================================================
     auto calcNiceInterval = [&](float target_pixel_dist, float total_cells, float aspect_corr, float win_dim) -> float {
-        // 1. ·´Ïò»»Ëã 100 ÏñËØÔÚµ±Ç°Ëõ·ÅÂÊÏÂ¶ÔÓ¦µÄÀíÂÛÎïÀí¾àÀë (Ã×)
+        // 1. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 100 ï¿½ï¿½ï¿½ï¿½ï¿½Úµï¿½Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¶ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½)
         float target_phys = (target_pixel_dist * total_cells * aspect_corr * ctx.h) / (win_dim * viewZoom);
         if (target_phys <= 0.0f) return 10.0f;
 
-        // 2. ÀûÓÃ Log10 ½«ÆäÉáÈëµ½ 10 µÄ N ´ÎÃÝ»ù×¼
+        // 2. ï¿½ï¿½ï¿½ï¿½ Log10 ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ëµ½ 10 ï¿½ï¿½ N ï¿½ï¿½ï¿½Ý»ï¿½×¼
         float log_val = log10f(target_phys);
         float base_power = powf(10.0f, floorf(log_val));
         float ratio = target_phys / base_power;
 
-        // 3. °´ÕÕ±ê×¼µØÑ§»æÍ¼Íø¸ñ±ÈÀý (1, 2, 5 »®·Ö·¨) Æ¥Åä×îÃÀ¹ÛµÄ²½³¤
+        // 3. ï¿½ï¿½ï¿½Õ±ï¿½×¼ï¿½ï¿½Ñ§ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (1, 2, 5 ï¿½ï¿½ï¿½Ö·ï¿½) Æ¥ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÛµÄ²ï¿½ï¿½ï¿½
         float nice_interval = base_power;
         if (ratio > 5.0f)      nice_interval = base_power * 5.0f;
         else if (ratio > 2.0f) nice_interval = base_power * 2.0f;
@@ -517,16 +531,16 @@ inline void RenderGridRulerOnBackbuffer(
         return (nice_interval < 1.0f) ? 1.0f : nice_interval;
         };
 
-    // ·Ö±ð½âËã·ûºÏ X ÖáºÍ Y ÖáÏñËØ·Ö±æÂÊµÄÍêÃÀÎïÀí¼ä¾à (µ¥Î»£ºÃ×)
+    // ï¿½Ö±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ X ï¿½ï¿½ï¿½ Y ï¿½ï¿½ï¿½ï¿½ï¿½Ø·Ö±ï¿½ï¿½Êµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½Î»ï¿½ï¿½ï¿½ï¿½)
     float nice_interval_x = calcNiceInterval(100.0f, ctx.NX, aspectCorr.x, (float)winW);
     float nice_interval_y = calcNiceInterval(100.0f, ctx.NZ, aspectCorr.y, (float)winH);
 
     // =========================================================================
-    // A. »æÖÆ¶¥²¿ X Öá×ÔÊÊÓ¦ÎïÀí¿Ì¶È (ÒÔÎïÀí¡°Ã×¡±ÎªÑ­»·µ¥Î»£¬±£Ö¤¿Ì¶ÈÖµÓÀÔ¶ÊÇÕû°Ù/ÕûÊ®)
+    // A. ï¿½ï¿½ï¿½Æ¶ï¿½ï¿½ï¿½ X ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½ï¿½Ì¶ï¿½ (ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×¡ï¿½ÎªÑ­ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½ï¿½ï¿½Ö¤ï¿½Ì¶ï¿½Öµï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½/ï¿½ï¿½Ê®)
     // =========================================================================
     float total_width_m = ctx.NX * ctx.h;
     for (float physX = 0.0f; physX <= total_width_m; physX += nice_interval_x) {
-        // ½«ÎïÀíÎ»ÖÃ·´ÏòÕÛËãÎªÍø¸ñ¸ñÊý£¬½øÐÐ NDC ±ä»»ÓëÏñËØÍ¶Ó°
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î»ï¿½Ã·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ NDC ï¿½ä»»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¶Ó°
         float simX = physX / ctx.h;
         float aPos_x = (simX / (float)ctx.NX) * 2.0f - 1.0f;
         float Pndc_x = (aPos_x - viewOffset.x) * viewZoom / aspectCorr.x;
@@ -549,7 +563,7 @@ inline void RenderGridRulerOnBackbuffer(
     }
 
     // =========================================================================
-    // B. »æÖÆ×ó²à Y Öá×ÔÊÊÓ¦Éî¶È¿Ì¶È (ÒÔÎïÀí¡°Ã×¡±ÎªÑ­»·µ¥Î»)
+    // B. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Y ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½È¿Ì¶ï¿½ (ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×¡ï¿½ÎªÑ­ï¿½ï¿½ï¿½ï¿½Î»)
     // =============================================================================
     float total_depth_m = ctx.NZ * ctx.h;
     for (float physY = 0.0f; physY <= total_depth_m; physY += nice_interval_y) {
@@ -575,9 +589,9 @@ inline void RenderGridRulerOnBackbuffer(
 }
 
 // =============================================================================
-// 5. Êó±ê»­±Ê¹â±êäÖÈ¾ (ÐÇ¿Õ/¿Æ¼¼Ö÷Ìâ×ÔÊÊÓ¦)
+// 5. ï¿½ï¿½ê»­ï¿½Ê¹ï¿½ï¿½ï¿½ï¿½È¾ (ï¿½Ç¿ï¿½/ï¿½Æ¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦)
 // =============================================================================
-inline void RenderBrushCursor(const SimState& state, const ViewportInfo& vp) {
+inline void renderBrushCursor(const SimState& state, const ViewportInfo& vp) {
     ImVec2 mousePos = ImGui::GetMousePos();
     bool   isInside = (mousePos.x >= vp.x && mousePos.x < (vp.x + vp.w) &&
         mousePos.y >= vp.y && mousePos.y < (vp.y + vp.h));
@@ -593,16 +607,16 @@ inline void RenderBrushCursor(const SimState& state, const ViewportInfo& vp) {
             const float outerRingRadius = 35.0f;
 
             // -----------------------------------------------------------------
-            // ¡¾×ÔÊÊÓ¦É«²ÊÏµÍ³¡¿£º½â¹¹È«¾Ö uiAccent Ö÷ÌâÉ«½øÐÐ¸ßÄâÕæÖØÓ³Éä
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦É«ï¿½ï¿½ÏµÍ³ï¿½ï¿½ï¿½ï¿½ï¿½â¹¹È«ï¿½ï¿½ uiAccent ï¿½ï¿½ï¿½ï¿½É«ï¿½ï¿½ï¿½Ð¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó³ï¿½ï¿½
             // -----------------------------------------------------------------
             float r = uiAccent.x;
             float g = uiAccent.y;
             float b = uiAccent.z;
 
-            // Ö÷É«µ÷£ºÓëÇ°Ì¨Ö÷Ìâ UI 100% ÎïÀí¶ÔÆë
+            // ï¿½ï¿½É«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç°Ì¨ï¿½ï¿½ï¿½ï¿½ UI 100% ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             ImU32 col_main = IM_COL32(r * 255, g * 255, b * 255, 255);
 
-            // ¶¯Ì¬É¨ÃèÖ¸ÕëÉ«£ºÔÚÖ÷ÌâÉ«»ù´¡ÉÏ½øÐÐ¸ßÁÁÍÆ¸ß£¬ÐÎ³ÉÒ«ÑÛµÄ·¢¹âµã
+            // ï¿½ï¿½Ì¬É¨ï¿½ï¿½Ö¸ï¿½ï¿½É«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É«ï¿½ï¿½ï¿½ï¿½ï¿½Ï½ï¿½ï¿½Ð¸ï¿½ï¿½ï¿½ï¿½Æ¸ß£ï¿½ï¿½Î³ï¿½Ò«ï¿½ÛµÄ·ï¿½ï¿½ï¿½ï¿½
             ImU32 col_dynamic = IM_COL32(
                 (int)std::min(255.0f, r * 1.15f * 255.0f),
                 (int)std::min(255.0f, g * 1.15f * 255.0f),
@@ -610,36 +624,36 @@ inline void RenderBrushCursor(const SimState& state, const ViewportInfo& vp) {
                 255
             );
 
-            // Í¶Ó°ÒõÓ°£ºÐÞ¸ÄÎª¸üÐ­µ÷µÄÉîºÚ/°µÂÌ°µ½Ç£¬Ê¹ÂÌ¹â±ßÔµ¶Ô±È¸üÈáºÍ
+            // Í¶Ó°ï¿½ï¿½Ó°ï¿½ï¿½ï¿½Þ¸ï¿½Îªï¿½ï¿½Ð­ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½/ï¿½ï¿½ï¿½Ì°ï¿½ï¿½Ç£ï¿½Ê¹ï¿½Ì¹ï¿½ï¿½Ôµï¿½Ô±È¸ï¿½ï¿½ï¿½ï¿½
             ImU32 col_shadow = IM_COL32(10, 18, 12, 160);
 
             // -----------------------------------------------------------------
-            // Í¼²ã»æÖÆÂß¼­ (±£³ÖÔ­ÓÐ¸ßÐÔÄÜ¼¸ºÎ½á¹¹)
+            // Í¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß¼ï¿½ (ï¿½ï¿½ï¿½ï¿½Ô­ï¿½Ð¸ï¿½ï¿½ï¿½ï¿½Ü¼ï¿½ï¿½Î½á¹¹)
             // -----------------------------------------------------------------
-            // 1. µ×²ã¸ß¶Ô±ÈÍ¶Ó°Ê®×ÖÏß
+            // 1. ï¿½×²ï¿½ß¶Ô±ï¿½Í¶Ó°Ê®ï¿½ï¿½ï¿½ï¿½
             fg->AddLine(ImVec2(mousePos.x - crosshairSize, mousePos.y), ImVec2(mousePos.x + crosshairSize, mousePos.y), col_shadow, 4.0f);
             fg->AddLine(ImVec2(mousePos.x, mousePos.y - crosshairSize), ImVec2(mousePos.x, mousePos.y + crosshairSize), col_shadow, 4.0f);
 
-            // 2. ¶¥²ãÖ÷ÌâÉ«Ê®×Ö×¼ÐÇ
+            // 2. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É«Ê®ï¿½ï¿½×¼ï¿½ï¿½
             fg->AddLine(ImVec2(mousePos.x - crosshairSize, mousePos.y), ImVec2(mousePos.x + crosshairSize, mousePos.y), col_main, 2.0f);
             fg->AddLine(ImVec2(mousePos.x, mousePos.y - crosshairSize), ImVec2(mousePos.x, mousePos.y + crosshairSize), col_main, 2.0f);
 
-            // 3. ¿Æ¼¼×¼ÐÇÍâ°üÔ²»·
+            // 3. ï¿½Æ¼ï¿½×¼ï¿½ï¿½ï¿½ï¿½ï¿½Ô²ï¿½ï¿½
             fg->AddCircle(mousePos, outerRingRadius, col_main, 32, 1.5f);
 
-            // 4. À×´ïÐý×ªÉ¨ÃèÉ¨ÃèÕë
+            // 4. ï¿½×´ï¿½ï¿½ï¿½×ªÉ¨ï¿½ï¿½É¨ï¿½ï¿½ï¿½ï¿½
             float  angle = t * 4.0f;
             ImVec2 scanEnd = ImVec2(mousePos.x + cos(angle) * outerRingRadius,
                 mousePos.y + sin(angle) * outerRingRadius);
             fg->AddLine(mousePos, scanEnd, col_dynamic, 2.0f);
             fg->AddCircleFilled(scanEnd, 3.5f, col_dynamic);
 
-            // 5. ×èÄáÕýÏÒÊÕËõÂö³å²¨
+            // 5. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½å²¨
             float pulse_t = fmodf(t, 1.5f) / 1.5f;
             float pulse_radius = pulse_t * outerRingRadius;
             int   pulse_alpha = (int)(sin(pulse_t * 3.14159f) * 120);
 
-            // Âö³å²¨ÑÕÉ«Í¬²½Ê¹ÓÃ´øÍ¸Ã÷¶ÈµÄÖ÷ÌâÉ«
+            // ï¿½ï¿½ï¿½å²¨ï¿½ï¿½É«Í¬ï¿½ï¿½Ê¹ï¿½Ã´ï¿½Í¸ï¿½ï¿½ï¿½Èµï¿½ï¿½ï¿½ï¿½ï¿½É«
             ImU32 col_pulse = IM_COL32(r * 255, g * 255, b * 255, pulse_alpha);
             fg->AddCircle(mousePos, pulse_radius, col_pulse, 32, 3.0f);
         }
@@ -662,9 +676,9 @@ inline void RenderBrushCursor(const SimState& state, const ViewportInfo& vp) {
 }
 
 // =============================================================================
-// 6. ÎïÀíÕðÔ´×¼ÐÇäÖÈ¾ (¸ß¾«¶ÈËæ±³¾°Æ½ÒÆËõ·Å¡¢ÎÞÆ¯ÒÆ)
+// 6. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô´×¼ï¿½ï¿½ï¿½ï¿½È¾ (ï¿½ß¾ï¿½ï¿½ï¿½ï¿½æ±³ï¿½ï¿½Æ½ï¿½ï¿½ï¿½ï¿½ï¿½Å¡ï¿½ï¿½ï¿½Æ¯ï¿½ï¿½)
 // =============================================================================
-inline void RenderSourceMarker(
+inline void renderSourceMarker(
     const SimulationContext& ctx,
     int                      src_x,
     int                      src_z,
@@ -724,18 +738,18 @@ inline void RenderSourceMarker(
     }
 }
 // =============================================================================
-// ¡¾ÐÂÔö¡¿£ºÈ«¾ÖÐü¸¡Ä£Ì¬µ¯´°äÖÈ¾Æ÷ (´¦Àí¼ÓÔØ³É¹¦/Ê§°ÜµÄ UI µ¯´°·´À¡)
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä£Ì¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¾ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø³É¹ï¿½/Ê§ï¿½Üµï¿½ UI ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½)
 // =============================================================================
-inline void RenderSeisPopups() {
+inline void renderSeisPopups() {
     // -------------------------------------------------------------------------
-    // A. ³É¹¦Ä£Ì¬µ¯´° (ÂÌ¿ò°××Ö)
+    // A. ï¿½É¹ï¿½Ä£Ì¬ï¿½ï¿½ï¿½ï¿½ (ï¿½Ì¿ï¿½ï¿½ï¿½ï¿½)
     // -------------------------------------------------------------------------
     if (show_success_popup) {
         ImGui::OpenPopup("Simulation Success");
-        show_success_popup = false; // Ïû·Ñµ¥´Î¼¤·¢ÐÅºÅ£¬±ÜÃâÖØ¸´ Open
+        show_success_popup = false; // ï¿½ï¿½ï¿½Ñµï¿½ï¿½Î¼ï¿½ï¿½ï¿½ï¿½ÅºÅ£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø¸ï¿½ Open
     }
 
-    // Îª³É¹¦µ¯´°°ó¶¨ÂÌÉ«Ó«¹â±ß¿ò
+    // Îªï¿½É¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É«Ó«ï¿½ï¿½ß¿ï¿½
     ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.2f, 0.8f, 0.2f, 1.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.5f);
 
@@ -744,7 +758,7 @@ inline void RenderSeisPopups() {
         ImGui::Separator();
         ImGui::Spacing();
 
-        // äÖÈ¾ÎÒÃÇÔÚºóÌ¨Ð´ÈëµÄ×Ö·û´®ÏûÏ¢
+        // ï¿½ï¿½È¾ï¿½ï¿½ï¿½ï¿½ï¿½Úºï¿½Ì¨Ð´ï¿½ï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢
         ImGui::Text("%s", popup_message.c_str());
 
         ImGui::Spacing();
@@ -759,14 +773,14 @@ inline void RenderSeisPopups() {
     ImGui::PopStyleColor();
 
     // -------------------------------------------------------------------------
-    // B. Ê§°ÜÄ£Ì¬µ¯´° (ºì¿ò°××Ö)
+    // B. Ê§ï¿½ï¿½Ä£Ì¬ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½)
     // -------------------------------------------------------------------------
     if (show_error_popup) {
         ImGui::OpenPopup("Simulation Error");
-        show_error_popup = false; // Ïû·Ñµ¥´Î¼¤·¢ÐÅºÅ
+        show_error_popup = false; // ï¿½ï¿½ï¿½Ñµï¿½ï¿½Î¼ï¿½ï¿½ï¿½ï¿½Åºï¿½
     }
 
-    // ÎªÊ§°Üµ¯´°°ó¶¨¸ß¾¯Ê¾¶Èºì¿ò
+    // ÎªÊ§ï¿½Üµï¿½ï¿½ï¿½ï¿½ó¶¨¸ß¾ï¿½Ê¾ï¿½Èºï¿½ï¿½
     ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.9f, 0.2f, 0.2f, 1.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.5f);
 
@@ -775,7 +789,7 @@ inline void RenderSeisPopups() {
         ImGui::Separator();
         ImGui::Spacing();
 
-        // äÖÈ¾ºóÌ¨Ð´ÈëµÄ´íÎóÕï¶ÏÐÅÏ¢
+        // ï¿½ï¿½È¾ï¿½ï¿½Ì¨Ð´ï¿½ï¿½Ä´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢
         ImGui::Text("%s", popup_message.c_str());
 
         ImGui::Spacing();
@@ -790,8 +804,11 @@ inline void RenderSeisPopups() {
     ImGui::PopStyleColor();
 }
 
-// ¼òµ¥µÄÀ×¿Ë×Ó²¨²úÉúÆ÷
+// ï¿½òµ¥µï¿½ï¿½×¿ï¿½ï¿½Ó²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 void generateRickerWavelet(std::vector<float>& wavelet, int nt, float dt, float f0, float t0) {
+    if (nt <= 0 || !std::isfinite(dt) || dt <= 0.0f || !std::isfinite(f0) || f0 <= 0.0f || !std::isfinite(t0)) {
+        throw std::invalid_argument("Invalid Ricker wavelet sampling or frequency");
+    }
     wavelet.resize(nt);
     for (int i = 0; i < nt; ++i) {
         float t = i * dt - t0;
@@ -801,18 +818,19 @@ void generateRickerWavelet(std::vector<float>& wavelet, int nt, float dt, float 
 }
 
 
-/// //////////////////////////////////////////µÚ¶þ²¿·Ö
+/// //////////////////////////////////////////ï¿½Ú¶ï¿½ï¿½ï¿½ï¿½ï¿½
 // =============================================================================
-// ¡¾ÐÂÔö¡¿£º¸ù¾Ýµ±Ç°µØ²ãÎïÀí¼«ÏÞ£¬Ò»¼ü×Ô¶¯¶ÔÆë²¢Ëø¶¨µ½×î´ó°²È«Ê±¼ä²½³¤ (CFL = 0.480)
-//  Ã¿µ±ÇÐ»»Ô¤Éè¡¢µ¼Èë SEG-Y/TXT ×Ô¶¨ÒåÄ£ÐÍÊ±£¬Ò»¼üµ÷ÓÃ´Ëº¯Êý¼´¿ÉÍê³ÉÎïÀí¶ÔÆë
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ýµï¿½Ç°ï¿½Ø²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Þ£ï¿½Ò»ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ë²¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È«Ê±ï¿½ä²½ï¿½ï¿½ (CFL = 0.480)
+//  Ã¿ï¿½ï¿½ï¿½Ð»ï¿½Ô¤ï¿½è¡¢ï¿½ï¿½ï¿½ï¿½ SEG-Y/TXT ï¿½Ô¶ï¿½ï¿½ï¿½Ä£ï¿½ï¿½Ê±ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½Ã´Ëºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 // =============================================================================
 // =============================================================================
-// ¡¾ÐÞÕýºó¡¿£ºÒ»¼ü×Ô¶¯¶ÔÆë²¢Ëø¶¨µ½×î´ó°²È«Ê±¼ä²½³¤ (CFL = 0.480)
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ó¡¿£ï¿½Ò»ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ë²¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È«Ê±ï¿½ä²½ï¿½ï¿½ (CFL = 0.480)
 // =============================================================================
-inline void AutoAlignTimeStep() {
+/** Clamps the time step to the stability limit derived from the current grid and maximum velocity. */
+inline void autoAlignTimeStep() {
     if (ctx.total_grid <= 0) return;
 
-    // 1. ×Ô¶¯ÌáÈ¡µØ²ã×î´ó×Ý²¨ËÙ¶È
+    // 1. ï¿½Ô¶ï¿½ï¿½ï¿½È¡ï¿½Ø²ï¿½ï¿½ï¿½ï¿½ï¿½Ý²ï¿½ï¿½Ù¶ï¿½
     float max_vp = 0.0f;
     for (int k = 0; k < ctx.total_grid; ++k) {
         float vp = sqrtf(ctx.lambda2mu[k] / ctx.rho[k]);
@@ -820,21 +838,24 @@ inline void AutoAlignTimeStep() {
     }
     if (max_vp <= 350.0f) max_vp = 2000.0f;
 
-    // 2. ×Ô¶¯Ëø¶¨ÔÚ¼«ÏÞ°²È«²½³¤
-    ctx.dt = 0.480f * ctx.h / max_vp;
+    // 2. ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú¼ï¿½ï¿½Þ°ï¿½È«ï¿½ï¿½ï¿½ï¿½
+    ctx.dt = kSafeCourant2d * ctx.h / max_vp;
+    gpu_data.dt = ctx.dt;
     gpu_data.inv_dt = 1.0f / ctx.dt;
     temp_dt = ctx.dt;
 
     // =========================================================================
-    // ¡¾ºËÐÄÐÞ¸´¡¿£º±ØÐëÊ¹ÓÃ×îÐÂ¡¢¶ÔÆëºóµÄÊ±¼ä²½³¤ ctx.dt ÖØÐÂÉú³É Ricker ×Ó²¨£¡
-    //  ·ñÔòÓÃ¾É dt Éú³ÉµÄ×Ó²¨ÔÚÐÂÊ±²½ÏÂ²¥·Å»á·¢ÉúÑÏÖØµÄÆµÂÊ»û±ä (Ëõ·ÅÀ­Éì)
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Þ¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½ï¿½ï¿½ï¿½Â¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ä²½ï¿½ï¿½ ctx.dt ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Ricker ï¿½Ó²ï¿½ï¿½ï¿½
+    //  ï¿½ï¿½ï¿½ï¿½ï¿½Ã¾ï¿½ dt ï¿½ï¿½ï¿½Éµï¿½ï¿½Ó²ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½Â²ï¿½ï¿½Å»á·¢ï¿½ï¿½ï¿½ï¿½ï¿½Øµï¿½Æµï¿½Ê»ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½)
     // =========================================================================
     generateRickerWavelet(ctx.wavelet, ctx.nt, ctx.dt, edit_f0, edit_t0);
 }
 // =============================================================================
-// 7. PML ÎüÊÕ²ã×èÄáË¥¼õÏµÊý¸üÐÂ (×¨×¢ÓÚ²î·ÖÏµÊý½¨Á¢£¬²»Ô½È¨ÐÞ¸ÄÏµÍ³È«¾Ö dt)
+// 7. PML ï¿½ï¿½ï¿½Õ²ï¿½ï¿½ï¿½ï¿½ï¿½Ë¥ï¿½ï¿½Ïµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (×¨×¢ï¿½Ú²ï¿½ï¿½Ïµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô½È¨ï¿½Þ¸ï¿½ÏµÍ³È«ï¿½ï¿½ dt)
 // =============================================================================
-inline void UpdatePmlDampingArrays() {
+/** Rebuilds staggered-grid PML damping profiles from the current model and boundary settings. */
+inline void updatePmlDampingArrays() {
+    validateBoundaryGeometry(ctx.NX, ctx.NZ, ctx.npml, ctx.flag_type == 3 && ctx.upFlag);
     float max_vp = 0.0f;
     for (int k = 0; k < ctx.total_grid; ++k) {
         float vp = sqrtf(ctx.lambda2mu[k] / ctx.rho[k]);
@@ -883,17 +904,17 @@ inline void UpdatePmlDampingArrays() {
 }
 
 // =============================================================================
-// 8. ÎïÀíÍø¸ñÓë²âÊÔÉÏÏÂÎÄ²ÎÊý·ÖÅä
+// 8. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 // =============================================================================
 void setupTestContext(SimulationContext& ctx, const Parameters& par) {
     ctx.NX = par.model.xnum;
     ctx.NZ = par.model.znum;
-    ctx.total_grid = ctx.NX * ctx.NZ;
+    ctx.total_grid = static_cast<int>(checkedGridElementCount(ctx.NX, ctx.NZ));
     ctx.dt = par.FDM.dt;
     ctx.nt = static_cast<int>(par.FDM.nt);
     ctx.npml = static_cast<int>(par.FDM.npml);
 
-    // ½öÔÚÊ×´ÎÆô¶¯Î´³õÊ¼»¯Ê±ÉèÎªÄ¬ÈÏÖµ 3£»ÆäÓàÇé¿ö¼Ì³ÐÓÃ»§ÔÚ UI ÉÏµÄÑ¡Ôñ
+    // ï¿½ï¿½ï¿½ï¿½ï¿½×´ï¿½ï¿½ï¿½ï¿½ï¿½Î´ï¿½ï¿½Ê¼ï¿½ï¿½Ê±ï¿½ï¿½ÎªÄ¬ï¿½ï¿½Öµ 3ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì³ï¿½ï¿½Ã»ï¿½ï¿½ï¿½ UI ï¿½Ïµï¿½Ñ¡ï¿½ï¿½
     if (ctx.flag_type == 0) {
         ctx.flag_type = 3;
     }
@@ -901,7 +922,7 @@ void setupTestContext(SimulationContext& ctx, const Parameters& par) {
     ctx.upFlag = (par.FDM.upFlag > 0.5f);
 
     float h = par.model.dx;
-    if (h <= 0.0f) h = 1.0f; // ·À´ô±£»¤
+    if (h <= 0.0f) h = 1.0f; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     ctx.h = h;
 
     temp_dx = h;
@@ -909,27 +930,27 @@ void setupTestContext(SimulationContext& ctx, const Parameters& par) {
     temp_nt = ctx.nt;
     temp_pml = ctx.npml;
 
-    // ½«ÎÞµ¥Î»µÄ 8 ½×ÓÐÏÞ²î·ÖÏµÊý³ýÒÔ¿Õ¼ä²½³¤ h 
-    ctx.c1_h = 1.125022f / h;
-    ctx.c2_h = -0.04687594f / h;
-    ctx.c3_h = 0.00416669f / h;
-    ctx.c4_h = -0.00019234f / h;
+    // ï¿½ï¿½ï¿½Þµï¿½Î»ï¿½ï¿½ 8 ï¿½ï¿½ï¿½ï¿½ï¿½Þ²ï¿½ï¿½Ïµï¿½ï¿½ï¿½ï¿½ï¿½Ô¿Õ¼ä²½ï¿½ï¿½ h 
+    ctx.c1_h = static_cast<float>(kStaggeredDerivativeWeights[0]) / h;
+    ctx.c2_h = static_cast<float>(kStaggeredDerivativeWeights[1]) / h;
+    ctx.c3_h = static_cast<float>(kStaggeredDerivativeWeights[2]) / h;
+    ctx.c4_h = static_cast<float>(kStaggeredDerivativeWeights[3]) / h;
 
-    // Ö±½Ó¶ÁÈ¡¶¨ÒåÔÚÍ·ÎÄ¼þ×î¶¥²¿µÄ¡¢Óë UI Ç¿°ó¶¨µÄÈ«¾Ö¹²ÏíÎïÐÔ±äÁ¿
+    // Ö±ï¿½Ó¶ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í·ï¿½Ä¼ï¿½ï¿½î¶¥ï¿½ï¿½ï¿½Ä¡ï¿½ï¿½ï¿½ UI Ç¿ï¿½ó¶¨µï¿½È«ï¿½Ö¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô±ï¿½ï¿½ï¿½
     float mu_val = edit_Density * edit_Vs * edit_Vs;
     float lambda2mu_val = edit_Density * edit_Vp * edit_Vp;
     float lambda_val = lambda2mu_val - 2.0f * mu_val;
 
-    // ÖØÐÂÌî³ä±¾µØ Context
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ä±¾ï¿½ï¿½ Context
     ctx.rho.assign(ctx.total_grid, edit_Density);
     ctx.mu.assign(ctx.total_grid, mu_val);
     ctx.lambda.assign(ctx.total_grid, lambda_val);
     ctx.lambda2mu.assign(ctx.total_grid, lambda2mu_val);
 
-    // ÖØÐÂ¼ÆËã PML ×èÄáÎüÊÕÏß
-    UpdatePmlDampingArrays();
+    // ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ PML ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    updatePmlDampingArrays();
 
-    // ×ÔÓÉ±íÃæ dp_flat ¼ÆËã
+    // ï¿½ï¿½ï¿½É±ï¿½ï¿½ï¿½ dp_flat ï¿½ï¿½ï¿½ï¿½
     {
         ctx.dp_flat.assign(ctx.NX, 0.0f);
         int fs_idx = ctx.npml;
@@ -943,34 +964,35 @@ void setupTestContext(SimulationContext& ctx, const Parameters& par) {
         }
     }
 
-    // ÕðÔ´³õÊ¼µãÉè¶¨
-    ctx.src_z_idx = ctx.NZ / 4;                                      // Z ÖáÉî¶ÈÉè¶¨ÔÚ 1/4 ´¦
-    ctx.src_idx = ctx.src_z_idx * ctx.NX + (ctx.NX / 2);             // X Öá¶¨Î»ÔÚÖÐÐÄ 1/2 ´¦
+    // ï¿½ï¿½Ô´ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½è¶¨
+    ctx.src_z_idx = ctx.NZ / 4;                                      // Z ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½è¶¨ï¿½ï¿½ 1/4 ï¿½ï¿½
+    ctx.src_idx = ctx.src_z_idx * ctx.NX + (ctx.NX / 2);             // X ï¿½á¶¨Î»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 1/2 ï¿½ï¿½
     ctx.src_angle = par.FDM.angle;
-    ctx.src_type = edit_source_type; // °ó¶¨ÀàÐÍ
-    ctx.src_amp = edit_amp;         // °ó¶¨·ùÖµ
+    ctx.src_type = edit_source_type; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    ctx.src_amp = edit_amp;         // ï¿½ó¶¨·ï¿½Öµ
     generateRickerWavelet(ctx.wavelet, ctx.nt, ctx.dt, par.FDM.f0, par.FDM.t0);
 
-    // ¼ì²¨Æ÷ (ÖÐ¼äË®Æ½·ÅÒ»ÐÐ¼ì²¨Æ÷)
-    ctx.num_rcv = 100;
+    // ï¿½ì²¨ï¿½ï¿½ (ï¿½Ð¼ï¿½Ë®Æ½ï¿½ï¿½Ò»ï¿½Ð¼ì²¨ï¿½ï¿½)
+    ctx.num_rcv = std::min(100, ctx.NX - 2 * kStencilRadius);
     ctx.rcv_grid_idx.resize(ctx.num_rcv);
-    int rcv_z = ctx.NZ / 2 + 30; // ÕðÔ´ÏÂ·½ 30 ²ÉÑùµã
-    int step = ctx.NX / ctx.num_rcv;
+    int rcv_z = std::min(ctx.NZ / 2 + 30, ctx.NZ - kStencilRadius - 1);
+    int step = std::max(1, (ctx.NX - 2 * kStencilRadius) / ctx.num_rcv);
     for (int r = 0; r < ctx.num_rcv; ++r) {
-        ctx.rcv_grid_idx[r] = rcv_z * ctx.NX + (r * step);
+        ctx.rcv_grid_idx[r] = rcv_z * ctx.NX + kStencilRadius + (r * step);
     }
 
-    ctx.record_vx.assign(ctx.num_rcv * ctx.nt, 0.0f);
-    ctx.record_vz.assign(ctx.num_rcv * ctx.nt, 0.0f);
+    ctx.record_vx.assign(static_cast<size_t>(ctx.num_rcv) * ctx.nt, 0.0f);
+    ctx.record_vz.assign(static_cast<size_t>(ctx.num_rcv) * ctx.nt, 0.0f);
 
-    RecalculateCachedModelMetrics();
+    recalculateCachedModelMetrics();
 }
 
 // =============================================================================
-// 9. ºËÐÄÎïÐÔ×¢ÈëÆ÷£º½«ËÙ¶È¡¢ÃÜ¶È×ª»»Îª CPU ¶Ëµ¯ÐÔÀ­Ã·³£Êý (¶ÔÆë Y Öá)
+// 9. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶È¡ï¿½ï¿½Ü¶ï¿½×ªï¿½ï¿½Îª CPU ï¿½Ëµï¿½ï¿½ï¿½ï¿½ï¿½Ã·ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ Y ï¿½ï¿½)
 // =============================================================================
-inline void SetMaterialAt(int x, int y, float vp, float vs, float rho) {
-    // ´¹Ö±¾µÏñ¶ÔÆë£ºÊ¹ LoadScenario µÄ y=0 ¶ÔÓ¦ CUDA Íø¸ñµÄ×îµ×²ã (NZ - 1 - y)
+/** Writes one cell's elastic properties, converting velocity and density to LamÃ© parameters. */
+inline void setMaterialAt(int x, int y, float vp, float vs, float rho) {
+    // ï¿½ï¿½Ö±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ë£ºÊ¹ loadScenario ï¿½ï¿½ y=0 ï¿½ï¿½Ó¦ CUDA ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×²ï¿½ (NZ - 1 - y)
     int k = (ctx.NZ - 1 - y) * ctx.NX + x;
     if (k >= 0 && k < ctx.total_grid) {
         ctx.rho[k] = rho;
@@ -981,28 +1003,29 @@ inline void SetMaterialAt(int x, int y, float vp, float vs, float rho) {
 }
 
 // =============================================================================
-// 10. ³¡¾°×°ÔØÆ÷£ºÍêÃÀÊÊÅä 11 Ì×¸ßÎ¬µØÇòÎïÀí·ÂÕæ³¡¾°
+// 10. ï¿½ï¿½ï¿½ï¿½×°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 11 ï¿½×¸ï¿½Î¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½æ³¡ï¿½ï¿½
 // =============================================================================
-inline void LoadScenario(int type) {
+/** Fills the current 2D material grid with a selected built-in geological test scenario. */
+inline void loadScenario(int type) {
     int W = ctx.NX;
     int H = ctx.NZ;
 
-    // Ä¬ÈÏ±³¾°³£Êý (Ó²É°ÑÒ)
+    // Ä¬ï¿½Ï±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (Ó²É°ï¿½ï¿½)
     float defVp = 3000.0f, defVs = 1732.0f, defRho = 2200.0f;
 
-    // Ä¬ÈÏ±³¾°Ìî³ä
+    // Ä¬ï¿½Ï±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     for (int y = 0; y < H; ++y) {
         for (int x = 0; x < W; ++x) {
-            SetMaterialAt(x, y, defVp, defVs, defRho);
+            setMaterialAt(x, y, defVp, defVs, defRho);
         }
     }
 
-    // Ä¬ÈÏ¼¤·¢Î»ÖÃÖØ¶¨Î»
+    // Ä¬ï¿½Ï¼ï¿½ï¿½ï¿½Î»ï¿½ï¿½ï¿½Ø¶ï¿½Î»
     edit_src_x = W / 2;
     edit_src_z = H / 2;
 
     if (type == SCENE_EARTH) {
-        // µØºËµØá£·Ö²ãÄ£ÐÍ (Õ¹Ê¾ÒºÌ¬ÌúÍâºËºá²¨ Vs=0 ÏûÊ§Óë P ²¨Í¸ÉäÎïÀíÏÖÏó)
+        // ï¿½ØºËµï¿½á£·Ö²ï¿½Ä£ï¿½ï¿½ (Õ¹Ê¾ÒºÌ¬ï¿½ï¿½ï¿½ï¿½Ëºá²¨ Vs=0 ï¿½ï¿½Ê§ï¿½ï¿½ P ï¿½ï¿½Í¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½)
         int   cx = W / 2;
         int   cy = H / 2;
         float maxRadius = (std::min(W, H) / 2.0f) * 0.95f;
@@ -1020,16 +1043,16 @@ inline void LoadScenario(int type) {
                 float distSq = dx * dx + dy * dy;
 
                 if (distSq < r_core_sq) {
-                    SetMaterialAt(x, y, 4000.0f, 0.0f, 4000.0f);    // ÒºÌ¬µØºË£ºVs=0
+                    setMaterialAt(x, y, 4000.0f, 0.0f, 4000.0f);    // ÒºÌ¬ï¿½ØºË£ï¿½Vs=0
                 }
                 else if (distSq < r_mantle_sq) {
-                    SetMaterialAt(x, y, 6000.0f, 3400.0f, 3000.0f); // ¹ÌÌåµØá£
+                    setMaterialAt(x, y, 6000.0f, 3400.0f, 3000.0f); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                 }
                 else if (distSq < max_sq) {
-                    SetMaterialAt(x, y, 3000.0f, 1700.0f, 2500.0f); // µØ¿Ç
+                    setMaterialAt(x, y, 3000.0f, 1700.0f, 2500.0f); // ï¿½Ø¿ï¿½
                 }
                 else {
-                    SetMaterialAt(x, y, 340.0f, 10.0f, 100.0f);     // Íâ²¿µÍËÙ½éÖÊ
+                    setMaterialAt(x, y, 340.0f, 10.0f, 100.0f);     // ï¿½â²¿ï¿½ï¿½ï¿½Ù½ï¿½ï¿½ï¿½
                 }
             }
         }
@@ -1037,22 +1060,22 @@ inline void LoadScenario(int type) {
         edit_src_z = H / 2;
     }
     else if (type == SCENE_DOUBLE_SLIT) {
-        // Ë®ÖÐ¸ß×è¿¹Ë«·ìµ²°å¸ÉÉæ³¡¾°
+        // Ë®ï¿½Ð¸ï¿½ï¿½è¿¹Ë«ï¿½ìµ²ï¿½ï¿½ï¿½ï¿½æ³¡ï¿½ï¿½
         int cy = H / 2;
         int cx = W / 2;
         int wallX = cx;
 
-        // Ë®½éÖÊ±³¾° (Vp=1500, Vs=0)
+        // Ë®ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ (Vp=1500, Vs=0)
         for (int i = 0; i < W * H; i++) {
-            SetMaterialAt(i % W, i / W, 1500.0f, 0.0f, 1000.0f);
+            setMaterialAt(i % W, i / W, 1500.0f, 0.0f, 1000.0f);
         }
 
-        // ¸ß×è¿¹Ç½ÌåÆÁÕÏ (ºñ10¸ñ) ÓëË«·ì
+        // ï¿½ï¿½ï¿½è¿¹Ç½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½10ï¿½ï¿½) ï¿½ï¿½Ë«ï¿½ï¿½
         for (int y = 0; y < H; ++y) {
             bool isSlit = (abs(y - cy) > 30 && abs(y - cy) < 60);
             if (!isSlit) {
                 for (int w = 0; w < 10; w++) {
-                    SetMaterialAt(wallX + w, y, 5500.0f, 3200.0f, 8000.0f); // ¸ßËÙÖÂÃÜ¸ÖÖÊÆÁÕÏ
+                    setMaterialAt(wallX + w, y, 5500.0f, 3200.0f, 8000.0f); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                 }
             }
         }
@@ -1060,15 +1083,15 @@ inline void LoadScenario(int type) {
         edit_src_z = cy;
     }
     else if (type == SCENE_TWO_LAYER) {
-        // µäÐÍË«²ã²ã×´½éÖÊÄ£ÐÍ
+        // ï¿½ï¿½ï¿½ï¿½Ë«ï¿½ï¿½ï¿½×´ï¿½ï¿½ï¿½ï¿½Ä£ï¿½ï¿½
         int interfaceY = H / 2;
         for (int y = 0; y < H; ++y) {
             for (int x = 0; x < W; ++x) {
                 if (y < interfaceY) {
-                    SetMaterialAt(x, y, 4000.0f, 2300.0f, 2500.0f); // Éî²¿Ó²ÑÒ
+                    setMaterialAt(x, y, 4000.0f, 2300.0f, 2500.0f); // ï¿½î²¿Ó²ï¿½ï¿½
                 }
                 else {
-                    SetMaterialAt(x, y, 2000.0f, 1100.0f, 1500.0f); // Ç³²¿ÈíÑÒ
+                    setMaterialAt(x, y, 2000.0f, 1100.0f, 1500.0f); // Ç³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                 }
             }
         }
@@ -1076,16 +1099,16 @@ inline void LoadScenario(int type) {
         edit_src_z = H / 2 + 50;
     }
     else if (type == SCENE_WAVEGUIDE) {
-        // Ö±Ìõ×´µÍËÙ²¨µ¼Í¨µÀ (ÄÜÁ¿ÔÚÆäÖÐÈ«·´ÉäÏÞÖÆ´«²¥)
+        // Ö±ï¿½ï¿½×´ï¿½ï¿½ï¿½Ù²ï¿½ï¿½ï¿½Í¨ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ´ï¿½ï¿½ï¿½)
         int cy = H / 2;
         int guideHalfWidth = 60;
         for (int y = 0; y < H; ++y) {
             for (int x = 0; x < W; ++x) {
                 if (abs(y - cy) < guideHalfWidth) {
-                    SetMaterialAt(x, y, 2000.0f, 1000.0f, 1500.0f); // µÍËÙÐ¾²ã
+                    setMaterialAt(x, y, 2000.0f, 1000.0f, 1500.0f); // ï¿½ï¿½ï¿½ï¿½Ð¾ï¿½ï¿½
                 }
                 else {
-                    SetMaterialAt(x, y, 100.0f, 60.0f, 10000.0f);   // ¸ß×è¿¹°ü²ã
+                    setMaterialAt(x, y, 100.0f, 60.0f, 10000.0f);   // ï¿½ï¿½ï¿½è¿¹ï¿½ï¿½ï¿½ï¿½
                 }
             }
         }
@@ -1093,17 +1116,17 @@ inline void LoadScenario(int type) {
         edit_src_z = cy;
     }
     else if (type == SCENE_WAVEGUIDE_CURVED) {
-        // ÕýÏÒÇúÏßÐÍÍäÇú¸ßËÙ²¨µ¼
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù²ï¿½ï¿½ï¿½
         int cy = H / 2;
         int guideHalfWidth = 60;
         for (int y = 0; y < H; ++y) {
             for (int x = 0; x < W; ++x) {
                 float currentCenterY = (H / 2) + (H / 4) * sin((float)x / W * 2.0f * 3.14159f);
                 if (abs(y - currentCenterY) < guideHalfWidth) {
-                    SetMaterialAt(x, y, 2000.0f, 1000.0f, 1500.0f);
+                    setMaterialAt(x, y, 2000.0f, 1000.0f, 1500.0f);
                 }
                 else {
-                    SetMaterialAt(x, y, 5500.0f, 3200.0f, 3000.0f);
+                    setMaterialAt(x, y, 5500.0f, 3200.0f, 3000.0f);
                 }
             }
         }
@@ -1111,13 +1134,13 @@ inline void LoadScenario(int type) {
         edit_src_z = H / 2;
     }
     else if (type == SCENE_CRYSTAL) {
-        // ¾§Ìå½»´íÁù½ÇÉù×Ó¾§¸ñ (¸ÖÇò¸ñÕ¤×è°­Óë¸ÉÉæ²¨Ç°)
-        float bgVp = 1500.0f, bgVs = 0.0f, bgRho = 1000.0f;   // Ë®±³¾°
-        float scVp = 5800.0f, scVs = 3200.0f, scRho = 7800.0f;// ¸ÖÇò
+        // ï¿½ï¿½ï¿½å½»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¾ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ï¿½Õ¤ï¿½è°­ï¿½ï¿½ï¿½ï¿½æ²¨Ç°)
+        float bgVp = 1500.0f, bgVs = 0.0f, bgRho = 1000.0f;   // Ë®ï¿½ï¿½ï¿½ï¿½
+        float scVp = 5800.0f, scVs = 3200.0f, scRho = 7800.0f;// ï¿½ï¿½ï¿½ï¿½
         int   radius = 12, spacingX = 50, spacingY = 50;
         int   startX = 250, endX = W - 100, startY = 100, endY = H - 100;
 
-        for (int i = 0; i < W * H; ++i) SetMaterialAt(i % W, i / W, bgVp, bgVs, bgRho);
+        for (int i = 0; i < W * H; ++i) setMaterialAt(i % W, i / W, bgVp, bgVs, bgRho);
 
         int   cols = (endX - startX) / spacingX;
         int   rows = (endY - startY) / spacingY;
@@ -1127,7 +1150,7 @@ inline void LoadScenario(int type) {
             for (int i = 0; i < cols; ++i) {
                 int cx = startX + i * spacingX;
                 int cy = startY + j * spacingY;
-                if (j % 2 == 1) cx += spacingX / 2; // ·äÎÑ½»´í
+                if (j % 2 == 1) cx += spacingX / 2; // ï¿½ï¿½ï¿½Ñ½ï¿½ï¿½ï¿½
 
                 for (int y = cy - radius; y <= cy + radius; ++y) {
                     for (int x = cx - radius; x <= cx + radius; ++x) {
@@ -1135,7 +1158,7 @@ inline void LoadScenario(int type) {
                             float dx = (float)(x - cx);
                             float dy = (float)(y - cy);
                             if (dx * dx + dy * dy <= r2) {
-                                SetMaterialAt(x, y, scVp, scVs, scRho);
+                                setMaterialAt(x, y, scVp, scVs, scRho);
                             }
                         }
                     }
@@ -1146,11 +1169,11 @@ inline void LoadScenario(int type) {
         edit_src_z = H / 2;
     }
     else if (type == SCENE_RANDOM_SCATTER) {
-        // Ëæ»úÅÝÅÝ½éÖÊÇ¿É¢Éä³¡
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý½ï¿½ï¿½ï¿½Ç¿É¢ï¿½ä³¡
         float bgVp = 2500.0f, bgVs = 1200.0f, bgRho = 2000.0f;
         float scVp = 4500.0f, scVs = 2500.0f, scRho = 2800.0f;
 
-        for (int i = 0; i < W * H; ++i) SetMaterialAt(i % W, i / W, bgVp, bgVs, bgRho);
+        for (int i = 0; i < W * H; ++i) setMaterialAt(i % W, i / W, bgVp, bgVs, bgRho);
 
         int numScatterers = 300;
         int minR = 5, maxR = 15;
@@ -1166,7 +1189,7 @@ inline void LoadScenario(int type) {
                         float dx = x - cx;
                         float dy = y - cy;
                         if (dx * dx + dy * dy <= r2) {
-                            SetMaterialAt(x, y, scVp, scVs, scRho);
+                            setMaterialAt(x, y, scVp, scVs, scRho);
                         }
                     }
                 }
@@ -1176,7 +1199,7 @@ inline void LoadScenario(int type) {
         edit_src_z = H / 2;
     }
     else if (type == SCENE_CURVED) {
-        // Æð·üÕýÏÒÁ½²ã½éÖÊ·Ö½çÃæ
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê·Ö½ï¿½ï¿½ï¿½
         float l1_Vp = 2000.0f, l1_Vs = 1100.0f, l1_Rho = 1800.0f;
         float l2_Vp = 3500.0f, l2_Vs = 2000.0f, l2_Rho = 2400.0f;
         float l3_Vp = 5500.0f, l3_Vs = 3200.0f, l3_Rho = 2800.0f;
@@ -1188,16 +1211,16 @@ inline void LoadScenario(int type) {
             for (int x = 0; x < W; ++x) {
                 float h1 = baseH1 + amp1 * sin(x * freq1);
                 float h2 = baseH2 + amp2 * sin(x * freq2 + phase2);
-                if (y < h1)       SetMaterialAt(x, y, l3_Vp, l3_Vs, l3_Rho);
-                else if (y < h2)  SetMaterialAt(x, y, l2_Vp, l2_Vs, l2_Rho);
-                else              SetMaterialAt(x, y, l1_Vp, l1_Vs, l1_Rho);
+                if (y < h1)       setMaterialAt(x, y, l3_Vp, l3_Vs, l3_Rho);
+                else if (y < h2)  setMaterialAt(x, y, l2_Vp, l2_Vs, l2_Rho);
+                else              setMaterialAt(x, y, l1_Vp, l1_Vs, l1_Rho);
             }
         }
         edit_src_x = W / 2;
         edit_src_z = H - 50;
     }
     else if (type == SCENE_REFRACTION) {
-        // ËÙ¶ÈÁ¬ÐøÏßÐÔÔö¼ÓµÄÌÝ¶È½éÖÊ (ÕÛÉäºÍ»Ø×ª»Øµ¯²¨)
+        // ï¿½Ù¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Óµï¿½ï¿½Ý¶È½ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½Í»ï¿½×ªï¿½Øµï¿½ï¿½ï¿½)
         float vTop = 1000.0f, vBot = 2000.0f;
         float rhoTop = 1800.0f, rhoBot = 2500.0f;
         for (int y = 0; y < H; ++y) {
@@ -1207,13 +1230,13 @@ inline void LoadScenario(int type) {
             if (vp < 1000.0f) vs = 0.0f;
             float rho = rhoBot + (rhoTop - rhoBot) * ratio;
 
-            for (int x = 0; x < W; ++x) SetMaterialAt(x, y, vp, vs, rho);
+            for (int x = 0; x < W; ++x) setMaterialAt(x, y, vp, vs, rho);
         }
         edit_src_x = 100;
-        edit_src_z = H - 50; // Ç³²ã¼¤·¢
+        edit_src_z = H - 50; // Ç³ï¿½ã¼¤ï¿½ï¿½
     }
     else if (type == SCENE_PENROSE_ROOM) {
-        // ÅíÂÞË¹ÍÖÔ²·¿¼ä (Õ¹Ê¾²¨ÐÎË«½¹µã»ã¾ÛÍ¸¾µÐ§Ó¦)
+        // ï¿½ï¿½ï¿½ï¿½Ë¹ï¿½ï¿½Ô²ï¿½ï¿½ï¿½ï¿½ (Õ¹Ê¾ï¿½ï¿½ï¿½ï¿½Ë«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¸ï¿½ï¿½Ð§Ó¦)
         float rockVp = 3000.0f, rockVs = 1732.0f, rockRho = 2500.0f;
         float airVp = 0.0f, airVs = 0.0f, airRho = 20.0f;
         float cx = W * 0.5f, cy = H * 0.5f;
@@ -1241,39 +1264,39 @@ inline void LoadScenario(int type) {
 
         for (int y = 0; y < H; ++y) {
             for (int x = 0; x < W; ++x) {
-                if (isInsidePenrose((float)x, (float)y)) SetMaterialAt(x, y, rockVp, rockVs, rockRho);
-                else                                     SetMaterialAt(x, y, airVp, airVs, airRho);
+                if (isInsidePenrose((float)x, (float)y)) setMaterialAt(x, y, rockVp, rockVs, rockRho);
+                else                                     setMaterialAt(x, y, airVp, airVs, airRho);
             }
         }
         edit_src_x = static_cast<int>(cx);
         edit_src_z = static_cast<int>(cy);
     }
-    else if (type == SCENE_TOPOGRAPHY) { // ¼ÙÉèÎª SCENE_TOPOGRAPHY
-        // 1. ¶¨Òå±³¾°ÎïÐÔ (¹ÌÌåÎ§ÑÒ)
+    else if (type == SCENE_TOPOGRAPHY) { // ï¿½ï¿½ï¿½ï¿½Îª SCENE_TOPOGRAPHY
+        // 1. ï¿½ï¿½ï¿½å±³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½Î§ï¿½ï¿½)
         float rockVp = 2500.0f, rockVs = 1443.0f, rockRho = 2000.0f;
-        // 2. ¶¨Òå¿ÕÆøµÈÐ§ÎïÐÔ (Õæ¿Õ·¨)
-        float airVp = 340.0f, airVs = 0.0f, airRho = 50.0f; // ÃÜ¶ÈÉèÎª50ÒÔ±£Ö¤ÓÐÏÞ²î·Ö×¿Ô½µÄÎÈ¶¨ÐÔ
+        // 2. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð§ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½Õ·ï¿½)
+        float airVp = 340.0f, airVs = 0.0f, airRho = 50.0f; // ï¿½Ü¶ï¿½ï¿½ï¿½Îª50ï¿½Ô±ï¿½Ö¤ï¿½ï¿½ï¿½Þ²ï¿½ï¿½×¿Ô½ï¿½ï¿½ï¿½È¶ï¿½ï¿½ï¿½
 
-        float baseHeight = H * 0.45f; // É½µ×»ù´¡¸ß¶È
-        float hillAmp = H * 0.15f; // É½Çð¸ß¶È
-        float hillFreq = 2.0f * 3.14159f / W * 1.5f; // ¿ØÖÆÉ½ÇðµÄ¸öÊý
+        float baseHeight = H * 0.45f; // É½ï¿½×»ï¿½ï¿½ï¿½ï¿½ß¶ï¿½
+        float hillAmp = H * 0.15f; // É½ï¿½ï¿½ß¶ï¿½
+        float hillFreq = 2.0f * 3.14159f / W * 1.5f; // ï¿½ï¿½ï¿½ï¿½É½ï¿½ï¿½Ä¸ï¿½ï¿½ï¿½
 
         for (int y = 0; y < H; ++y) {
             for (int x = 0; x < W; ++x) {
-                // ÀûÓÃÕýÏÒº¯Êý»ò¸ßË¹º¯ÊýËãÒ»ÌõÆð·üÉ½µØÂÖÀªÏß z = f(x)
+                // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ë¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½É½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ z = f(x)
                 float surfaceZ = baseHeight + hillAmp * sin(x * hillFreq);
 
-                // ×¢Òâ£ºÔÚ CPU ×ø±êÏµÖÐ£¬y Ô½Ð¡´ú±íÉî¶ÈÔ½Éî¡£
-                // Èç¹û y ´óÓÚÉ½µØ±íÃæ¸ß¶È£¬ËµÃ÷¸Ãµã´¦ÓÚµØ±íÉÏ·½£¨¿ÕÆø£©
+                // ×¢ï¿½â£ºï¿½ï¿½ CPU ï¿½ï¿½ï¿½ï¿½Ïµï¿½Ð£ï¿½y Ô½Ð¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô½ï¿½î¡£
+                // ï¿½ï¿½ï¿½ y ï¿½ï¿½ï¿½ï¿½É½ï¿½Ø±ï¿½ï¿½ï¿½ß¶È£ï¿½Ëµï¿½ï¿½ï¿½Ãµã´¦ï¿½ÚµØ±ï¿½ï¿½Ï·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                 if (y > surfaceZ) {
-                    SetMaterialAt(x, y, airVp, airVs, airRho);   // Ìî³äµÍËÙ¿ÕÆø
+                    setMaterialAt(x, y, airVp, airVs, airRho);   // ï¿½ï¿½ï¿½ï¿½ï¿½Ù¿ï¿½ï¿½ï¿½
                 }
                 else {
-                    SetMaterialAt(x, y, rockVp, rockVs, rockRho); // Ìî³ä¹ÌÌåÉ½ÌåÑÒÊ¯
+                    setMaterialAt(x, y, rockVp, rockVs, rockRho); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É½ï¿½ï¿½ï¿½ï¿½Ê¯
                 }
             }
         }
-        // ¼¤·¢µã¶¨Î»ÔÚÉ½ÌåÄÚ²¿
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ã¶¨Î»ï¿½ï¿½É½ï¿½ï¿½ï¿½Ú²ï¿½
         edit_src_x = W / 2;
         edit_src_z = H / 2;
         }
@@ -1281,24 +1304,25 @@ inline void LoadScenario(int type) {
 
 
 // =============================================================================
-// 12. µ¯ÐÔ³¡¾°ÖØ×°Ò»¼üÓ¦ÓÃÇý¶¯
+// 12. ï¿½ï¿½ï¿½Ô³ï¿½ï¿½ï¿½ï¿½ï¿½×°Ò»ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 // =============================================================================
-inline void ApplyScenario(int type, SimState& state) {
+/** Stops the active run, rebuilds the selected model, refreshes coefficients, and reallocates GPU state. */
+inline void applyScenario(int type, SimState& state) {
     state.running = false;
     current_it = 0;
     accumulated_compute_time = 0.0f;
-    active_sources.clear(); // Çå¿Õ¶àµã¼¤·¢¶ÓÁÐ
+    active_sources.clear(); // ï¿½ï¿½Õ¶ï¿½ã¼¤ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-    // 1. ÖØÐÂ¹¹½¨ CPU ÎïÀí³¡¼¸ºÎ¿ò¼Ü
+    // 1. ï¿½ï¿½ï¿½Â¹ï¿½ï¿½ï¿½ CPU ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î¿ï¿½ï¿½
     setupTestContext(ctx, par);
 
-    // 2. ×°ÔØÄ¿±êµØ²ãÄ£ÐÍ
-    LoadScenario(type);
+    // 2. ×°ï¿½ï¿½Ä¿ï¿½ï¿½Ø²ï¿½Ä£ï¿½ï¿½
+    loadScenario(type);
 
-    // 3. ÊµÊ±ÖØÐÂ¼ÆËãÎïÀí¼«ÏÞËùÆ¥ÅäµÄ×ÔÊÊÓ¦ PML ×èÄáÏµÊý
-    UpdatePmlDampingArrays();
-    AutoAlignTimeStep();
-    // 4. ÖØËã×ÔÓÉ±íÃæ dp_flat ×è¿¹
+    // 3. ÊµÊ±ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¥ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ PML ï¿½ï¿½ï¿½ï¿½Ïµï¿½ï¿½
+    updatePmlDampingArrays();
+    autoAlignTimeStep();
+    // 4. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É±ï¿½ï¿½ï¿½ dp_flat ï¿½è¿¹
     ctx.dp_flat.assign(ctx.NX, 0.0f);
     int fs_idx = ctx.npml;
     for (int j = 0; j < ctx.NX; ++j) {
@@ -1310,24 +1334,24 @@ inline void ApplyScenario(int type, SimState& state) {
         }
     }
 
-    // 5. ×¢Ïú¡¢ÖØ×°²¢³õÊ¼»¯ GPU ÏÔ´æ
-    freeGPUSimulation(gpu_data);
-    initGPUSimulation(gpu_data, ctx);
+    // 5. ×¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×°ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ GPU ï¿½Ô´ï¿½
+    releaseGpuSimulation(gpu_data);
+    initializeGpuSimulation(gpu_data, ctx);
 
-    // 6. Í¬²½ÉÏ´«ÀëÆÁ¶þÎ¬ÎïÐÔÎÆÀí²¢¸üÐÂÏµÍ³¼«Öµ»º´æ
-    UpdateModelTexture();
-    RecalculateCachedModelMetrics();
+    // 6. Í¬ï¿½ï¿½ï¿½Ï´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÏµÍ³ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½
+    updateModelTexture();
+    recalculateCachedModelMetrics();
 }
 
-/// ////////////////////////////////////////////////////////////////////////µÚÈý²¿·Ö
+/// ////////////////////////////////////////////////////////////////////////ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 // =============================================================================
-// 13. ÏµÍ³Ô­Éú´ò¿ªÎÄ¼þÑ¡Ôñ¶Ô»°¿ò (Windows/Linux ¿çÆ½Ì¨Ë«Ä£)
+// 13. ÏµÍ³Ô­ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½Ñ¡ï¿½ï¿½Ô»ï¿½ï¿½ï¿½ (Windows/Linux ï¿½ï¿½Æ½Ì¨Ë«Ä£)
 // =============================================================================
-inline bool OpenSystemFileDialog(char* buffer, int bufferSize) {
+inline bool openSystemFileDialog(char* buffer, int bufferSize) {
     memset(buffer, 0, bufferSize);
 
 #ifdef _WIN32
-    // Windows Ô­Éúµ×²ãÊµÏÖ
+    // Windows Ô­ï¿½ï¿½ï¿½×²ï¿½Êµï¿½ï¿½
     OPENFILENAMEA ofn;
     memset(&ofn, 0, sizeof(ofn));
     ofn.lStructSize = sizeof(ofn);
@@ -1335,11 +1359,11 @@ inline bool OpenSystemFileDialog(char* buffer, int bufferSize) {
     ofn.lpstrFile = buffer;
     ofn.nMaxFile = bufferSize;
     ofn.lpstrFilter = "Model Data (*.txt;*.sgy;*.csv)\0*.txt;*.sgy;*.segy;*.csv\0All Files (*.*)\0*.*\0";
-    ofn.nFilterIndex = 1; // Ä¬ÈÏÑ¡ÖÐµÚÒ»¸ö (Model Data)
+    ofn.nFilterIndex = 1; // Ä¬ï¿½ï¿½Ñ¡ï¿½Ðµï¿½Ò»ï¿½ï¿½ (Model Data)
     ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
     return GetOpenFileNameA(&ofn);
 #else
-    // Linux Ô­ÉúÊµÏÖ (ÐèÒªÖÕ¶ËÔ¤×° zenity ÃüÁî×é¼þ)
+    // Linux Ô­ï¿½ï¿½Êµï¿½ï¿½ (ï¿½ï¿½Òªï¿½Õ¶ï¿½Ô¤×° zenity ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½)
     const char* cmd = "zenity --file-selection --file-filter='*.txt' --title='Select Model Data'";
     FILE* pipe = popen(cmd, "r");
     if (!pipe) {
@@ -1350,7 +1374,7 @@ inline bool OpenSystemFileDialog(char* buffer, int bufferSize) {
     if (fgets(buffer, bufferSize, pipe) != NULL) {
         size_t len = strlen(buffer);
         if (len > 0 && buffer[len - 1] == '\n') {
-            buffer[len - 1] = '\0'; // ²Ã¼ôÄ©Î²»»ÐÐ·û
+            buffer[len - 1] = '\0'; // ï¿½Ã¼ï¿½Ä©Î²ï¿½ï¿½ï¿½Ð·ï¿½
         }
         success = (strlen(buffer) > 0);
     }
@@ -1360,10 +1384,10 @@ inline bool OpenSystemFileDialog(char* buffer, int bufferSize) {
 }
 
 // =============================================================================
-// 14. ÏµÍ³Ô­Éú±£´æÎÄ¼þÑ¡Ôñ¶Ô»°¿ò (Windows/Linux ¿çÆ½Ì¨Ë«Ä£)
+// 14. ÏµÍ³Ô­ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½Ñ¡ï¿½ï¿½Ô»ï¿½ï¿½ï¿½ (Windows/Linux ï¿½ï¿½Æ½Ì¨Ë«Ä£)
 // =============================================================================
 #ifdef _WIN32
-inline bool SaveSystemFileDialog(char* outPath, DWORD maxPathLen) {
+inline bool saveSystemFileDialog(char* outPath, DWORD maxPathLen) {
     OPENFILENAMEA ofn;
     ZeroMemory(&ofn, sizeof(ofn));
     ofn.lStructSize = sizeof(ofn);
@@ -1377,35 +1401,36 @@ inline bool SaveSystemFileDialog(char* outPath, DWORD maxPathLen) {
     ofn.nMaxFileTitle = 0;
     ofn.lpstrInitialDir = NULL;
 
-    // OFN_NOCHANGEDIR ¼«Æä¹Ø¼ü£¬·ÀÖ¹¸ü¸Ä³ÌÐòÔËÐÐÄ¿Â¼µ¼ÖÂÏà¶ÔÂ·¾¶×ÅÉ«Æ÷Ê§Ð§
+    // OFN_NOCHANGEDIR ï¿½ï¿½ï¿½ï¿½Ø¼ï¿½ï¿½ï¿½ï¿½ï¿½Ö¹ï¿½ï¿½ï¿½Ä³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿Â¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½É«ï¿½ï¿½Ê§Ð§
     ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT | OFN_NOCHANGEDIR;
 
     return GetSaveFileNameA(&ofn) == TRUE;
 }
 #else
-inline bool SaveSystemFileDialog(char* outPath, size_t maxPathLen) {
+inline bool saveSystemFileDialog(char* outPath, size_t maxPathLen) {
     return false;
 }
 #endif
 
 // =============================================================================
-// 15. ÁÐÓÅÏÈ (Column-Major) 2D ÎïÀíÄ£ÐÍÍø¸ñÖØ²ÉÑùËã·¨ (×î½üÁÚ²åÖµ)
+// 15. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (Column-Major) 2D ï¿½ï¿½ï¿½ï¿½Ä£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø²ï¿½ï¿½ï¿½ï¿½ã·¨ (ï¿½ï¿½ï¿½ï¿½Ú²ï¿½Öµ)
 // =============================================================================
-inline std::vector<std::vector<float>> ResampleGrid2D(
+// Resamples a 2D material grid to the requested dimensions using interpolation.
+inline std::vector<std::vector<float>> resampleGrid2d(
     const std::vector<std::vector<float>>& input,
     float                                  target_dx,
     float                                  original_dx
 ) {
     if (input.empty() || input[0].empty()) return {};
 
-    int old_nx = static_cast<int>(input.size());    // Ô­Ê¼ X µãÊý (Traces)
-    int old_nz = static_cast<int>(input[0].size()); // Ô­Ê¼ Z µãÊý (Samples)
+    int old_nx = static_cast<int>(input.size());    // Ô­Ê¼ X ï¿½ï¿½ï¿½ï¿½ (Traces)
+    int old_nz = static_cast<int>(input[0].size()); // Ô­Ê¼ Z ï¿½ï¿½ï¿½ï¿½ (Samples)
 
-    // ¼ÆËãÊµ¼ÊµØÖÊÌåµÄÎïÀí¿í¸ß
+    // ï¿½ï¿½ï¿½ï¿½Êµï¿½Êµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     float physical_width = (old_nx - 1) * original_dx;
     float physical_depth = (old_nz - 1) * original_dx;
 
-    // ¼ÆËã¶ÔÓ¦ target_dx ²½³¤ÏÂµÄÐÂÍø¸ñµãÊý
+    // ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ target_dx ï¿½ï¿½ï¿½ï¿½ï¿½Âµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     int new_nx = static_cast<int>(physical_width / target_dx) + 1;
     int new_nz = static_cast<int>(physical_depth / target_dx) + 1;
 
@@ -1431,9 +1456,10 @@ inline std::vector<std::vector<float>> ResampleGrid2D(
 }
 
 // =============================================================================
-// 16. ÁÐÓÅÏÈ 2D ÎïÀíµØ²ã±ß½çÍâÍÆÀ©±ßËã×Ó (´øÁ÷Ìå°²È«¹Ì»¯»úÖÆ)
+// 16. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 2D ï¿½ï¿½ï¿½ï¿½ï¿½Ø²ï¿½ß½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ï¿½å°²È«ï¿½Ì»ï¿½ï¿½ï¿½ï¿½ï¿½)
 // =============================================================================
-inline std::vector<std::vector<float>> PadPmlToGrid2D(
+// Extends a 2D grid with absorbing-boundary padding while preserving its interior.
+inline std::vector<std::vector<float>> padPmlToGrid2d(
     const std::vector<std::vector<float>>& grid_vp,
     const std::vector<std::vector<float>>& grid_vs,
     const std::vector<std::vector<float>>& grid_rho,
@@ -1458,26 +1484,26 @@ inline std::vector<std::vector<float>> PadPmlToGrid2D(
             int  src_z = std::max(0, std::min(z - npml, old_nz - 1));
             bool in_z_pml = (z < npml) || (z >= new_nz - npml);
 
-            // »ñÈ¡ÍâÍÆ¶ÔÆëºóµÄÔ­Ê¼ÎïÀíÁ¿
+            // ï¿½ï¿½È¡ï¿½ï¿½ï¿½Æ¶ï¿½ï¿½ï¿½ï¿½ï¿½Ô­Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             float vp = grid_vp[src_x][src_z];
             float vs = grid_vs[src_x][src_z];
             float rho = grid_rho[src_x][src_z];
 
-            // ÖÇÄÜÁ¿¸Ù×ª»» (g/cm3 ×ª kg/m3)
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×ªï¿½ï¿½ (g/cm3 ×ª kg/m3)
             if (convert_rho) {
                 if (rho > 0.0f && rho < 10.0f) rho *= 1000.0f;
                 if (rho < 10.0f) rho = 1000.0f;
             }
 
-            // Èç¹û¸Ãµã´¦ÓÚ PML ÄÚ²¿£¬ÇÒÔ­ÏÈÊÇÒºÌ¬µØ²ã£¨Vs == 0£©
-            // ÔÚ PML ÄÚ²¿Ç¿ÐÐ½«Æä¡°¹Ì»¯¡±Îª¼ôÇÐ²¨ËÙÎª Vp / 2 µÄÎÈ¶¨¹ÌÌå½éÖÊ£¬ÏûÃð PML Ææµã
+            // ï¿½ï¿½ï¿½ï¿½Ãµã´¦ï¿½ï¿½ PML ï¿½Ú²ï¿½ï¿½ï¿½ï¿½ï¿½Ô­ï¿½ï¿½ï¿½ï¿½ÒºÌ¬ï¿½Ø²ã£¨Vs == 0ï¿½ï¿½
+            // ï¿½ï¿½ PML ï¿½Ú²ï¿½Ç¿ï¿½Ð½ï¿½ï¿½ä¡°ï¿½Ì»ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½Ð²ï¿½ï¿½ï¿½Îª Vp / 2 ï¿½ï¿½ï¿½È¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê£ï¿½ï¿½ï¿½ï¿½ï¿½ PML ï¿½ï¿½ï¿½
             if (in_x_pml || in_z_pml) {
                 if (vs <= 0.0f && vp > 350.0f) {
-                    vs = vp / 2.0f; // ÎÈ¶¨¼ôÇÐËÙ¶È
+                    vs = vp / 2.0f; // ï¿½È¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½
                 }
             }
 
-            // ¸ù¾ÝÇëÇóµÄ·ÖÁ¿·µ»ØÎïÀíÖµ
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµ
             if (component_type == 0)      output[x][z] = vp;
             else if (component_type == 1) output[x][z] = vs;
             else                          output[x][z] = rho;
@@ -1487,9 +1513,10 @@ inline std::vector<std::vector<float>> PadPmlToGrid2D(
 }
 
 // =============================================================================
-// 17. Éý¼¶°æ ASCII ¸ñÊ½ (TXT) ÎïÀíÄ£ÐÍµ¼ÈëÆ÷
+// 17. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ASCII ï¿½ï¿½Ê½ (TXT) ï¿½ï¿½ï¿½ï¿½Ä£ï¿½Íµï¿½ï¿½ï¿½ï¿½ï¿½
 // =============================================================================
-inline bool LoadModelFromTxt(const std::string& filename, bool flipVertically, GLHandles& gl, SimState& state) {
+// Loads a text material model, validates its dimensions, and refreshes model views.
+inline bool loadModelFromText(const std::string& filename, bool flipVertically, GLHandles& gl, SimState& state) {
     std::cout << "[IO] Loading custom ASCII model: " << filename << " (Flip Y: " << (flipVertically ? "Yes" : "No") << ")" << std::endl;
 
     std::ifstream file(filename);
@@ -1498,7 +1525,7 @@ inline bool LoadModelFromTxt(const std::string& filename, bool flipVertically, G
         return false;
     }
 
-    // 1. ½âÎö Dimensions Í·²¿³ß´ç
+    // 1. ï¿½ï¿½ï¿½ï¿½ Dimensions Í·ï¿½ï¿½ï¿½ß´ï¿½
     std::string line;
     int         file_w = 0, file_h = 0;
     bool        dimensionsFound = false;
@@ -1516,7 +1543,7 @@ inline bool LoadModelFromTxt(const std::string& filename, bool flipVertically, G
         return false;
     }
 
-    // ´´½¨ CPU ÁÙÊ± 2D Ô­Ê¼ÎïÐÔÊý×é
+    // ï¿½ï¿½ï¿½ï¿½ CPU ï¿½ï¿½Ê± 2D Ô­Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     std::vector<std::vector<float>> raw_vp(file_w, std::vector<float>(file_h, 0.0f));
     std::vector<std::vector<float>> raw_vs(file_w, std::vector<float>(file_h, 0.0f));
     std::vector<std::vector<float>> raw_rho(file_w, std::vector<float>(file_h, 0.0f));
@@ -1524,7 +1551,7 @@ inline bool LoadModelFromTxt(const std::string& filename, bool flipVertically, G
     file.clear();
     file.seekg(0, std::ios::beg);
 
-    // 2. ÖðÐÐ½âÎö²¢×°ÈëÁÙÊ±Êý×é
+    // 2. ï¿½ï¿½ï¿½Ð½ï¿½ï¿½ï¿½ï¿½ï¿½×°ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½
     int pixelCount = 0;
     int total_pixels = file_w * file_h;
 
@@ -1553,21 +1580,21 @@ inline bool LoadModelFromTxt(const std::string& filename, bool flipVertically, G
         return false;
     }
 
-    // ¶¯Ì¬ÖØ²ÉÑù (¶ÔÆëÏµÍ³µ±Ç°µÄÎïÀí¿Õ¼ä²½³¤ par.model.dx)
+    // ï¿½ï¿½Ì¬ï¿½Ø²ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ÏµÍ³ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ¼ä²½ï¿½ï¿½ par.model.dx)
     float original_txt_dx = 1.0f;
     float target_system_dx = par.model.dx;
 
-    auto grid_vp = ResampleGrid2D(raw_vp, target_system_dx, original_txt_dx);
-    auto grid_vs = ResampleGrid2D(raw_vs, target_system_dx, original_txt_dx);
-    auto grid_rho = ResampleGrid2D(raw_rho, target_system_dx, original_txt_dx);
+    auto grid_vp = resampleGrid2d(raw_vp, target_system_dx, original_txt_dx);
+    auto grid_vs = resampleGrid2d(raw_vs, target_system_dx, original_txt_dx);
+    auto grid_rho = resampleGrid2d(raw_rho, target_system_dx, original_txt_dx);
 
-    // PML À©±ßÓëÁ÷Ìå°²È«¹Ì»¯ (Ò»ÆøºÇ³É)
+    // PML ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½å°²È«ï¿½Ì»ï¿½ (Ò»ï¿½ï¿½ï¿½Ç³ï¿½)
     int  current_npml = static_cast<int>(par.FDM.npml);
-    auto vp_pad = PadPmlToGrid2D(grid_vp, grid_vs, grid_rho, current_npml, 0); // ´« 0 µ¼ Vp
-    auto vs_pad = PadPmlToGrid2D(grid_vp, grid_vs, grid_rho, current_npml, 1); // ´« 1 µ¼ Vs
-    auto rho_pad = PadPmlToGrid2D(grid_vp, grid_vs, grid_rho, current_npml, 2); // ´« 2 µ¼ Rho
+    auto vp_pad = padPmlToGrid2d(grid_vp, grid_vs, grid_rho, current_npml, 0); // ï¿½ï¿½ 0 ï¿½ï¿½ Vp
+    auto vs_pad = padPmlToGrid2d(grid_vp, grid_vs, grid_rho, current_npml, 1); // ï¿½ï¿½ 1 ï¿½ï¿½ Vs
+    auto rho_pad = padPmlToGrid2d(grid_vp, grid_vs, grid_rho, current_npml, 2); // ï¿½ï¿½ 2 ï¿½ï¿½ Rho
 
-    // 3. ÖØÖÃÄ£ÄâÑÝ»¯²ÎÊýÓë×îÖÕÍø¸ñ¿í¸ß
+    // 3. ï¿½ï¿½ï¿½ï¿½Ä£ï¿½ï¿½ï¿½Ý»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     state.running = false;
     current_it = 0;
     accumulated_compute_time = 0.0f;
@@ -1578,10 +1605,10 @@ inline bool LoadModelFromTxt(const std::string& filename, bool flipVertically, G
     par.model.xnum = edit_w;
     par.model.znum = edit_h;
 
-    // ÖØÐÂÔÚ CPU ¶ËÖØ×é»ù´¡ÎïÀí³¡´óÐ¡
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ CPU ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¡
     setupTestContext(ctx, par);
 
-    // 4. ½«ÍêÃÀÀ©±ßÓë¶ÔÆëµÄÊý¾Ý×¢Èë CPU ÄÚ´æ
+    // 4. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×¢ï¿½ï¿½ CPU ï¿½Ú´ï¿½
     for (int x = 0; x < ctx.NX; ++x) {
         for (int z = 0; z < ctx.NZ; ++z) {
             float vp = vp_pad[x][z];
@@ -1591,21 +1618,21 @@ inline bool LoadModelFromTxt(const std::string& filename, bool flipVertically, G
             int   tgtZ = z;
 
             if (flipVertically) {
-                tgtZ = ctx.NZ - 1 - z; // ´¹Ö±µØ±í¶ÔÆë
+                tgtZ = ctx.NZ - 1 - z; // ï¿½ï¿½Ö±ï¿½Ø±ï¿½ï¿½ï¿½ï¿½ï¿½
             }
-            SetMaterialAt(tgtX, tgtZ, vp, vs, rho);
+            setMaterialAt(tgtX, tgtZ, vp, vs, rho);
         }
     }
 
-    // 5. ÖØÖÃÕðÔ´Î»ÖÃÓë±íÃæ²¨ dp_flat
+    // 5. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô´Î»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½æ²¨ dp_flat
     ctx.src_z_idx = ctx.NZ / 4;
     ctx.src_idx = ctx.src_z_idx * ctx.NX + (ctx.NX / 2);
     edit_src_x = ctx.NX / 2;
     edit_src_z = ctx.NZ / 4;
 
-    // ÖØÐÂ¼ÆËã²¢±ê¶¨×î¸ß²¨ËÙÏÂµÄ PML ×èÄáÏµÊý
-    UpdatePmlDampingArrays();
-    AutoAlignTimeStep();
+    // ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ã²¢ï¿½ê¶¨ï¿½ï¿½ß²ï¿½ï¿½ï¿½ï¿½Âµï¿½ PML ï¿½ï¿½ï¿½ï¿½Ïµï¿½ï¿½
+    updatePmlDampingArrays();
+    autoAlignTimeStep();
 
     ctx.dp_flat.assign(ctx.NX, 0.0f);
     int fs_idx = ctx.npml;
@@ -1618,19 +1645,19 @@ inline bool LoadModelFromTxt(const std::string& filename, bool flipVertically, G
         }
     }
 
-    // 6. ÊÍ·Å²¢ÖØÐÂ×¢²á FBO ÎÆÀí³ß´ç£¬·ÀÖ¹ÏÔ´æ±ÀÀ£
-    freeGPUSimulation(gpu_data);
+    // 6. ï¿½Í·Å²ï¿½ï¿½ï¿½ï¿½ï¿½×¢ï¿½ï¿½ FBO ï¿½ï¿½ï¿½ï¿½ï¿½ß´ç£¬ï¿½ï¿½Ö¹ï¿½Ô´ï¿½ï¿½ï¿½ï¿½
+    releaseGpuSimulation(gpu_data);
     cudaGraphicsUnregisterResource(gl.cudaSeisRes);
     glBindTexture(GL_TEXTURE_2D, gl.seisTex);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, ctx.NX, ctx.NZ, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-    cudaGraphicsGLRegisterImage(&gl.cudaSeisRes, gl.seisTex, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard);
+    CUDA_CHECK(cudaGraphicsGLRegisterImage(&gl.cudaSeisRes, gl.seisTex, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard));
 
-    // 7. ÖØÐÂ³õÊ¼»¯ÐÂÏÔ´æ
-    initGPUSimulation(gpu_data, ctx);
+    // 7. ï¿½ï¿½ï¿½Â³ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½Ô´ï¿½
+    initializeGpuSimulation(gpu_data, ctx);
 
-    // 8. Í¬²½¸üÐÂµØÖÊ±³¾°ÎÆÀí£¬ÖØÐÂ±ê¶¨¼«ÖµºÍÊÓ¿Ú¶ÔÆë
-    UpdateModelTexture();
-    RecalculateCachedModelMetrics();
+    // 8. Í¬ï¿½ï¿½ï¿½ï¿½ï¿½Âµï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â±ê¶¨ï¿½ï¿½Öµï¿½ï¿½ï¿½Ó¿Ú¶ï¿½ï¿½ï¿½
+    updateModelTexture();
+    recalculateCachedModelMetrics();
     first_align_needed = true;
 
     std::cout << "[IO] Custom ASCII Model Loaded, Padded and Stabilized Successfully: " << ctx.NX << "x" << ctx.NZ << std::endl;
@@ -1638,9 +1665,10 @@ inline bool LoadModelFromTxt(const std::string& filename, bool flipVertically, G
 }
 
 // =============================================================================
-// 18. Éý¼¶°æ SEG-Y ¶àµÀÎïÀíÄ£ÐÍ¼ÓÔØÆ÷ (Ö§³ÖË«Ïò·­×ª¡¢¶ÔÆëÖØ²ÉÑù)
+// 18. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ SEG-Y ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä£ï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½ (Ö§ï¿½ï¿½Ë«ï¿½ï¿½×ªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø²ï¿½ï¿½ï¿½)
 // =============================================================================
-inline bool LoadModelFromSegy(
+// Loads velocity/material samples from SEG-Y and updates the selected model state.
+inline bool loadModelFromSegy(
     const std::string& vp_path,
     const std::string& vs_path,
     const std::string& rho_path,
@@ -1660,21 +1688,21 @@ inline bool LoadModelFromSegy(
         return false;
     }
 
-    // 1. ¶¯Ì¬ÖØ²ÉÑù (¶ÔÆëÎÒÃÇµ±Ç°ÏµÍ³µÄÎïÀí¿Õ¼ä²½³¤ ctx.h / par.model.dx)
+    // 1. ï¿½ï¿½Ì¬ï¿½Ø²ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Çµï¿½Ç°ÏµÍ³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ¼ä²½ï¿½ï¿½ ctx.h / par.model.dx)
     float original_segy_dx = edit_segy_dx;
     float target_system_dx = par.model.dx;
 
-    auto grid_vp = ResampleGrid2D(raw_vp, target_system_dx, original_segy_dx);
-    auto grid_vs = ResampleGrid2D(raw_vs, target_system_dx, original_segy_dx);
-    auto grid_rho = ResampleGrid2D(raw_rho, target_system_dx, original_segy_dx);
+    auto grid_vp = resampleGrid2d(raw_vp, target_system_dx, original_segy_dx);
+    auto grid_vs = resampleGrid2d(raw_vs, target_system_dx, original_segy_dx);
+    auto grid_rho = resampleGrid2d(raw_rho, target_system_dx, original_segy_dx);
 
-    // 2. PML À©±ß + 100% P²¨×è¿¹Æ¥Åä + Ë®²ã°²È«¹Ì»¯
+    // 2. PML ï¿½ï¿½ï¿½ï¿½ + 100% Pï¿½ï¿½ï¿½è¿¹Æ¥ï¿½ï¿½ + Ë®ï¿½ã°²È«ï¿½Ì»ï¿½
     int  current_npml = static_cast<int>(par.FDM.npml);
-    auto vp_pad = PadPmlToGrid2D(grid_vp, grid_vs, grid_rho, current_npml, 0); // ´« 0 µ¼ Vp
-    auto vs_pad = PadPmlToGrid2D(grid_vp, grid_vs, grid_rho, current_npml, 1); // ´« 1 µ¼ Vs
-    auto rho_pad = PadPmlToGrid2D(grid_vp, grid_vs, grid_rho, current_npml, 2); // ´« 2 µ¼ Rho
+    auto vp_pad = padPmlToGrid2d(grid_vp, grid_vs, grid_rho, current_npml, 0); // ï¿½ï¿½ 0 ï¿½ï¿½ Vp
+    auto vs_pad = padPmlToGrid2d(grid_vp, grid_vs, grid_rho, current_npml, 1); // ï¿½ï¿½ 1 ï¿½ï¿½ Vs
+    auto rho_pad = padPmlToGrid2d(grid_vp, grid_vs, grid_rho, current_npml, 2); // ï¿½ï¿½ 2 ï¿½ï¿½ Rho
 
-    // È·¶¨×îÖÕ³ß´ç
+    // È·ï¿½ï¿½ï¿½ï¿½ï¿½Õ³ß´ï¿½
     int file_w = static_cast<int>(vp_pad.size());
     int file_h = static_cast<int>(vp_pad[0].size());
 
@@ -1688,10 +1716,10 @@ inline bool LoadModelFromSegy(
     par.model.xnum = edit_w;
     par.model.znum = edit_h;
 
-    // ÖØÐÂÔÚ CPU ²à³õÊ¼»¯ÉÏÏÂÎÄ³ß´ç
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ CPU ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä³ß´ï¿½
     setupTestContext(ctx, par);
 
-    // 3. ½«ÍêÃÀ¶ÔÆë¡¢ÍêÈ«ÎÈ¶¨µÄÊý¾ÝÐ´ÈëÄÚ´æ (Ö§³Ö´¹Ö±/Ë®Æ½·­×ª)
+    // 3. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ë¡¢ï¿½ï¿½È«ï¿½È¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð´ï¿½ï¿½ï¿½Ú´ï¿½ (Ö§ï¿½Ö´ï¿½Ö±/Ë®Æ½ï¿½ï¿½×ª)
     for (int x = 0; x < ctx.NX; ++x) {
         for (int z = 0; z < ctx.NZ; ++z) {
             float vp = vp_pad[x][z];
@@ -1704,11 +1732,11 @@ inline bool LoadModelFromSegy(
             int tgtZ = z;
             if (flipVertically)   tgtZ = ctx.NZ - 1 - z;
 
-            SetMaterialAt(tgtX, tgtZ, vp, vs, rho);
+            setMaterialAt(tgtX, tgtZ, vp, vs, rho);
         }
     }
 
-    // 4. ÖØÖÃ¼¤·¢Î»ÖÃÓë PML ±íÃæ²¨ dp_flat
+    // 4. ï¿½ï¿½ï¿½Ã¼ï¿½ï¿½ï¿½Î»ï¿½ï¿½ï¿½ï¿½ PML ï¿½ï¿½ï¿½æ²¨ dp_flat
     ctx.src_z_idx = ctx.NZ / 4;
     ctx.src_idx = ctx.src_z_idx * ctx.NX + (ctx.NX / 2);
     edit_src_x = ctx.NX / 2;
@@ -1724,33 +1752,34 @@ inline bool LoadModelFromSegy(
             ctx.dp_flat[j] = (l2m * l2m - lam * lam) / l2m;
         }
     }
-    UpdatePmlDampingArrays();
-    AutoAlignTimeStep();
-    // 5. ÊÍ·Å²¢ÖØÐÂ×¢²á FBO ÎÆÀí³ß´ç£¬·ÀÖ¹ÏÔ´æ±ÀÀ£
-    freeGPUSimulation(gpu_data);
+    updatePmlDampingArrays();
+    autoAlignTimeStep();
+    // 5. ï¿½Í·Å²ï¿½ï¿½ï¿½ï¿½ï¿½×¢ï¿½ï¿½ FBO ï¿½ï¿½ï¿½ï¿½ï¿½ß´ç£¬ï¿½ï¿½Ö¹ï¿½Ô´ï¿½ï¿½ï¿½ï¿½
+    releaseGpuSimulation(gpu_data);
     cudaGraphicsUnregisterResource(gl.cudaSeisRes);
     glBindTexture(GL_TEXTURE_2D, gl.seisTex);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, ctx.NX, ctx.NZ, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-    cudaGraphicsGLRegisterImage(&gl.cudaSeisRes, gl.seisTex, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard);
+    CUDA_CHECK(cudaGraphicsGLRegisterImage(&gl.cudaSeisRes, gl.seisTex, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard));
 
-    // 6. ÖØÐÂ³õÊ¼»¯ÐÂ´óÐ¡µÄ GPU ÏÔ´æ
-    initGPUSimulation(gpu_data, ctx);
+    // 6. ï¿½ï¿½ï¿½Â³ï¿½Ê¼ï¿½ï¿½ï¿½Â´ï¿½Ð¡ï¿½ï¿½ GPU ï¿½Ô´ï¿½
+    initializeGpuSimulation(gpu_data, ctx);
 
-    // 7. Í¬²½ÖØ»æµØÖÊ±³¾°ÎÆÀí£¬ÖØÐÂ¶ÔÆëÊÓ¿Ú±ê³ß
-    UpdateModelTexture();
-    RecalculateCachedModelMetrics();
+    // 7. Í¬ï¿½ï¿½ï¿½Ø»ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¶ï¿½ï¿½ï¿½ï¿½Ó¿Ú±ï¿½ï¿½
+    updateModelTexture();
+    recalculateCachedModelMetrics();
     first_align_needed = true;
 
     return true;
 }
 
 // =============================================================================
-// 19. ÖÕ¼«°æµØ²ãÄ£ÐÍµ¼³öÆ÷ (Ö§³Ö¿Õ¼ä¾Ö²¿²Ã¼ô Cropping ÓëË®Æ½·­×ªµ¼³öÎª SGY ¼ÇÂ¼)
+// 19. ï¿½Õ¼ï¿½ï¿½ï¿½Ø²ï¿½Ä£ï¿½Íµï¿½ï¿½ï¿½ï¿½ï¿½ (Ö§ï¿½Ö¿Õ¼ï¿½Ö²ï¿½ï¿½Ã¼ï¿½ Cropping ï¿½ï¿½Ë®Æ½ï¿½ï¿½×ªï¿½ï¿½ï¿½ï¿½Îª SGY ï¿½ï¿½Â¼)
 // =============================================================================
 // =============================================================================
-// ¡¾ÖØ¹¹ºó¡¿£ºÖ§³Ö¿Õ¼ä¾Ö²¿²Ã¼ô¡¢Ë«Ïò·­×ªÒÔ¼°¶¯Ì¬ÖØ²ÉÑùµÄ SEGY Ä£ÐÍµ¼³öÇý¶¯
+// ï¿½ï¿½ï¿½Ø¹ï¿½ï¿½ó¡¿£ï¿½Ö§ï¿½Ö¿Õ¼ï¿½Ö²ï¿½ï¿½Ã¼ï¿½ï¿½ï¿½Ë«ï¿½ï¿½×ªï¿½Ô¼ï¿½ï¿½ï¿½Ì¬ï¿½Ø²ï¿½ï¿½ï¿½ï¿½ï¿½ SEGY Ä£ï¿½Íµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 // =============================================================================
-inline bool ExportModelToSegy(
+// Writes the current material model to SEG-Y with the selected axis metadata.
+inline bool exportModelToSegy(
     const std::string& base_filepath,
     bool               density_gcm3,
     bool               flipHorizontally,
@@ -1758,11 +1787,11 @@ inline bool ExportModelToSegy(
     int                z_min,
     int                x_max,
     int                z_max,
-    float              target_dx // <-- ¡¾ºËÐÄÐÂÔö¡¿£ºÄ¿±êµ¼³öÍø¸ñ²½³¤ (Ã×)
+    float              target_dx // <-- ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½êµ¼ï¿½ï¿½ï¿½ï¿½ï¿½ñ²½³ï¿½ (ï¿½ï¿½)
 ) {
     if (ctx.total_grid <= 0) return false;
 
-    // 1. °²È«±ß½ç¼ì²éÓë×ÔÊÊÓ¦¾À´í
+    // 1. ï¿½ï¿½È«ï¿½ß½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½
     x_min = std::clamp(x_min, 0, ctx.NX - 1);
     x_max = std::clamp(x_max, 0, ctx.NX - 1);
     z_min = std::clamp(z_min, 0, ctx.NZ - 1);
@@ -1771,7 +1800,7 @@ inline bool ExportModelToSegy(
     if (x_min > x_max) std::swap(x_min, x_max);
     if (z_min > z_max) std::swap(z_min, z_max);
 
-    // ¼ÆËã²Ã¼ôºóµÄÐÂÄ£ÐÍ³ß´ç (ÐÂ¿í¶È¡¢ÐÂÉî¶È)
+    // ï¿½ï¿½ï¿½ï¿½Ã¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä£ï¿½Í³ß´ï¿½ (ï¿½Â¿ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½)
     int new_NX = x_max - x_min + 1;
     int new_NZ = z_max - z_min + 1;
 
@@ -1779,19 +1808,19 @@ inline bool ExportModelToSegy(
     std::cout << "     - Crop Range: X[" << x_min << " ~ " << x_max << "], Z[" << z_min << " ~ " << z_max << "]" << std::endl;
     std::cout << "     - Raw Crop Size: " << new_NX << "x" << new_NZ << std::endl;
 
-    // 2. ÌáÈ¡²Ã¼ôÇøÓòµ½ CPU 2D ÁÙÊ±»º³åÇø
+    // 2. ï¿½ï¿½È¡ï¿½Ã¼ï¿½ï¿½ï¿½ï¿½ï¿½ CPU 2D ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     std::vector<std::vector<float>> cropped_vp(new_NX, std::vector<float>(new_NZ, 0.0f));
     std::vector<std::vector<float>> cropped_vs(new_NX, std::vector<float>(new_NZ, 0.0f));
     std::vector<std::vector<float>> cropped_rho(new_NX, std::vector<float>(new_NZ, 0.0f));
 
     for (int x = 0; x < new_NX; ++x) {
-        // Èç¹û¿ªÆôÁËË®Æ½·­×ª£¬Ôò¶Ô²Ã¼ô³öµÄ×ÓÇøÓò½øÐÐ×óÓÒ¾µÏñ
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ë®Æ½ï¿½ï¿½×ªï¿½ï¿½ï¿½ï¿½Ô²Ã¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò¾ï¿½ï¿½ï¿½
         int targetX = flipHorizontally ? (x_max - x) : (x_min + x);
 
         for (int z = 0; z < new_NZ; ++z) {
-            int targetZ = z_min + z; // ¶ÔÆëÉî¶È
+            int targetZ = z_min + z; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-            int k_cuda = targetZ * ctx.NX + targetX; // ¶ÁÈ¡È«Íø¸ñÖÐ¶ÔÓ¦µÄÎ»ÖÃ
+            int k_cuda = targetZ * ctx.NX + targetX; // ï¿½ï¿½È¡È«ï¿½ï¿½ï¿½ï¿½ï¿½Ð¶ï¿½Ó¦ï¿½ï¿½Î»ï¿½ï¿½
 
             float rho_val = ctx.rho[k_cuda];
             float vp_val = 0.0f;
@@ -1805,25 +1834,25 @@ inline bool ExportModelToSegy(
             cropped_vp[x][z] = vp_val;
             cropped_vs[x][z] = vs_val;
 
-            // ÎïÀíµ¥Î»»»Ëã
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½ï¿½ï¿½
             if (density_gcm3) cropped_rho[x][z] = rho_val / 1000.0f;
             else              cropped_rho[x][z] = rho_val;
         }
     }
 
-    // 3. ¡¾ºËÐÄÐÂÔö¡¿£ºÎïÀíÖØ²ÉÑù¹ÜÏß¶ÔÆë
+    // 3. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß¶ï¿½ï¿½ï¿½
     std::vector<std::vector<float>> final_vp, final_vs, final_rho;
     int export_NX = new_NX;
     int export_NZ = new_NZ;
 
-    // Ö»ÓÐµ±Ä¿±ê²½³¤´óÓÚ 0 ÇÒÓëµ±Ç°²½³¤²»Í¬Ê±£¬²Å´¥·¢¶þÎ¬ÖØ²ÉÑù²åÖµ
+    // Ö»ï¿½Ðµï¿½Ä¿ï¿½ê²½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 0 ï¿½ï¿½ï¿½ëµ±Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¬Ê±ï¿½ï¿½ï¿½Å´ï¿½ï¿½ï¿½ï¿½ï¿½Î¬ï¿½Ø²ï¿½ï¿½ï¿½ï¿½ï¿½Öµ
     if (target_dx > 0.0f && std::abs(target_dx - ctx.h) > 1e-4f) {
         std::cout << "     - [Trigger] Resampling sub-grid: " << ctx.h << "m -> " << target_dx << "m" << std::endl;
-        final_vp = ResampleGrid2D(cropped_vp, target_dx, ctx.h);
-        final_vs = ResampleGrid2D(cropped_vs, target_dx, ctx.h);
-        final_rho = ResampleGrid2D(cropped_rho, target_dx, ctx.h);
+        final_vp = resampleGrid2d(cropped_vp, target_dx, ctx.h);
+        final_vs = resampleGrid2d(cropped_vs, target_dx, ctx.h);
+        final_rho = resampleGrid2d(cropped_rho, target_dx, ctx.h);
 
-        // Ë¢ÐÂÖØ²ÉÑùºóµÄÕæÊµ³ß´ç
+        // Ë¢ï¿½ï¿½ï¿½Ø²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Êµï¿½ß´ï¿½
         export_NX = static_cast<int>(final_vp.size());
         export_NZ = static_cast<int>(final_vp[0].size());
     }
@@ -1833,7 +1862,7 @@ inline bool ExportModelToSegy(
         final_rho = cropped_rho;
     }
 
-    // 4. ½« 2D ÎïÀíÍø¸ñÕ¹Æ½Îª 1D µ¼³öÏòÁ¿
+    // 4. ï¿½ï¿½ 2D ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ¹Æ½Îª 1D ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     size_t             export_total_grid = static_cast<size_t>(export_NX) * export_NZ;
     std::vector<float> flat_vp(export_total_grid);
     std::vector<float> flat_vs(export_total_grid);
@@ -1841,14 +1870,14 @@ inline bool ExportModelToSegy(
 
     for (int x = 0; x < export_NX; ++x) {
         for (int z = 0; z < export_NZ; ++z) {
-            size_t k_segy = (size_t)x * export_NZ + z; // SEGY ÒªÇóµÄµÀÄÚÅÅÁÐ´ÎÐò
+            size_t k_segy = (size_t)x * export_NZ + z; // SEGY Òªï¿½ï¿½Äµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð´ï¿½ï¿½ï¿½
             flat_vp[k_segy] = final_vp[x][z];
             flat_vs[k_segy] = final_vs[x][z];
             flat_rho[k_segy] = final_rho[x][z];
         }
     }
 
-    // 5. ×Ô¶¯¸ñÊ½»¯ÎÄ¼þÂ·¾¶²¢Ð´³ö¶þ½øÖÆÎÄ¼þ
+    // 5. ï¿½Ô¶ï¿½ï¿½ï¿½Ê½ï¿½ï¿½ï¿½Ä¼ï¿½Â·ï¿½ï¿½ï¿½ï¿½Ð´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½
     std::string clean_path = base_filepath;
     size_t      dot_pos = clean_path.find_last_of('.');
     if (dot_pos != std::string::npos) {
@@ -1858,7 +1887,7 @@ inline bool ExportModelToSegy(
     std::string out_vs_path = clean_path + "_vs.sgy";
     std::string out_rho_path = clean_path + "_rho.sgy";
 
-    float dummy_dt = 0.001f; // Ä£ÐÍÎÄ¼þµÄ±ê³Æ´¹Ö±¼ä¸ô
+    float dummy_dt = 0.001f; // Ä£ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½Ä±ï¿½Æ´ï¿½Ö±ï¿½ï¿½ï¿½
     SeismicIO::writeSegyFile2D(flat_vp, export_NX, export_NZ, out_vp_path, dummy_dt);
     SeismicIO::writeSegyFile2D(flat_vs, export_NX, export_NZ, out_vs_path, dummy_dt);
     SeismicIO::writeSegyFile2D(flat_rho, export_NX, export_NZ, out_rho_path, dummy_dt);
@@ -1869,10 +1898,11 @@ inline bool ExportModelToSegy(
 }
 
 // =============================================================================
-// 20. ±ê×¼¶þ½øÖÆ SEG-Y µØÕð²¨¼ÇÂ¼ÎÄ¼þÊý¾Ý¼ÓÔØÆ÷
+// 20. ï¿½ï¿½×¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ SEG-Y ï¿½ï¿½ï¿½ð²¨¼ï¿½Â¼ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½Ý¼ï¿½ï¿½ï¿½ï¿½ï¿½
 // =============================================================================
-inline bool LoadSeismicSegy(const std::string& filepath, AnalysisState& state) {
-    // 1. µ÷ÓÃµ×²ãµÄ±ê×¼ SEGY 2D ½Ó¿Ú¶ÁÈ¡
+// Loads recorded seismic traces from SEG-Y into the analysis state.
+inline bool loadSeismicSegy(const std::string& filepath, AnalysisState& state) {
+    // 1. ï¿½ï¿½ï¿½Ãµ×²ï¿½Ä±ï¿½×¼ SEGY 2D ï¿½Ó¿Ú¶ï¿½È¡
     state.traces = SeismicIO::readSegyFile2D(filepath);
     if (state.traces.empty()) {
         return false;
@@ -1881,24 +1911,24 @@ inline bool LoadSeismicSegy(const std::string& filepath, AnalysisState& state) {
     state.numChannels = static_cast<int>(state.traces.size());
     state.numSamples = static_cast<int>(state.traces[0].size());
 
-    // 2. ×Ô¶¯´Ó¶þ½øÖÆ¾íÍ·µÄ Bytes 17-18 (¼´ÎÄ¼þµÚ 3216 ×Ö½Ú) ÌáÈ¡²ÉÑù¼ä¸ô
-    state.samplingInterval = 0.001f; // Ä¬ÈÏ·À´ôÖµ (1ms)
+    // 2. ï¿½Ô¶ï¿½ï¿½Ó¶ï¿½ï¿½ï¿½ï¿½Æ¾ï¿½Í·ï¿½ï¿½ Bytes 17-18 (ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ 3216 ï¿½Ö½ï¿½) ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    state.samplingInterval = 0.001f; // Ä¬ï¿½Ï·ï¿½ï¿½ï¿½Öµ (1ms)
     std::ifstream file(filepath, std::ios::binary);
 
     if (file.is_open()) {
-        file.seekg(3200 + 16, std::ios::beg); // ¶¨Î»ÖÁ 3216 ×Ö½Ú
+        file.seekg(3200 + 16, std::ios::beg); // ï¿½ï¿½Î»ï¿½ï¿½ 3216 ï¿½Ö½ï¿½
         uint16_t raw_dt = 0;
         file.read(reinterpret_cast<char*>(&raw_dt), 2);
 
-        // ´ó¶ËÐò×ªÐ¡¶ËÐò
+        // ï¿½ï¿½ï¿½ï¿½ï¿½×ªÐ¡ï¿½ï¿½ï¿½ï¿½
         uint16_t swapped_dt = ((raw_dt & 0xFF00) >> 8) | ((raw_dt & 0x00FF) << 8);
         if (swapped_dt > 0) {
-            state.samplingInterval = static_cast<float>(swapped_dt) / 1000000.0f; // Î¢Ãë»»ËãÎªÃë
+            state.samplingInterval = static_cast<float>(swapped_dt) / 1000000.0f; // Î¢ï¿½ë»»ï¿½ï¿½Îªï¿½ï¿½
         }
         file.close();
     }
 
-    // 3. ¼ÆËãÈ«¾Ö×î´óÕñ·ùÓÃÓÚ Wiggle/Heatmap ¶¯Ì¬±ß½ç×ÔÊÊÓ¦
+    // 3. ï¿½ï¿½ï¿½ï¿½È«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Wiggle/Heatmap ï¿½ï¿½Ì¬ï¿½ß½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦
     state.globalMaxAmp = 0.0f;
     for (const auto& trace : state.traces) {
         for (float val : trace) {
@@ -1912,15 +1942,16 @@ inline bool LoadSeismicSegy(const std::string& filepath, AnalysisState& state) {
 }
 
 // =============================================================================
-// ¡¾ºËÐÄÐÂÔö¡¿£º´ÓÑ¡ÔñµÄ¶þ½øÖÆÎÄ¼þÃûÖÐ£¬×Ô¶¯ÄæÏò½âÎö³ö NX ºÍ NZ ´óÐ¡ (¸ñÊ½£º_NXxNZ_)
-//  Ö§³Ö¸ñÊ½Èç£ºmarmousi_2267x1401_vz.bin -> w = 2267, z = 1401
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ¡ï¿½ï¿½Ä¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½Ð£ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ NX ï¿½ï¿½ NZ ï¿½ï¿½Ð¡ (ï¿½ï¿½Ê½ï¿½ï¿½_NXxNZ_)
+//  Ö§ï¿½Ö¸ï¿½Ê½ï¿½ç£ºmarmousi_2267x1401_vz.bin -> w = 2267, z = 1401
 // =============================================================================
-inline bool ParseDimensionsFromPath(const std::string& path, int& out_w, int& out_z) {
-    // 1. Ñ°ÕÒ×îºóÒ»¸ö×ÖÄ¸ 'x' »ò 'X'
+// Extracts optional grid dimensions encoded in a model filename.
+inline bool parseDimensionsFromPath(const std::string& path, int& out_w, int& out_z) {
+    // 1. Ñ°ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½Ä¸ 'x' ï¿½ï¿½ 'X'
     size_t last_x = path.find_last_of("xX");
     if (last_x == std::string::npos) return false;
 
-    // 2. ´Ó 'x' ÄæÏòÑ°ÕÒÇ°Ò»¸öÏÂ»®Ïß '_' »òÐ±¸Ü
+    // 2. ï¿½ï¿½ 'x' ï¿½ï¿½ï¿½ï¿½Ñ°ï¿½ï¿½Ç°Ò»ï¿½ï¿½ï¿½Â»ï¿½ï¿½ï¿½ '_' ï¿½ï¿½Ð±ï¿½ï¿½
     size_t start_idx = path.find_last_of('_', last_x);
     if (start_idx == std::string::npos) {
         start_idx = path.find_last_of("\\/", last_x);
@@ -1928,10 +1959,10 @@ inline bool ParseDimensionsFromPath(const std::string& path, int& out_w, int& ou
         else                                start_idx += 1;
     }
     else {
-        start_idx += 1; // Ìø¹ýÏÂ»®Ïß×Ö·û
+        start_idx += 1; // ï¿½ï¿½ï¿½ï¿½ï¿½Â»ï¿½ï¿½ï¿½ï¿½Ö·ï¿½
     }
 
-    // 3. ´Ó 'x' ÕýÏòÑ°ÕÒºóÒ»¸öÏÂ»®Ïß '_' »òµãºÅ '.'
+    // 3. ï¿½ï¿½ 'x' ï¿½ï¿½ï¿½ï¿½Ñ°ï¿½Òºï¿½Ò»ï¿½ï¿½ï¿½Â»ï¿½ï¿½ï¿½ '_' ï¿½ï¿½ï¿½ï¿½ '.'
     size_t end_idx = path.find_first_of('_', last_x);
     if (end_idx == std::string::npos) {
         end_idx = path.find_last_of('.');
@@ -1942,11 +1973,11 @@ inline bool ParseDimensionsFromPath(const std::string& path, int& out_w, int& ou
 
     if (start_idx >= last_x || last_x >= end_idx) return false;
 
-    // 4. ½ØÈ¡¿í¶ÈºÍÉî¶È×Ó×Ö·û´®²¢×ªÎªÕûÊý
+    // 4. ï¿½ï¿½È¡ï¿½ï¿½ï¿½Èºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½ï¿½ï¿½×ªÎªï¿½ï¿½ï¿½ï¿½
     std::string w_str = path.substr(start_idx, last_x - start_idx);
     std::string z_str = path.substr(last_x + 1, end_idx - last_x - 1);
 
-    // ·À´ôÑéÖ¤£ºÈ·±£½ØÈ¡µÄ×Ö·û´®È«²¿Îª´¿Êý×Ö
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¤ï¿½ï¿½È·ï¿½ï¿½ï¿½ï¿½È¡ï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½È«ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     auto is_digits = [](const std::string& s) {
         return !s.empty() && std::all_of(s.begin(), s.end(), ::isdigit);
         };
@@ -1960,38 +1991,35 @@ inline bool ParseDimensionsFromPath(const std::string& path, int& out_w, int& ou
 }
 
 // =============================================================================
-// ¼ì²¨Æ÷ÅÅÁÐÊý¾ÝÍ¬²½ÖÁ GPU ÏÔ´æµÄºËÐÄ½Ó¿Ú
+// ï¿½ì²¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¬ï¿½ï¿½ï¿½ï¿½ GPU ï¿½Ô´ï¿½Äºï¿½ï¿½Ä½Ó¿ï¿½
 // =============================================================================
-inline void SyncReceiversToGPU() {
-    if (rec.receivers.empty()) return;
-
-    ctx.num_rcv = rec.numChannels;
-    ctx.rcv_grid_idx.resize(ctx.num_rcv);
-    for (int i = 0; i < ctx.num_rcv; ++i) {
-        ctx.rcv_grid_idx[i] = rec.receivers[i].y * ctx.NX + rec.receivers[i].x;
+// Synchronizes receiver coordinates with the GPU sampling buffers.
+inline void syncReceiversToGpu() {
+    std::vector<int> receiverIndices;
+    receiverIndices.reserve(rec.receivers.size());
+    for (const ReceiverPos& receiver : rec.receivers) {
+        if (receiver.x < 0 || receiver.x >= ctx.NX || receiver.y < 0 || receiver.y >= ctx.NZ) {
+            throw std::invalid_argument("Receiver coordinates are outside the model; redeploy the receiver array");
+        }
+        receiverIndices.push_back(receiver.y * ctx.NX + receiver.x);
     }
-
-    // ÖØÐÂÔÚÏÔ¿¨¶Ë·ÖÅä¼ì²¨Æ÷Ë÷Òý¼°ÁÙÊ±Êý¾Ý»º³åÇø£¬·ÀÖ¹Ô½½ç
-    cudaFree(gpu_data.d_rcv_grid_idx);
-    cudaMalloc(&gpu_data.d_rcv_grid_idx, ctx.num_rcv * sizeof(int));
-    cudaMemcpy(gpu_data.d_rcv_grid_idx, ctx.rcv_grid_idx.data(), ctx.num_rcv * sizeof(int), cudaMemcpyHostToDevice);
-
-    cudaFree(gpu_data.d_record_vx_step);
-    cudaFree(gpu_data.d_record_vz_step);
-    cudaMalloc(&gpu_data.d_record_vx_step, ctx.num_rcv * sizeof(float));
-    cudaMalloc(&gpu_data.d_record_vz_step, ctx.num_rcv * sizeof(float));
+    updateGpuReceivers(gpu_data, receiverIndices);
+    ctx.rcv_grid_idx = std::move(receiverIndices);
+    ctx.num_rcv = static_cast<int>(ctx.rcv_grid_idx.size());
+    rec.numChannels = ctx.num_rcv;
 }
 
 // =============================================================================
-// Êý¾Ý²É¼¯Ò»¼üÖØÖÃÓëµ¥µã¼¤·¢¸¨ÖúÇý¶¯
+// ï¿½ï¿½ï¿½Ý²É¼ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ëµ¥ï¿½ã¼¤ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 // =============================================================================
 // =============================================================================
-// Êý¾Ý²É¼¯Ò»¼üÖØÖÃÓëµ¥µã¼¤·¢¸¨ÖúÇý¶¯ (ÐÞÕý°æ£ºÖ´ÐÐ GPU ³õÊ¼»¯Ç°Ç¿ÖÆÎïÀí²ÎÊý¶ÔÆë)
+// ï¿½ï¿½ï¿½Ý²É¼ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ëµ¥ï¿½ã¼¤ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ï¿½æ£ºÖ´ï¿½ï¿½ GPU ï¿½ï¿½Ê¼ï¿½ï¿½Ç°Ç¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½)
 // =============================================================================
-inline void TriggerSingleShot(GLHandles& gl, SimState& state) {
+// Initializes and advances one single-shot simulation using the current setup.
+inline void triggerSingleShot(GLHandles& gl, SimState& state) {
     // =========================================================================
-    // ¡¾ºËÐÄÐÞ¸´¡¿£ºÔÚ³õÊ¼»¯ GPU Ö®Ç°£¬±ØÐë½«µ±Ç°Ç°Ì¨£¨»ò×Ô¶¯¹¤×÷Á÷ÖÐ£©×îÐÂµÄ 
-    //  ÕðÔ´×ø±ê¡¢¼¤·¢ÀàÐÍ¡¢·ùÖµ¡¢½Ç¶È 100% Í¬²½¸øÈ«¾Ö ctx£¬²¢ÖØ»­×Ó²¨£¬³¹µ×¸ùÖÎÔ­µØ±¬Õ¨ Bug£¡
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Þ¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú³ï¿½Ê¼ï¿½ï¿½ GPU Ö®Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ë½«ï¿½ï¿½Ç°Ç°Ì¨ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð£ï¿½ï¿½ï¿½ï¿½Âµï¿½ 
+    //  ï¿½ï¿½Ô´ï¿½ï¿½ï¿½ê¡¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¡ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½Ç¶ï¿½ 100% Í¬ï¿½ï¿½ï¿½ï¿½È«ï¿½ï¿½ ctxï¿½ï¿½ï¿½ï¿½ï¿½Ø»ï¿½ï¿½Ó²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×¸ï¿½ï¿½ï¿½Ô­ï¿½Ø±ï¿½Õ¨ Bugï¿½ï¿½
     // =========================================================================
     ctx.src_z_idx = edit_src_z;
     ctx.src_idx = edit_src_z * ctx.NX + edit_src_x;
@@ -1999,7 +2027,7 @@ inline void TriggerSingleShot(GLHandles& gl, SimState& state) {
     ctx.src_type = edit_source_type;
     ctx.src_amp = edit_amp;
 
-    // ÖØÐÂ¼ÆËã²¢Éú³ÉÓë×îÐÂÊ±¼ä²½ dt ¶ÔÆëµÄ Ricker ×Ó²¨£¬³¹µ×¶Å¾øÆµÂÊ»û±ä
+    // ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ã²¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ä²½ dt ï¿½ï¿½ï¿½ï¿½ï¿½ Ricker ï¿½Ó²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×¶Å¾ï¿½Æµï¿½Ê»ï¿½ï¿½ï¿½
     generateRickerWavelet(ctx.wavelet, ctx.nt, ctx.dt, edit_f0, edit_t0);
 
     current_it = 0;
@@ -2007,26 +2035,33 @@ inline void TriggerSingleShot(GLHandles& gl, SimState& state) {
     accumulated_compute_time = 0.0f;
     active_sources.clear();
 
-    freeGPUSimulation(gpu_data);
-    initGPUSimulation(gpu_data, ctx); // ´ËÊ± gpu_data ½«»ñµÃÍêÈ«¶ÔÆëµÄÐÂÕðÔ´Î»ÖÃÓë²ÎÊý£¡
+    releaseGpuSimulation(gpu_data);
+    initializeGpuSimulation(gpu_data, ctx); // ï¿½ï¿½Ê± gpu_data ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô´Î»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-    // Ç¿ÖÆÖ´ÐÐÒ»´Î¼ì²¨Æ÷ÏÔ´æÍ¬²½
-    SyncReceiversToGPU();
+    // Ç¿ï¿½ï¿½Ö´ï¿½ï¿½Ò»ï¿½Î¼ì²¨ï¿½ï¿½ï¿½Ô´ï¿½Í¬ï¿½ï¿½
+    syncReceiversToGpu();
 
     std::fill(ctx.record_vx.begin(), ctx.record_vx.end(), 0.0f);
     std::fill(ctx.record_vz.begin(), ctx.record_vz.end(), 0.0f);
 }
 
 // =============================================================================
-// ½«²É¼¯µÄÊý¾Ýµ¼³öÎª´øÓÐÎïÀíµÀÍ·×ø±êµÄ±ê×¼ SEG-Y ¸ñÊ½ÎÄ¼þ
+// ï¿½ï¿½ï¿½É¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ýµï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í·ï¿½ï¿½ï¿½ï¿½Ä±ï¿½×¼ SEG-Y ï¿½ï¿½Ê½ï¿½Ä¼ï¿½
 // =============================================================================
 // =============================================================================
-// ¡¾¶à·ÖÁ¿Éý¼¶°æ¡¿£ºÒ»¼ü×Ô¶¯½«²É¼¯¼ÇÂ¼µ¼³öÎª Ë®Æ½(Vx) ºÍ ´¹Ö±(Vz) Ë«Í¨µÀ SEG-Y ¼ÇÂ¼×é
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½æ¡¿ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½É¼ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½Îª Ë®Æ½(Vx) ï¿½ï¿½ ï¿½ï¿½Ö±(Vz) Ë«Í¨ï¿½ï¿½ SEG-Y ï¿½ï¿½Â¼ï¿½ï¿½
 // =============================================================================
-inline void ExportToSegy(const AcquisitionManager& recorder, const std::string& filename) {
+// Exports acquired receiver traces to SEG-Y at the requested path.
+inline void exportToSegy(const AcquisitionManager& recorder, const std::string& filename) {
     if (recorder.recorded_vz.empty() || recorder.recorded_vz[0].empty()) return;
+    const float sample_interval_dt = recorder.actualSampleInterval;
+    if (!std::isfinite(sample_interval_dt) || sample_interval_dt <= 0.0f || recorder.numChannels <= 0 ||
+        recorder.receivers.size() != recorder.numChannels || recorder.recorded_vx.size() != recorder.numChannels ||
+        recorder.recorded_vz.size() != recorder.numChannels) {
+        throw std::invalid_argument("Export requires matching traces, receivers, and recorded sampling interval");
+    }
 
-    // 1. Æ´×°±ê×¼µÄµ¥µÀ²É¼¯ÔªÊý¾ÝµÀÍ·
+    // 1. Æ´×°ï¿½ï¿½×¼ï¿½Äµï¿½ï¿½ï¿½ï¿½É¼ï¿½Ôªï¿½ï¿½ï¿½Ýµï¿½Í·
     std::vector<SeismicIO::TraceMetadata> metadata(recorder.numChannels);
     for (int i = 0; i < recorder.numChannels; ++i) {
         metadata[i].fieldRecordNum = recorder.currentFileIndex;
@@ -2037,24 +2072,23 @@ inline void ExportToSegy(const AcquisitionManager& recorder, const std::string& 
         metadata[i].groupY = static_cast<int32_t>(recorder.receivers[i].y * ctx.h);
     }
 
-    float sample_interval_dt = 1.0f / recorder.samplingRateHz;
-
-    // 2. ×Ô¶¯¸ñÊ½»¯²ð·Öµ¼³öÂ·¾¶Îª _vx ºÍ _vz ¸ñÊ½
+    // 2. ï¿½Ô¶ï¿½ï¿½ï¿½Ê½ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½Â·ï¿½ï¿½Îª _vx ï¿½ï¿½ _vz ï¿½ï¿½Ê½
     std::string clean_path = filename;
     size_t      dot_pos = clean_path.find_last_of('.');
     if (dot_pos != std::string::npos) {
         clean_path = clean_path.substr(0, dot_pos);
     }
 
-    // 3. ¡¾ºËÐÄÐÂÔö¡¿£ºÒ»Ê½Á½·Ý£¬Í¬²½µ¼³ö¸ß±£ÕæË®Æ½Óë´¹Ö±µØÕð¼ÇÂ¼µÀ¼¯£¡
-    SeismicIO::writeSegyFile2D(recorder.recorded_vx, metadata, clean_path + "_vx.sgy", sample_interval_dt); // µ¼³öË®Æ½·ÖÁ¿
-    SeismicIO::writeSegyFile2D(recorder.recorded_vz, metadata, clean_path + "_vz.sgy", sample_interval_dt); // µ¼³ö´¹Ö±·ÖÁ¿
+    // 3. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»Ê½ï¿½ï¿½ï¿½Ý£ï¿½Í¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß±ï¿½ï¿½ï¿½Ë®Æ½ï¿½ë´¹Ö±ï¿½ï¿½ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    SeismicIO::writeSegyFile2D(recorder.recorded_vx, metadata, clean_path + "_vx.sgy", sample_interval_dt); // ï¿½ï¿½ï¿½ï¿½Ë®Æ½ï¿½ï¿½ï¿½ï¿½
+    SeismicIO::writeSegyFile2D(recorder.recorded_vz, metadata, clean_path + "_vz.sgy", sample_interval_dt); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö±ï¿½ï¿½ï¿½ï¿½
 
     std::cout << "[Acquisition IO] Dual-Component (2C) Seismograms exported successfully." << std::endl;
 }
 
-// CSV ¼òµ¥¸ñÊ½±¸·Ýµ¼³ö
-inline void ExportToCSV(const AcquisitionManager& recorder, const std::string& filename) {
+// CSV ï¿½òµ¥¸ï¿½Ê½ï¿½ï¿½ï¿½Ýµï¿½ï¿½ï¿½
+// Exports acquired receiver traces to a tabular CSV file.
+inline void exportToCsv(const AcquisitionManager& recorder, const std::string& filename) {
     if (recorder.recorded_vz.empty()) return;
     std::ofstream file(filename);
     if (!file.is_open()) return;
@@ -2070,43 +2104,45 @@ inline void ExportToCSV(const AcquisitionManager& recorder, const std::string& f
     file.close();
 }
 
-/// ////////////////////////////////////////////////////////////////////////µÚËÄ²¿·Ö
+/// ////////////////////////////////////////////////////////////////////////ï¿½ï¿½ï¿½Ä²ï¿½ï¿½ï¿½
 
 // =============================================================================
-// 21. ¶èÐÔ¸üÐÂÒ»Î¬ Heatmap ¾ØÕóµÄ¸¨Öúº¯Êý
+// 21. ï¿½ï¿½ï¿½Ô¸ï¿½ï¿½ï¿½Ò»Î¬ Heatmap ï¿½ï¿½ï¿½ï¿½Ä¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 // =============================================================================
-inline void UpdateHeatmapData(AnalysisState& state) {
+// Recomputes the analysis heatmap from the currently selected trace data.
+inline void updateHeatmapData(AnalysisState& state) {
     state.heatmapData.resize(state.numSamples * state.numChannels);
     for (int r = 0; r < state.numSamples; ++r) {
         for (int c = 0; c < state.numChannels; ++c) {
-            // ½« [channel_idx][sample_idx] Ó³ÉäÎªÐÐÓÅÏÈ¾ØÕó£¬ÍêÃÀÊÊÅä ImPlot::PlotHeatmap
+            // ï¿½ï¿½ [channel_idx][sample_idx] Ó³ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½È¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ImPlot::PlotHeatmap
             state.heatmapData[r * state.numChannels + c] = state.traces[c][r];
         }
     }
 }
 
 // =============================================================================
-// 22. ÊÓ¿Ú LOD ¸ßÐ§»Øµ÷ÌáÈ¡Æ÷
+// 22. ï¿½Ó¿ï¿½ LOD ï¿½ï¿½Ð§ï¿½Øµï¿½ï¿½ï¿½È¡ï¿½ï¿½
 // =============================================================================
-inline ImPlotPoint SeismicDataGetter(int idx, void* data) {
+// Supplies one receiver-trace sample to ImPlot using the current plot data.
+inline ImPlotPoint seismicDataGetter(int idx, void* data) {
     PlotContext* ctx = reinterpret_cast<PlotContext*>(data);
     int          sampleIdx = ctx->startSample + idx * ctx->step;
     float        val = (*ctx->traceData)[sampleIdx];
 
-    // Õñ·ùºáÏòÕ¹¿ªÆ«ÒÆÓëÊ±¼äÉî¶È×ª»¯
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ¹ï¿½ï¿½Æ«ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½×ªï¿½ï¿½
     double x = ctx->offsetX + val * ctx->gain;
     double y = ctx->useTime ? (sampleIdx * ctx->dt) : (double)sampleIdx;
 
     return ImPlotPoint(x, y);
 }
 
-// È«¾ÖÎ¨Ò»µÄ·ÖÎöÆ÷×´Ì¬ÊµÀý
+// È«ï¿½ï¿½Î¨Ò»ï¿½Ä·ï¿½ï¿½ï¿½ï¿½ï¿½×´Ì¬Êµï¿½ï¿½
 inline AnalysisState g_analyzerState;
 
 // =============================================================================
-// 23. ¸ß±£Õæ SEG-Y Ì½²éÊý¾Ý·ÖÎöÆ÷Ö÷´°¿Ú (Seismic Data Analyzer Window)
+// 23. ï¿½ß±ï¿½ï¿½ï¿½ SEG-Y Ì½ï¿½ï¿½ï¿½ï¿½ï¿½Ý·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (Seismic Data Analyzer Window)
 // =============================================================================
-void RenderAnalysisWindow(AnalysisState& state) {
+void renderAnalysisWindow(AnalysisState& state) {
     if (!state.isOpen) return;
 
     ImGui::SetNextWindowSize(ImVec2(1000, 700), ImGuiCond_FirstUseEver);
@@ -2115,14 +2151,14 @@ void RenderAnalysisWindow(AnalysisState& state) {
         static bool useTimeAxis = true;
 
         // ------------------------------------------------------------
-        // A. ¶¥²¿¹¤¾ßÀ¸ (SEG-Y ¼ÓÔØÓëÊý¾ÝÃèÊö)
+        // A. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (SEG-Y ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½)
         // ------------------------------------------------------------
         if (ImGui::Button("Load SEG-Y Data")) {
             char filePath[1024] = { 0 };
-            if (OpenSystemFileDialog(filePath, sizeof(filePath))) {
-                // Ò»¼üÔØÈë±ê×¼µÄ¶þ½øÖÆ SEG-Y Êý¾Ý×é
-                if (LoadSeismicSegy(filePath, state)) {
-                    // ×Ô¶¯¼ÆËã Wiggle ÔöÒæÓë·¶Î§
+            if (openSystemFileDialog(filePath, sizeof(filePath))) {
+                // Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×¼ï¿½Ä¶ï¿½ï¿½ï¿½ï¿½ï¿½ SEG-Y ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+                if (loadSeismicSegy(filePath, state)) {
+                    // ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ Wiggle ï¿½ï¿½ï¿½ï¿½ï¿½ë·¶Î§
                     if (state.globalMaxAmp > 1e-20f) {
                         state.displayGain = 0.8f / state.globalMaxAmp;
                         state.heatmapMin = -state.globalMaxAmp;
@@ -2131,8 +2167,8 @@ void RenderAnalysisWindow(AnalysisState& state) {
                     else {
                         state.displayGain = 1.0f;
                     }
-                    state.heatmapData.clear(); // ±ê¼ÇÔàÊý¾Ý£¬´¥·¢ÖØÐÂÆ´×°
-                    state.fitRequest = true;   // Ò»¼ü×ÔÊÊÓ¦Ëõ·ÅÈ«ÆÁ
+                    state.heatmapData.clear(); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ´×°
+                    state.fitRequest = true;   // Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½È«ï¿½ï¿½
                 }
             }
         }
@@ -2150,12 +2186,12 @@ void RenderAnalysisWindow(AnalysisState& state) {
             state.numChannels, state.numSamples, state.globalMaxAmp, state.samplingInterval);
 
         // ------------------------------------------------------------
-        // B. ²ÎÊý¿ØÖÆÃæ°å
+        // B. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         // ------------------------------------------------------------
         if (ImGui::CollapsingHeader("Display Parameters", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Columns(2, "viz_cols", false);
 
-            // --- ×óÁÐ£ºWiggle ²¨ÐÎÏ¸Ïß»æÖÆÉèÖÃ ---
+            // --- ï¿½ï¿½ï¿½Ð£ï¿½Wiggle ï¿½ï¿½ï¿½ï¿½Ï¸ï¿½ß»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ---
             ImGui::TextDisabled("[ Wiggle Trace ]");
             ImGui::Checkbox("Show Wiggle", &state.showWiggle);
             if (state.showWiggle) {
@@ -2175,7 +2211,7 @@ void RenderAnalysisWindow(AnalysisState& state) {
                 ImGui::ColorEdit4("Color", (float*)&state.colorLine, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
             }
 
-            // --- ÓÒÁÐ£ºHeatmap ÃÜ¶È×ÅÉ«±³¾°ÉèÖÃ ---
+            // --- ï¿½ï¿½ï¿½Ð£ï¿½Heatmap ï¿½Ü¶ï¿½ï¿½ï¿½É«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ---
             ImGui::NextColumn();
             ImGui::TextDisabled("[ Heatmap Background ]");
             ImGui::Checkbox("Show Heatmap", &state.showHeatmap);
@@ -2191,7 +2227,7 @@ void RenderAnalysisWindow(AnalysisState& state) {
             }
             ImGui::Columns(1);
 
-            // --- Ö»¶ÁÎïÀí²ÉÑùÂÊÏÔÊ¾ ---
+            // --- Ö»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾ ---
             ImGui::Separator();
             ImGui::Text("Physical Parameters:");
             ImGui::SameLine();
@@ -2201,14 +2237,14 @@ void RenderAnalysisWindow(AnalysisState& state) {
         ImGui::Separator();
 
         // ------------------------------------------------------------
-        // C. ºËÐÄ»æÍ¼Õ¹ÏÖÇø (»ùÓÚ ImPlot)
+        // C. ï¿½ï¿½ï¿½Ä»ï¿½Í¼Õ¹ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ ImPlot)
         // ------------------------------------------------------------
         if (state.numChannels > 0 && state.numSamples > 0) {
             if (state.showHeatmap && state.heatmapData.empty()) {
-                UpdateHeatmapData(state);
+                updateHeatmapData(state);
             }
 
-            // ¾­µäÑ§Êõ°×µ×»æÍ¼Ö½·ç¸ñÉ«°å
+            // ï¿½ï¿½ï¿½ï¿½Ñ§ï¿½ï¿½ï¿½×µ×»ï¿½Í¼Ö½ï¿½ï¿½ï¿½É«ï¿½ï¿½
             ImPlot::PushStyleColor(ImPlotCol_FrameBg, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
             ImPlot::PushStyleColor(ImPlotCol_PlotBg, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
             ImPlot::PushStyleColor(ImPlotCol_AxisGrid, ImVec4(0.9f, 0.9f, 0.9f, 1.0f));
@@ -2221,7 +2257,7 @@ void RenderAnalysisWindow(AnalysisState& state) {
 
                 const char* yLabel = useTimeAxis ? "Time (s)" : "Sample Index";
                 ImPlot::SetupAxes("Trace Number", yLabel);
-                ImPlot::SetupAxis(ImAxis_Y1, NULL, ImPlotAxisFlags_Invert); // ±ê¸Ë£ºÇ³²ãÔÚµØ±í¾Ó¶¥¶ÔÆë
+                ImPlot::SetupAxis(ImAxis_Y1, NULL, ImPlotAxisFlags_Invert); // ï¿½ï¿½Ë£ï¿½Ç³ï¿½ï¿½ï¿½ÚµØ±ï¿½ï¿½Ó¶ï¿½ï¿½ï¿½ï¿½ï¿½
 
                 if (state.fitRequest) {
                     ImPlot::SetupAxisLimits(ImAxis_X1, -2.0, state.numChannels + 2.0, ImGuiCond_Always);
@@ -2233,7 +2269,7 @@ void RenderAnalysisWindow(AnalysisState& state) {
                     ImPlot::SetupAxisLimitsConstraints(ImAxis_Y1, -yEnd * 0.5, yEnd * 2.0);
                 }
 
-                // --- Layer 1: Heatmap ÃÜ¶ÈÆÊÃæ±³¾° ---
+                // --- Layer 1: Heatmap ï¿½Ü¶ï¿½ï¿½ï¿½ï¿½æ±³ï¿½ï¿½ ---
                 if (state.showHeatmap && !state.heatmapData.empty()) {
                     ImPlotColormap mapID = ImPlotColormap_RdBu;
                     if (state.colormapIndex == 1)      mapID = ImPlotColormap_PiYG;
@@ -2253,18 +2289,18 @@ void RenderAnalysisWindow(AnalysisState& state) {
                     ImPlot::PopColormap();
                 }
 
-                // --- Layer 2: Wiggle Trace µØÕðµÀÇúÏß ---
+                // --- Layer 2: Wiggle Trace ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ---
                 if (state.showWiggle) {
                     ImPlotRect limits = ImPlot::GetPlotLimits();
                     ImVec2     plotSize = ImPlot::GetPlotSize();
 
-                    // ¿Õ¼äË®Æ½ÊÓ¿ÚÌÞ³ý£¬±ÜÃâäÖÈ¾ÊÓÒ°ÍâµÄµÀ
+                    // ï¿½Õ¼ï¿½Ë®Æ½ï¿½Ó¿ï¿½ï¿½Þ³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¾ï¿½ï¿½Ò°ï¿½ï¿½Äµï¿½
                     int startCh = (int)floor(limits.X.Min) - 1;
                     int endCh = (int)ceil(limits.X.Max) + 1;
                     if (startCh < 0)                  startCh = 0;
                     if (endCh > state.numChannels) endCh = state.numChannels;
 
-                    // Éî¶È×ÝÏòÊÓ¿ÚÌÞ³ý (¼æÈÝ Invert Öá)
+                    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¿ï¿½ï¿½Þ³ï¿½ (ï¿½ï¿½ï¿½ï¿½ Invert ï¿½ï¿½)
                     double valMin = (limits.Y.Min < limits.Y.Max) ? limits.Y.Min : limits.Y.Max;
                     double valMax = (limits.Y.Min > limits.Y.Max) ? limits.Y.Min : limits.Y.Max;
 
@@ -2281,7 +2317,7 @@ void RenderAnalysisWindow(AnalysisState& state) {
                     if (endSample > state.numSamples) endSample = state.numSamples;
 
                     if (startCh < endCh && startSample < endSample) {
-                        // ¶¯Ì¬ LOD ²ÉÑùÂË²¨£¬·ÀÖ¹¼«¸ß·Ö±æÂÊµÀÍ¼ÒòÏñËØ¹ý¶àµ¼ÖÂ¿¹¾â³ÝÊ§Ð§/¿¨¶Ù
+                        // ï¿½ï¿½Ì¬ LOD ï¿½ï¿½ï¿½ï¿½ï¿½Ë²ï¿½ï¿½ï¿½ï¿½ï¿½Ö¹ï¿½ï¿½ï¿½ß·Ö±ï¿½ï¿½Êµï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½Ø¹ï¿½ï¿½àµ¼ï¿½Â¿ï¿½ï¿½ï¿½ï¿½Ê§Ð§/ï¿½ï¿½ï¿½ï¿½
                         double visibleSamples = endSample - startSample;
                         int    step = 1;
                         if (visibleSamples > 0 && plotSize.y > 0) {
@@ -2304,9 +2340,9 @@ void RenderAnalysisWindow(AnalysisState& state) {
 
                             ImGui::PushID(i);
                             if (pointsToDraw > 0) {
-                                ImPlot::PlotLineG("##Trace", SeismicDataGetter, &ctx, pointsToDraw);
+                                ImPlot::PlotLineG("##Trace", seismicDataGetter, &ctx, pointsToDraw);
                             }
-                            ImGui::PopID(); // <-- ÐÞÕý£º»Ö¸´ÎªÆ½ºâµÄ PopID()
+                            ImGui::PopID(); // <-- ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ÎªÆ½ï¿½ï¿½ï¿½ PopID()
                         }
                     }
                 }
@@ -2326,12 +2362,13 @@ void RenderAnalysisWindow(AnalysisState& state) {
 }
 
 // =============================================================================
-// 24. ³õÊ¼»¯ÏÔ´æÓëÊýÖµÄ£ÄâÎïÀíÍø¸ñ×ÊÔ´
+// 24. ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½Ô´ï¿½ï¿½ï¿½ï¿½ï¿½ÖµÄ£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô´
 // =============================================================================
-inline void InitializeSeismicSimulation(GLHandles& gl) {
+/** Creates the initial simulation context, GPU fields, and CUDA-OpenGL wavefield texture once. */
+inline void initializeSeismicSimulation(GLHandles& gl) {
     if (!is_seis_initialized) {
         edit_src_x = edit_w / 2;
-        edit_src_z = edit_h / 4; // ÕðÔ´Ä¬ÈÏÉî¶ÈÉèÎª 1/4
+        edit_src_z = edit_h / 4; // ï¿½ï¿½Ô´Ä¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îª 1/4
 
         par.model.xnum = edit_w;
         par.model.znum = edit_h;
@@ -2341,7 +2378,7 @@ inline void InitializeSeismicSimulation(GLHandles& gl) {
         par.FDM.t0 = edit_t0;
 
         setupTestContext(ctx, par);
-        initGPUSimulation(gpu_data, ctx);
+        initializeGpuSimulation(gpu_data, ctx);
 
         glGenTextures(1, &gl.seisTex);
         glBindTexture(GL_TEXTURE_2D, gl.seisTex);
@@ -2349,22 +2386,23 @@ inline void InitializeSeismicSimulation(GLHandles& gl) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-        cudaGraphicsGLRegisterImage(&gl.cudaSeisRes, gl.seisTex, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard);
+        CUDA_CHECK(cudaGraphicsGLRegisterImage(&gl.cudaSeisRes, gl.seisTex, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard));
 
         is_seis_initialized = true;
         first_align_needed = true;
-        UpdateModelTexture();
+        updateModelTexture();
 
-        // --- ¡¾ÐÂÔö¡¿£º³õÊ¼»¯×Ô¶¯¶àÅÚµÄÄ¬ÈÏÅÚÉîºÍÆðµã ---
+        // --- ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½Úµï¿½Ä¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ---
         g_autoAcq.shotDepthZ = edit_src_z;
         g_autoAcq.startX = edit_w / 5;
     }
 }
 
 // =============================================================================
-// 25. ÎïÀí±ê³ß×ÔÊÊÓ¦Æ½ÒÆÏà»ú¾ØÕó¶ÔÆë
+// 25. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦Æ½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 // =============================================================================
-inline void ApplyCameraAutoAlignment(int winW, int winH, float barHeight) {
+/** Fits the 2D model aspect ratio to the available viewport after initialization or resize. */
+inline void applyCameraAutoAlignment(int winW, int winH, float barHeight) {
     if (first_align_needed && winH > 0 && ctx.NX > 0) {
         float  winAspect = (float)winW / (float)winH;
         float  simAspect = (float)ctx.NX / (float)ctx.NZ;
@@ -2384,12 +2422,13 @@ inline void ApplyCameraAutoAlignment(int winW, int winH, float barHeight) {
 }
 
 // =============================================================================
-// 26. ½»»¥Âß¼­´¦Àí (Êó±êµã»÷/ÍÏ×§£¬°´¼ü´¥·¢ÖØÖÃ)
+// 26. ï¿½ï¿½ï¿½ï¿½ï¿½ß¼ï¿½ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ï¿½/ï¿½ï¿½×§ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½)
 // =============================================================================
-inline void HandleSeismicInteractions(SimState& state, int winW, int winH, float barHeight) {
+/** Converts viewport input into model edits, source/receiver placement, and camera controls. */
+inline void handleSeismicInteractions(SimState& state, int winW, int winH, float barHeight) {
     ImGuiIO& io = ImGui::GetIO();
 
-    // A. ÏìÓ¦¼üÅÌ C ¼üÒ»¼üÇå¿ÕÓëÖØÖÃÄ£ÄâÐÅºÅ
+    // A. ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½ C ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä£ï¿½ï¿½ï¿½Åºï¿½
     if (g_resetSimRequested) {
         current_it = 0;
         state.running = false;
@@ -2407,15 +2446,15 @@ inline void HandleSeismicInteractions(SimState& state, int winW, int winH, float
             }
         }
 
-        freeGPUSimulation(gpu_data);
-        initGPUSimulation(gpu_data, ctx);
-        UpdateModelTexture();
+        releaseGpuSimulation(gpu_data);
+        initializeGpuSimulation(gpu_data, ctx);
+        updateModelTexture();
         std::fill(ctx.record_vx.begin(), ctx.record_vx.end(), 0.0f);
         std::fill(ctx.record_vz.begin(), ctx.record_vz.end(), 0.0f);
         g_resetSimRequested = false;
     }
 
-    // B. ÏìÓ¦ R ¼üÖØÖÃÏà»úÊÓ½ÇÓëËõ·Å
+    // B. ï¿½ï¿½Ó¦ R ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     if (g_resetViewportRequested) {
         viewZoom = 1.0f;
 
@@ -2430,7 +2469,7 @@ inline void HandleSeismicInteractions(SimState& state, int winW, int winH, float
             aspectCorr.y = simAspect / winAspect;
         }
 
-        // ÖØÐÂ¶ÔÆë×óÉÏ½Ç£¬È·±£ÊÓ½ÇÍêÃÀ¸´Î»
+        // ï¿½ï¿½ï¿½Â¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï½Ç£ï¿½È·ï¿½ï¿½ï¿½Ó½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î»
         viewOffset.x = aspectCorr.x - 1.0f;
         viewOffset.y = 1.0f - aspectCorr.y * (1.0f - 2.0f * barHeight / (float)winH);
 
@@ -2439,38 +2478,38 @@ inline void HandleSeismicInteractions(SimState& state, int winW, int winH, float
     }
 
     if (!io.WantCaptureKeyboard && ImGui::IsKeyPressed(ImGuiKey_Q, false)) {
-        // ×Ü¹²ÓÐ 7 Ì×ÎïÀí·ÖÁ¿ (Index 0 ~ 6)
+        // ï¿½Ü¹ï¿½ï¿½ï¿½ 7 ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (Index 0 ~ 6)
         show_component = (show_component + 1) % 7;
     }
     // =============================================================================
-    // F. ¡¾ÐÂÔö¡¿£ºÏìÓ¦¼üÅÌ W ¼üÒ»¼üÑ­»·ÇÐ»» 13 Ì×¿ÆÑ§É«Æ×²¨ÐÎÑùÊ½
+    // F. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½ W ï¿½ï¿½Ò»ï¿½ï¿½Ñ­ï¿½ï¿½ï¿½Ð»ï¿½ 13 ï¿½×¿ï¿½Ñ§É«ï¿½×²ï¿½ï¿½ï¿½ï¿½ï¿½Ê½
     // =============================================================================
     if (!io.WantCaptureKeyboard && ImGui::IsKeyPressed(ImGuiKey_W, false)) {
-        // ×Ü¹²ÓÐ 13 Ì×²¨³¡ÑùÊ½ (Index 0 ~ 12)
+        // ï¿½Ü¹ï¿½ï¿½ï¿½ 13 ï¿½×²ï¿½ï¿½ï¿½ï¿½ï¿½Ê½ (Index 0 ~ 12)
         waveStyle = (waveStyle + 1) % 13;
     }
     if (!io.WantCaptureKeyboard && ImGui::IsKeyPressed(ImGuiKey_E, false)) {
-        // ×Ü¹²ÓÐ 5 Ì×±³¾°·ç¸ñ (Index 0 ~ 4)
+        // ï¿½Ü¹ï¿½ï¿½ï¿½ 5 ï¿½×±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (Index 0 ~ 4)
         modelStyle = (modelStyle + 1) % 5;
     }
 
-    // ¡¾ºËÐÄÐÂÔö¡¿£º¼üÅÌÊý×Ö¼ü 1 - 5 ¿ìËÙÒ»¼üÇÐ»»µ±Ç°Êó±ê»­±Ê¹¤¾ßÄ£Ê½
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¼ï¿½ 1 - 5 ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ð»ï¿½ï¿½ï¿½Ç°ï¿½ï¿½ê»­ï¿½Ê¹ï¿½ï¿½ï¿½Ä£Ê½
     if (!io.WantCaptureKeyboard) {
-        if (ImGui::IsKeyPressed(ImGuiKey_1)) state.brushType = TOOL_NONE;   // 1 ¼ü£º»Ö¸´Ä¬ÈÏµ¥µãÕðÔ´
-        if (ImGui::IsKeyPressed(ImGuiKey_2)) state.brushType = TOOL_HIGH;   // 2 ¼ü£ºÇÐ»»ÎªÓ²ÑÒ¸ßËÙÌåË¢
-        if (ImGui::IsKeyPressed(ImGuiKey_3)) state.brushType = TOOL_LOW;    // 3 ¼ü£ºÇÐ»»ÎªËÉÉ¢²ãµÍËÙÌåË¢
-        if (ImGui::IsKeyPressed(ImGuiKey_4)) state.brushType = TOOL_WALL;   // 4 ¼ü£ºÇÐ»»Îª×Ô¶¨ÒåÎïÐÔË¢
-        if (ImGui::IsKeyPressed(ImGuiKey_5)) state.brushType = TOOL_ERASER; // 5 ¼ü£ºÇÐ»»ÎªÏðÆ¤²Á
+        if (ImGui::IsKeyPressed(ImGuiKey_1)) state.brushType = TOOL_NONE;   // 1 ï¿½ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½Ä¬ï¿½Ïµï¿½ï¿½ï¿½ï¿½ï¿½Ô´
+        if (ImGui::IsKeyPressed(ImGuiKey_2)) state.brushType = TOOL_HIGH;   // 2 ï¿½ï¿½ï¿½ï¿½ï¿½Ð»ï¿½ÎªÓ²ï¿½Ò¸ï¿½ï¿½ï¿½ï¿½ï¿½Ë¢
+        if (ImGui::IsKeyPressed(ImGuiKey_3)) state.brushType = TOOL_LOW;    // 3 ï¿½ï¿½ï¿½ï¿½ï¿½Ð»ï¿½Îªï¿½ï¿½É¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ë¢
+        if (ImGui::IsKeyPressed(ImGuiKey_4)) state.brushType = TOOL_WALL;   // 4 ï¿½ï¿½ï¿½ï¿½ï¿½Ð»ï¿½Îªï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ë¢
+        if (ImGui::IsKeyPressed(ImGuiKey_5)) state.brushType = TOOL_ERASER; // 5 ï¿½ï¿½ï¿½ï¿½ï¿½Ð»ï¿½Îªï¿½ï¿½Æ¤ï¿½ï¿½
     }
 
-    // ¼ÆËãÆÁÄ»Ëõ·Å±ÈÀýÏµÊý
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä»ï¿½ï¿½ï¿½Å±ï¿½ï¿½ï¿½Ïµï¿½ï¿½
     float  winAspect = (float)winW / (float)winH;
     float  simAspect = (float)ctx.NX / (float)ctx.NZ;
     ImVec2 aspectCorr = { 1.0f, 1.0f };
     if (winAspect > simAspect) aspectCorr.x = winAspect / simAspect;
     else                         aspectCorr.y = simAspect / winAspect;
 
-    // C. Êó±ê×ó¼ü¼¤·¢ (¶àÕðÔ´Á¬Ðø»òµ¥ÕðÔ´Ë²Ê±×¢Éä)
+    // C. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½Ô´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô´Ë²Ê±×¢ï¿½ï¿½)
     static double last_inject_time = 0.0;
     double        current_time = glfwGetTime();
     bool          trigger_active = false;
@@ -2499,7 +2538,7 @@ inline void HandleSeismicInteractions(SimState& state, int winW, int winH, float
 
         if (state.brushType == TOOL_NONE) {
             // -----------------------------------------------------------------
-            // 1. ¡¾Ä¬ÈÏµ¥µã¼¤·¢Ä£Ê½¡¿£º·ÅÖÃµ¥µãÕðÔ´²¢ÖØÐÂ¼ÆËã
+            // 1. ï¿½ï¿½Ä¬ï¿½Ïµï¿½ï¿½ã¼¤ï¿½ï¿½Ä£Ê½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ãµï¿½ï¿½ï¿½ï¿½ï¿½Ô´ï¿½ï¿½ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½
             // -----------------------------------------------------------------
             if (trigger_active) {
                 int min_valid = ctx.npml + 0;
@@ -2531,8 +2570,8 @@ inline void HandleSeismicInteractions(SimState& state, int winW, int winH, float
                         state.running = true;
                         accumulated_compute_time = 0.0f;
 
-                        freeGPUSimulation(gpu_data);
-                        initGPUSimulation(gpu_data, ctx);
+                        releaseGpuSimulation(gpu_data);
+                        initializeGpuSimulation(gpu_data, ctx);
                         std::fill(ctx.record_vx.begin(), ctx.record_vx.end(), 0.0f);
                         std::fill(ctx.record_vz.begin(), ctx.record_vz.end(), 0.0f);
                     }
@@ -2541,56 +2580,56 @@ inline void HandleSeismicInteractions(SimState& state, int winW, int winH, float
         }
         else {
             // -----------------------------------------------------------------
-            // 2. ¡¾Ä£ÐÍÍ¿»­±à¼­Ä£Ê½¡¿£º°´×¡×ó¼ü²»·Å¼´¿ÉÔÚµ±Ç°Î»ÖÃÖ´ÐÐÎïÐÔÍ¿Ä¨
+            // 2. ï¿½ï¿½Ä£ï¿½ï¿½Í¿ï¿½ï¿½ï¿½à¼­Ä£Ê½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å¼ï¿½ï¿½ï¿½ï¿½Úµï¿½Ç°Î»ï¿½ï¿½Ö´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¿Ä¨
             // -----------------------------------------------------------------
             if (ImGui::IsMouseDown(0)) {
                 int  r_cells = static_cast<int>(state.brushRadius);
                 bool model_changed = false;
 
-                // 2.1 Éè¶¨²»Í¬»­±ÊÐÎÌ¬µÄÄ¿±êÎïÀí²ÎÊý
+                // 2.1 ï¿½è¶¨ï¿½ï¿½Í¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì¬ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                 float p_vp = 3000.0f, p_vs = 1732.0f, p_rho = 2200.0f;
                 if (state.brushType == TOOL_HIGH) {
-                    p_vp = 4800.0f; p_vs = 2800.0f; p_rho = 2500.0f; // ¸ßËÙÌå (Ó²ÑÒ)
+                    p_vp = 4800.0f; p_vs = 2800.0f; p_rho = 2500.0f; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (Ó²ï¿½ï¿½)
                 }
                 else if (state.brushType == TOOL_LOW) {
-                    p_vp = 1500.0f; p_vs = 800.0f;  p_rho = 1800.0f; // µÍËÙÌå (ËÉÉ¢ÄàÖÊ/É°ÑÒ)
+                    p_vp = 1500.0f; p_vs = 800.0f;  p_rho = 1800.0f; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½É¢ï¿½ï¿½ï¿½ï¿½/É°ï¿½ï¿½)
                 }
                 else if (state.brushType == TOOL_WALL) {
-                    p_vp = edit_Vp; p_vs = edit_Vs;  p_rho = edit_Density; // ×Ô¶¨ÒåÎïÐÔ±Ê (Óë UI ¹²Ïí)
+                    p_vp = edit_Vp; p_vs = edit_Vs;  p_rho = edit_Density; // ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô±ï¿½ (ï¿½ï¿½ UI ï¿½ï¿½ï¿½ï¿½)
                 }
                 else if (state.brushType == TOOL_ERASER) {
-                    p_vp = 3000.0f; p_vs = 1732.0f; p_rho = 2200.0f; // ÏðÆ¤²Á£º»Ö¸´Îª±³¾°±ê×¼²ã
+                    p_vp = 3000.0f; p_vs = 1732.0f; p_rho = 2200.0f; // ï¿½ï¿½Æ¤ï¿½ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×¼ï¿½ï¿½
                 }
 
-                // 2.2 ¿Õ¼äÔ²ÐÎÁÚÓòÍ¿Ë¢Ëã·¨
+                // 2.2 ï¿½Õ¼ï¿½Ô²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¿Ë¢ï¿½ã·¨
                 for (int dy = -r_cells; dy <= r_cells; ++dy) {
                     for (int dx = -r_cells; dx <= r_cells; ++dx) {
                         if (dx * dx + dy * dy <= r_cells * r_cells) {
                             int target_x = mx + dx;
-                            int target_y = my + dy; // ÆÁÄ»Éî¶È (0ÎªµØ±í, NZ-1Îªµ×²¿)
+                            int target_y = my + dy; // ï¿½ï¿½Ä»ï¿½ï¿½ï¿½ (0Îªï¿½Ø±ï¿½, NZ-1Îªï¿½×²ï¿½)
 
                             if (target_x >= 0 && target_x < ctx.NX && target_y >= 0 && target_y < ctx.NZ) {
-                                // ¡¾ºËÐÄÎïÀí×ª»»¡¿£ºSetMaterialAt ÄÚ²¿ y=0 ¶ÔÓ¦µØµ×£¬
-                                // Òò´ËÐèÔÚ´Ë´¦½øÐÐÒ»´Î´¹Ö±¶ÔÆë×ª»»£ºy_cpu = NZ - 1 - y_screen
+                                // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×ªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½setMaterialAt ï¿½Ú²ï¿½ y=0 ï¿½ï¿½Ó¦ï¿½Øµ×£ï¿½
+                                // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú´Ë´ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½Î´ï¿½Ö±ï¿½ï¿½ï¿½ï¿½×ªï¿½ï¿½ï¿½ï¿½y_cpu = NZ - 1 - y_screen
                                 int cpu_y = ctx.NZ - 1 - target_y;
-                                SetMaterialAt(target_x, cpu_y, p_vp, p_vs, p_rho);
+                                setMaterialAt(target_x, cpu_y, p_vp, p_vs, p_rho);
                                 model_changed = true;
                             }
                         }
                     }
                 }
 
-                // 2.3 ´¥·¢¸ßËÙÏÔ´æÍ¬²½ÓëÎÆÀíÖØ»æ
+                // 2.3 ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô´ï¿½Í¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø»ï¿½
                 if (model_changed) {
-                    UploadMaterialToGPU();
+                    uploadMaterialToGpu();
                 }
             }
         }
         // =============================================================================
-        // D. Êó±êÖÐ¼üÍÏ×§Æ½ÒÆÓë¹öÂÖÊÓ¿ÚËõ·Å (ÐÞÕý°æ£ºÒýÈë aspectCorr ³¹µ×Ïû³ýÍÏ×§Õ³ÖÍ¸Ð)
+        // D. ï¿½ï¿½ï¿½ï¿½Ð¼ï¿½ï¿½ï¿½×§Æ½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¿ï¿½ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ï¿½æ£ºï¿½ï¿½ï¿½ï¿½ aspectCorr ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×§Õ³ï¿½Í¸ï¿½)
         // =============================================================================
         if (!io.WantCaptureMouse) {
-            // 1. ¶¯Ì¬¼ÆËãµ±Ç°ÊÓ¿ÚµÄ×ÔÊÊÓ¦³¤¿í±ÈÐÞÕýÏµÊý
+            // 1. ï¿½ï¿½Ì¬ï¿½ï¿½ï¿½ãµ±Ç°ï¿½Ó¿Úµï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ïµï¿½ï¿½
             float winAspect = (float)winW / (float)winH;
             float simAspect = (float)ctx.NX / (float)ctx.NZ;
             ImVec2 aspectCorr = { 1.0f, 1.0f };
@@ -2601,7 +2640,7 @@ inline void HandleSeismicInteractions(SimState& state, int winW, int winH, float
                 aspectCorr.y = simAspect / winAspect;
             }
 
-            // 2. ¹öÂÖÎÞ¼¶Ëõ·Å
+            // 2. ï¿½ï¿½ï¿½ï¿½ï¿½Þ¼ï¿½ï¿½ï¿½ï¿½ï¿½
             if (io.MouseWheel != 0) {
                 float mouseSpeed = 0.1f * viewZoom;
                 viewZoom += io.MouseWheel * mouseSpeed;
@@ -2609,7 +2648,7 @@ inline void HandleSeismicInteractions(SimState& state, int winW, int winH, float
                 if (viewZoom > 100.0f) viewZoom = 100.0f;
             }
 
-            // 3. Êó±êÖÐ¼üÆ½ÒÆ (ºËÐÄÐÞ¸´£º³ËÉÏ aspectCorr ÐÞÕý£¬Ê¹Ä£ÐÍÎ»ÒÆÓëÊó±êÎ»ÒÆÊµÏÖ 1:1 ¾«È·¶ÔÆë)
+            // 3. ï¿½ï¿½ï¿½ï¿½Ð¼ï¿½Æ½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ï¿½Þ¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ aspectCorr ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¹Ä£ï¿½ï¿½Î»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½Êµï¿½ï¿½ 1:1 ï¿½ï¿½È·ï¿½ï¿½ï¿½ï¿½)
             if (ImGui::IsMouseDragging(ImGuiMouseButton_Middle)) {
                 viewOffset.x -= 2.0f * io.MouseDelta.x * aspectCorr.x / (winW * viewZoom);
                 viewOffset.y += 2.0f * io.MouseDelta.y * aspectCorr.y / (winH * viewZoom);
@@ -2618,7 +2657,7 @@ inline void HandleSeismicInteractions(SimState& state, int winW, int winH, float
 
         ImVec2 mousePos = ImGui::GetMousePos();
 
-        // E. Êó±êÐüÍ£Î»ÖÃÄæÏòÓ³ÉäÓëÎïÐÔ¼à¿Ø
+        // E. ï¿½ï¿½ï¿½ï¿½ï¿½Í£Î»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¼ï¿½ï¿½
         is_mouse_inside = (mousePos.x >= 0.0f && mousePos.x < (float)winW &&
             mousePos.y >= barHeight && mousePos.y < (float)(winH - barHeight));
 
@@ -2650,11 +2689,12 @@ inline void HandleSeismicInteractions(SimState& state, int winW, int winH, float
     }
 }
 
-/// ////////////////////////////////////////////////////////////////////////µÚÎå²¿·Ö
+/// ////////////////////////////////////////////////////////////////////////ï¿½ï¿½ï¿½å²¿ï¿½ï¿½
 // =============================================================================
-// 27. Ö´ÐÐ CUDA ÓÐÏÞ²î·ÖÊ±ÑÝ¸üÐÂ (CUDA Finite-Difference Wavefield Update)
+// 27. Ö´ï¿½ï¿½ CUDA ï¿½ï¿½ï¿½Þ²ï¿½ï¿½Ê±ï¿½Ý¸ï¿½ï¿½ï¿½ (CUDA Finite-Difference Wavefield Update)
 // =============================================================================
-inline void UpdateWavefieldSimulation(SimState& state) {
+/** Advances configured CUDA time steps and coordinates recording, replay capture, and run state. */
+inline void updateWavefieldSimulation(SimState& state) {
     ImGuiIO& io = ImGui::GetIO();
     bool     can_run = state.running && (infinite_mode || current_it < ctx.nt);
 
@@ -2663,7 +2703,7 @@ inline void UpdateWavefieldSimulation(SimState& state) {
 
         for (int s = 0; s < steps_per_frame; ++s) {
             if (infinite_mode || current_it < ctx.nt) {
-                // A. ¶àµã¼¤·¢ÊÙÃü¸üÐÂÓë×Ô¶¯ÏûÍö
+                // A. ï¿½ï¿½ã¼¤ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½
                 if (multi_source_mode && !active_sources.empty()) {
                     for (auto it = active_sources.begin(); it != active_sources.end(); ) {
                         it->t += ctx.dt;
@@ -2676,33 +2716,38 @@ inline void UpdateWavefieldSimulation(SimState& state) {
                         }
                     }
                     if (!active_sources.empty()) {
-                        cudaMemcpy(gpu_data.d_active_sources, active_sources.data(),
-                            active_sources.size() * sizeof(GPUSource), cudaMemcpyHostToDevice);
+                        if (active_sources.size() > kMaximumActiveSources) throw std::invalid_argument("Active source capacity exceeded");
+                        CUDA_CHECK(cudaMemcpy(gpu_data.d_active_sources, active_sources.data(), active_sources.size() * sizeof(GPUSource), cudaMemcpyHostToDevice));
                     }
                 }
 
-                // B. Ö´ÐÐ GPU ¼ÆËãºËº¯ÊýÍÆ½ø
-                runGPUStep(gpu_data, current_it, ctx, multi_source_mode ? (int)active_sources.size() : -1);
+                // B. Ö´ï¿½ï¿½ GPU ï¿½ï¿½ï¿½ï¿½Ëºï¿½ï¿½ï¿½ï¿½Æ½ï¿½
+                runGpuSimulationStep(gpu_data, current_it, ctx, multi_source_mode ? (int)active_sources.size() : -1);
 
                 // =====================================================================
-                // ¡¾ºËÐÄÐÂÔö¡¿£º¸ß±£ÕæµØÕðÊý¾Ý²É¼¯²ÉÑùÂß¼­
+                // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý²É¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß¼ï¿½
                 // =====================================================================
                 if (rec.isRecording) {
-                    // ¼ÆËãÊ±ÑÝ²½³¤ÓëÄ¿±ê²É¼¯²ÉÑùÂÊµÄ»»ËãÒò×Ó
-                    int steps_per_sample = static_cast<int>(round((1.0f / rec.samplingRateHz) / ctx.dt));
-                    if (steps_per_sample <= 0) steps_per_sample = 1;
+                    // ï¿½ï¿½ï¿½ï¿½Ê±ï¿½Ý²ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½É¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÊµÄ»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+                    const int steps_per_sample = rec.samplingStepStride;
+                    if (steps_per_sample <= 0 || std::abs(steps_per_sample * ctx.dt - rec.actualSampleInterval) > rec.actualSampleInterval * 1e-5f) {
+                        throw std::invalid_argument("Simulation dt changed during acquisition; start a new recording");
+                    }
 
                     if (current_it % steps_per_sample == 0) {
                         int sample_idx = current_it / steps_per_sample;
-                        int max_samples = rec.recorded_vz[0].size();
+                        if (rec.numChannels <= 0 || rec.recorded_vx.size() != rec.numChannels || rec.recorded_vz.size() != rec.numChannels) throw std::invalid_argument("Recording buffers do not match receiver channels");
+                        int max_samples = static_cast<int>(rec.recorded_vz[0].size());
 
                         if (sample_idx < max_samples) {
-                            // 1. µ÷ÓÃ GPU ¸ß²¢·¢ÌáÈ¡ºËº¯Êý£¬ÌáÈ¡µ±Ç°Ê±¼äÇÐÆ¬ÉÏËùÓÐ½ÓÊÕÆ÷µÄÕñ·ù
-                            // 1. ´´½¨ CPU ÁÙÊ±»º³åÇø£¬²¢µ÷ÓÃ GPU °ü×°½Ó¿ÚÌáÈ¡µ±Ç°Ê±¿ÌËùÓÐ½ÓÊÕÆ÷µÄ Vx ºÍ Vz Õñ·ù
-                            std::vector<float> h_step_vx(rec.numChannels);
-                            std::vector<float> h_step_vz(rec.numChannels);
-                            recordReceiverStepGPU(gpu_data, rec.numChannels, h_step_vx.data(), h_step_vz.data());
-                            // 3. ÌîÈëÂ¼ÖÆ»º³åÇø¶ÔÓ¦µÀµÄ Sample Ë÷ÒýÖÐ
+                            // 1. ï¿½ï¿½ï¿½ï¿½ GPU ï¿½ß²ï¿½ï¿½ï¿½ï¿½ï¿½È¡ï¿½Ëºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¡ï¿½ï¿½Ç°Ê±ï¿½ï¿½ï¿½ï¿½Æ¬ï¿½ï¿½ï¿½ï¿½ï¿½Ð½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+                            // 1. ï¿½ï¿½ï¿½ï¿½ CPU ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ GPU ï¿½ï¿½×°ï¿½Ó¿ï¿½ï¿½ï¿½È¡ï¿½ï¿½Ç°Ê±ï¿½ï¿½ï¿½ï¿½ï¿½Ð½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Vx ï¿½ï¿½ Vz ï¿½ï¿½ï¿½
+                            static std::vector<float> h_step_vx;
+                            h_step_vx.resize(rec.numChannels);
+                            static std::vector<float> h_step_vz;
+                            h_step_vz.resize(rec.numChannels);
+                            recordReceiverStepOnGpu(gpu_data, rec.numChannels, h_step_vx.data(), h_step_vz.data());
+                            // 3. ï¿½ï¿½ï¿½ï¿½Â¼ï¿½Æ»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½ Sample ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                             for (int c = 0; c < rec.numChannels; ++c) {
                                 rec.recorded_vx[c][sample_idx] = h_step_vx[c];
                                 rec.recorded_vz[c][sample_idx] = h_step_vz[c];
@@ -2711,8 +2756,8 @@ inline void UpdateWavefieldSimulation(SimState& state) {
                     }
 
                     // =========================================================
-                    // ¡¾ºËÐÄÐÞ¸´¡¿£ºÖ»ÓÐÔÚ·ÇÈ«×Ô¶¯¶àÅÚ¹¤×÷Á÷×´Ì¬ÏÂ£¬²Å¼¤»îµ¥ÅÚ×Ô¶¯Í£»ú¡£
-                    //  Õâ¿ÉÒÔ·ÀÖ¹µ¥ÅÚÍ£»úÂß¼­ÔÚ×Ô¶¯¶àÅÚÊ±ÑÝÖÐÍ¾·¢Éú¶ñÒâÇÀÕ¼¡¢¹ÒÆðÐòÁÐ£¡
+                    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Þ¸ï¿½ï¿½ï¿½ï¿½ï¿½Ö»ï¿½ï¿½ï¿½Ú·ï¿½È«ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½Ú¹ï¿½ï¿½ï¿½ï¿½ï¿½×´Ì¬ï¿½Â£ï¿½ï¿½Å¼ï¿½ï¿½îµ¥ï¿½ï¿½ï¿½Ô¶ï¿½Í£ï¿½ï¿½ï¿½ï¿½
+                    //  ï¿½ï¿½ï¿½ï¿½Ô·ï¿½Ö¹ï¿½ï¿½ï¿½ï¿½Í£ï¿½ï¿½ï¿½ß¼ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½Í¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð£ï¿½
                     // =========================================================
                     rec.totalTimer = current_it * ctx.dt;
                     if (g_autoAcq.state != AUTO_ACQ_RUNNING) {
@@ -2721,7 +2766,7 @@ inline void UpdateWavefieldSimulation(SimState& state) {
                             rec.isRecording = false;
                             state.running = false;
 
-                            ExportToSegy(rec, "auto_export_gather.sgy");
+                            exportToSegy(rec, "auto_export_gather.sgy");
                             popup_message = "Simulation recording completed!\nExported to 'auto_export_gather.sgy'";
                             show_success_popup = true;
                         }
@@ -2729,20 +2774,20 @@ inline void UpdateWavefieldSimulation(SimState& state) {
                 }
 
                 // =============================================================
-                // ¡¾ºËÐÄÐÂÔö¡¿£º²¨³¡Ê±¿Õ¿ìÕÕÂ¼ÖÆÂß¼­
+                // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½Õ¿ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ß¼ï¿½
                 // =============================================================
                 if (g_replay.state == REPLAY_RECORDING) {
-                    // ¸ù¾ÝÉèÖÃµÄ Stride ²½³¤½øÐÐµÈ¼ä¸ô³éÏ¡²ÉÑù
+                    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ãµï¿½ Stride ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÐµÈ¼ï¿½ï¿½ï¿½ï¿½Ï¡ï¿½ï¿½ï¿½ï¿½
                     if (current_it % g_replay.recordStride == 0) {
                         if (g_replay.frames.size() < static_cast<size_t>(g_replay.maxFrames)) {
                             std::vector<float> h_vz(ctx.total_grid);
 
-                            // µ÷ÓÃÔ­ÓÐµÄ copyWavefieldToHost ½« GPU ¶Ë×éºÏºÃµÄ Vz ¿½±´»Ø CPU ÄÚ´æ
+                            // ï¿½ï¿½ï¿½ï¿½Ô­ï¿½Ðµï¿½ copyWavefieldToHost ï¿½ï¿½ GPU ï¿½ï¿½ï¿½ï¿½ÏºÃµï¿½ Vz ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ CPU ï¿½Ú´ï¿½
                             copyWavefieldToHost(gpu_data, h_vz.data());
                             g_replay.frames.push_back(h_vz);
                         }
                         else {
-                            // Â¼Âúºó×Ô¶¯×ªÎª´ý»ú×´Ì¬
+                            // Â¼ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½×ªÎªï¿½ï¿½ï¿½ï¿½×´Ì¬
                             g_replay.state = REPLAY_IDLE;
                         }
                     }
@@ -2755,20 +2800,21 @@ inline void UpdateWavefieldSimulation(SimState& state) {
 }
 
 // =============================================================================
-// ¡¾ºËÐÄÐÂÔö¡¿£ºÃ¿Ö¡×Ô¶¯¶àÅÚ²É¼¯¹¤×÷Á÷Çý¶¯ (Symmetric Shot Gather Sequencer)
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã¿Ö¡ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½Ú²É¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (Symmetric Shot Gather Sequencer)
 // =============================================================================
-inline void UpdateAutoAcquisitionWorkflow(SimState& state, GLHandles& gl) {
+/** Advances the multi-shot acquisition state machine, resetting, stepping, and exporting each shot. */
+inline void updateAutoAcquisitionWorkflow(SimState& state, GLHandles& gl) {
     if (g_autoAcq.state != AUTO_ACQ_RUNNING) return;
 
-    // ¼ì²éµ±Ç°ÅÚµÄÊ±ÑÝÂ¼ÖÆÊÇ·ñÒÑ¾­´ïµ½Éè¶¨µÄ×Ü²ÉÑùÊ±³¤
+    // ï¿½ï¿½éµ±Ç°ï¿½Úµï¿½Ê±ï¿½ï¿½Â¼ï¿½ï¿½ï¿½Ç·ï¿½ï¿½Ñ¾ï¿½ï¿½ïµ½ï¿½è¶¨ï¿½ï¿½ï¿½Ü²ï¿½ï¿½ï¿½Ê±ï¿½ï¿½
     if (current_it >= ctx.nt) {
         // -----------------------------------------------------------------
-        // 1. ÕâÒ»ÅÚÎïÀí³¡ÑÝ»¯Â¼Âú£¡Ö´ÐÐ×Ô¶¯¸ß±£Õæ SEG-Y ´æÅÌ (º¬ÓÐ×ø±êµÀÍ·)
+        // 1. ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý»ï¿½Â¼ï¿½ï¿½ï¿½ï¿½Ö´ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ß±ï¿½ï¿½ï¿½ SEG-Y ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í·)
         // -----------------------------------------------------------------
         char filename[256];
         sprintf_s(filename, "%sshot_%03d.sgy", g_autoAcq.exportFolder.c_str(), g_autoAcq.currentShotIdx + 1);
 
-        // ¿çÆ½Ì¨°²È«´´½¨Êä³öÎÄ¼þ¼Ð (mkdir/ _mkdir ÒÑÔÚ Common.h Í·²¿¶ÔÆë)
+        // ï¿½ï¿½Æ½Ì¨ï¿½ï¿½È«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ (mkdir/ _mkdir ï¿½ï¿½ï¿½ï¿½ Common.h Í·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½)
         std::string folder = g_autoAcq.exportFolder;
         if (!folder.empty() && folder.back() != '/' && folder.back() != '\\') {
             folder += "/";
@@ -2779,27 +2825,27 @@ inline void UpdateAutoAcquisitionWorkflow(SimState& state, GLHandles& gl) {
         mkdir(folder.c_str(), 0777);
 #endif
 
-        // Ö´ÐÐË«·ÖÁ¿ (_vx, _vz) Í¬²½¸ßÐ§ÂÊÐ´ÅÌ
-        ExportToSegy(rec, filename);
+        // Ö´ï¿½ï¿½Ë«ï¿½ï¿½ï¿½ï¿½ (_vx, _vz) Í¬ï¿½ï¿½ï¿½ï¿½Ð§ï¿½ï¿½Ð´ï¿½ï¿½
+        exportToSegy(rec, filename);
 
         // -----------------------------------------------------------------
-        // 2. ÀÛ¼Ó²¢¼ì²éÊÇ·ñ»¹ÓÐÎ´¼¤·¢µÄÏÂÒ»ÅÚ
+        // 2. ï¿½Û¼Ó²ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½Î´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½
         // -----------------------------------------------------------------
         g_autoAcq.currentShotIdx++;
 
         if (g_autoAcq.currentShotIdx < g_autoAcq.totalShots) {
-            // ¼ÆËãÏÂÒ»ÅÚµÄ X Íø¸ñ×ø±ê
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½Úµï¿½ X ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             int next_x = g_autoAcq.startX + g_autoAcq.currentShotIdx * g_autoAcq.shotIntervalX;
             edit_src_x = std::clamp(next_x, ctx.npml + 5, ctx.NX - ctx.npml - 5);
             edit_src_z = g_autoAcq.shotDepthZ;
 
             // =================================================================
-            // ¡¾ºËÐÄÐÞ¸´¡¿£ºÔÚÌø×ªÖÁÏÂÒ»ÅÚÇ°£¬Ç¿ÖÆÖØÐÂ¸ù¾Ý×îÐÂµÄ²½³¤ÖØ»­×Ó²¨£¬
-            //  ²¢Ö´ÐÐÒ»¼ü´óÏµÍ³ÎïÀí³¡¶ÔÆë£¬³¹µ×Çå³ýÀúÊ·¾É²¨³¡²ÐÁô£¡
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Þ¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×ªï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½Ç°ï¿½ï¿½Ç¿ï¿½ï¿½ï¿½ï¿½ï¿½Â¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÂµÄ²ï¿½ï¿½ï¿½ï¿½Ø»ï¿½ï¿½Ó²ï¿½ï¿½ï¿½
+            //  ï¿½ï¿½Ö´ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ÏµÍ³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ë£¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê·ï¿½É²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             // =================================================================
-            TriggerSingleShot(gl, state);
+            triggerSingleShot(gl, state);
 
-            // ÖØÖÃ½ÓÊÕÆ÷ Host ¶Ë»º³åÇø£¬ÖØÐÂÆô¶¯²É¼¯
+            // ï¿½ï¿½ï¿½Ã½ï¿½ï¿½ï¿½ï¿½ï¿½ Host ï¿½Ë»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É¼ï¿½
             rec.initBuffer();
             rec.isRecording = true;
             state.running = true;
@@ -2809,7 +2855,7 @@ inline void UpdateAutoAcquisitionWorkflow(SimState& state, GLHandles& gl) {
         }
         else {
             // -----------------------------------------------------------------
-            // 3. ËùÓÐÔ¤ÉèÅÚµãÈ«Á¿²É¼¯Íê±Ï£¡
+            // 3. ï¿½ï¿½ï¿½ï¿½Ô¤ï¿½ï¿½ï¿½Úµï¿½È«ï¿½ï¿½ï¿½É¼ï¿½ï¿½ï¿½Ï£ï¿½
             // -----------------------------------------------------------------
             g_autoAcq.state = AUTO_ACQ_FINISHED;
             state.running = false;
@@ -2822,61 +2868,70 @@ inline void UpdateAutoAcquisitionWorkflow(SimState& state, GLHandles& gl) {
 }
 
 // =============================================================================
-// 28. OpenGL äÖÈ¾È«ÆÁ±³¾°²¨³¡ÎÆÀí
+// 28. OpenGL ï¿½ï¿½È¾È«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 // =============================================================================
-inline void RenderFullBackbufferWavefield(int winW, int winH, float barHeight, GLHandles& gl) {
-    // 1. ÏÔ´æÉ«²ÊÓ³ÉäÓë 2D copy Ð´ÈëÎÆÀí
-    cudaGraphicsMapResources(1, &gl.cudaSeisRes, 0);
-    cudaGraphicsSubResourceGetMappedArray(&gl.cudaSeisArray, gl.cudaSeisRes, 0, 0);
+/** Maps the current CUDA wavefield texture onto the application viewport with aspect correction. */
+inline void renderFullBackbufferWavefield(int winW, int winH, float barHeight, GLHandles& gl) {
+    // 1. ï¿½Ô´ï¿½É«ï¿½ï¿½Ó³ï¿½ï¿½ï¿½ï¿½ 2D copy Ð´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    CUDA_CHECK(cudaGraphicsMapResources(1, &gl.cudaSeisRes, 0));
+    struct MappedResourceGuard {
+        cudaGraphicsResource_t resource;
+        ~MappedResourceGuard() {
+            if (resource) cudaGraphicsUnmapResources(1, &resource, 0);
+        }
+    } mappedResourceGuard{gl.cudaSeisRes};
+    CUDA_CHECK(cudaGraphicsSubResourceGetMappedArray(&gl.cudaSeisArray, gl.cudaSeisRes, 0, 0));
 
-    static uchar4* d_rgba_out = nullptr;
-    static int     last_size = 0;
+    uchar4*& d_rgba_out = gl.deviceWavefieldRgba;
+    int& last_size = gl.wavefieldRgbaCapacity;
 
     if (last_size != ctx.total_grid) {
         if (d_rgba_out) cudaFree(d_rgba_out);
-        cudaMalloc(&d_rgba_out, ctx.total_grid * sizeof(uchar4));
+        d_rgba_out = nullptr;
+        CUDA_CHECK(cudaMalloc(&d_rgba_out, static_cast<size_t>(ctx.total_grid) * sizeof(uchar4)));
         last_size = ctx.total_grid;
     }
-    generateWavefieldTextureCUDA(gpu_data, d_rgba_out, color_scale, show_component);
+    generateWavefieldTextureOnGpu(gpu_data, d_rgba_out, color_scale, show_component);
 
-    cudaMemcpy2DToArray(
+    CUDA_CHECK(cudaMemcpy2DToArray(
         gl.cudaSeisArray, 0, 0,
         d_rgba_out,
         ctx.NX * sizeof(uchar4),
         ctx.NX * sizeof(uchar4),
         ctx.NZ,
         cudaMemcpyDeviceToDevice
-    );
-    cudaGraphicsUnmapResources(1, &gl.cudaSeisRes, 0);
+    ));
+    CUDA_CHECK(cudaGraphicsUnmapResources(1, &gl.cudaSeisRes, 0));
+    mappedResourceGuard.resource = nullptr;
 
-    // 2. ×ÅÉ«Æ÷äÖÈ¾¹ÜÏß
+    // 2. ï¿½ï¿½É«ï¿½ï¿½ï¿½ï¿½È¾ï¿½ï¿½ï¿½ï¿½
     glViewport(0, 0, winW, winH);
     glUseProgram(gl.seisProg);
 
-    // °ó¶¨²¢ÔØÈëµØÕð²¨³¡ÎÆÀíµ½µ¥Ôª 0
+    // ï¿½ó¶¨²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ð²¨³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ôª 0
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, gl.seisTex);
     glUniform1i(glGetUniformLocation(gl.seisProg, "seisTexture"), 0);
 
-    // ¼¤»îµ¥Ôª 1 ²¢°ó¶¨ÀëÆÁµØÖÊ²ãÎ»ÎïÐÔÎÆÀí
+    // ï¿½ï¿½ï¿½îµ¥Ôª 1 ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê²ï¿½Î»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, g_modelTex);
     glUniform1i(glGetUniformLocation(gl.seisProg, "modelTexture"), 1);
 
-    // ´«µÝµØÕð¼°µØÖÊ±³¾°Ïà¹ØµÄ Uniform ±äÁ¿
+    // ï¿½ï¿½ï¿½Ýµï¿½ï¿½ð¼°µï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½Øµï¿½ Uniform ï¿½ï¿½ï¿½ï¿½
     glUniform1i(glGetUniformLocation(gl.seisProg, "waveStyle"), waveStyle);
-    glUniform1i(glGetUniformLocation(gl.seisProg, "modelStyle"), modelStyle); // ´«µÝ±³¾°·ç¸ñ
-    glUniform1i(glGetUniformLocation(gl.seisProg, "showGrid"), showGrid ? 1 : 0); // Íø¸ñ¿ª¹Ø×´Ì¬
+    glUniform1i(glGetUniformLocation(gl.seisProg, "modelStyle"), modelStyle); // ï¿½ï¿½ï¿½Ý±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    glUniform1i(glGetUniformLocation(gl.seisProg, "showGrid"), showGrid ? 1 : 0); // ï¿½ï¿½ï¿½ñ¿ª¹ï¿½×´Ì¬
 
     glUniform1f(glGetUniformLocation(gl.seisProg, "gridSpacing"), ui_gridSpacing);
     glUniform1f(glGetUniformLocation(gl.seisProg, "gridOpacity"), ui_gridOpacity);
 
-    // ÎÞ·ìÏòÏÂ´«µÝµ±Ç°»¬¿éÉèÖÃµÄ Vp ºÍ ÃÜ¶È (Rho)£¬½¨Á¢ÎïÀí³¡¹ØÁª
+    // ï¿½Þ·ï¿½ï¿½ï¿½ï¿½Â´ï¿½ï¿½Ýµï¿½Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ãµï¿½ Vp ï¿½ï¿½ ï¿½Ü¶ï¿½ (Rho)ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     glUniform1f(glGetUniformLocation(gl.seisProg, "uniformVp"), edit_Vp);
     glUniform1f(glGetUniformLocation(gl.seisProg, "uniformRho"), edit_Density);
-    glUniform1i(glGetUniformLocation(gl.seisProg, "useModelTexture"), 1); // ÆôÓÃ·Ç¾ùÔÈËÙ¶ÈÄ£ÐÍÎÆÀí
+    glUniform1i(glGetUniformLocation(gl.seisProg, "useModelTexture"), 1); // ï¿½ï¿½ï¿½Ã·Ç¾ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½Ä£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-    // °ó¶¨³£¹æ²ÎÊý Uniform ±äÁ¿
+    // ï¿½ó¶¨³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Uniform ï¿½ï¿½ï¿½ï¿½
     glUniform2f(glGetUniformLocation(gl.seisProg, "winSize"), (float)winW, (float)winH);
     glUniform2f(glGetUniformLocation(gl.seisProg, "simSize"), (float)ctx.NX, (float)ctx.NZ);
     glUniform2f(glGetUniformLocation(gl.seisProg, "viewOffset"), viewOffset.x, viewOffset.y);
@@ -2884,7 +2939,7 @@ inline void RenderFullBackbufferWavefield(int winW, int winH, float barHeight, G
     glUniform1f(glGetUniformLocation(gl.seisProg, "totalTime"), (float)glfwGetTime());
     glUniform1f(glGetUniformLocation(gl.seisProg, "npml"), (float)ctx.npml);
 
-    // ÔÙ´Î°ó¶¨²¢ÔØÈëÎÆÀí
+    // ï¿½Ù´Î°ó¶¨²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, gl.seisTex);
     glUniform1i(glGetUniformLocation(gl.seisProg, "seisTexture"), 0);
@@ -2893,17 +2948,18 @@ inline void RenderFullBackbufferWavefield(int winW, int winH, float barHeight, G
     glDrawArrays(GL_TRIANGLES, 0, 6);
 }
 
-/// ////////////////////////////////////////////////////////////////////////µÚÁù²¿·Ö
+/// ////////////////////////////////////////////////////////////////////////ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 // =============================================================================
-// 29. Éý¼¶°æ£ºµØÕðÄ£Äâ¶àÎ¬Í¼ÐÎÓÃ»§½çÃæÓë HUD ½»»¥¿ò¼Ü (ImGui / ImPlot)
+// 29. ï¿½ï¿½ï¿½ï¿½ï¿½æ£ºï¿½ï¿½ï¿½ï¿½Ä£ï¿½ï¿½ï¿½Î¬Í¼ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ HUD ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (ImGui / ImPlot)
 // =============================================================================
-inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, float scale, GLHandles& gl, const GpuInfo& info) {
+/** Draws simulation controls, run state, acquisition controls, and device telemetry over the wavefield. */
+inline void renderSeisHud(SimState& state, int winW, int winH, float barHeight, float scale, GLHandles& gl, const GpuInfo& info) {
     ImGuiIO& io = ImGui::GetIO();
 
-    // A. »æÖÆÖ÷»º³åÇø×ÔÊÊÓ¦±ê³ß (ÔÚ²¨³¡Ö®ÉÏ£¬ImGui ¿ØÖÆÃæ°åÖ®ÏÂ)
-    RenderGridRulerOnBackbuffer(ctx, state, winW, winH, barHeight, viewOffset, viewZoom);
+    // A. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ (ï¿½Ú²ï¿½ï¿½ï¿½Ö®ï¿½Ï£ï¿½ImGui ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö®ï¿½ï¿½)
+    renderGridRulerOnBackbuffer(ctx, state, winW, winH, barHeight, viewOffset, viewZoom);
 
-    // B. »æÖÆ¸ßÁÁ¿Æ¼¼Êó±ê¹â±ê (Fg Í¼²ã)
+    // B. ï¿½ï¿½ï¿½Æ¸ï¿½ï¿½ï¿½ï¿½Æ¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (Fg Í¼ï¿½ï¿½)
     ViewportInfo vp;
     vp.x = 0.0f;
     vp.y = 0.0f;
@@ -2911,12 +2967,12 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
     vp.h = (float)winH;
     vp.scaleX = vp.w / (float)ctx.NX;
     vp.scaleY = vp.h / (float)ctx.NZ;
-    RenderBrushCursor(state, vp);
+    renderBrushCursor(state, vp);
 
-    // C. »æÖÆµ±Ç°±à¼­/¼¤·¢µÄÎïÀíÕðÔ´ÂÌÉ«/³ÈÉ«×¼ÐÇ
-    RenderSourceMarker(ctx, edit_src_x, edit_src_z, winW, winH, barHeight, viewOffset, viewZoom);
+    // C. ï¿½ï¿½ï¿½Æµï¿½Ç°ï¿½à¼­/ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô´ï¿½ï¿½É«/ï¿½ï¿½É«×¼ï¿½ï¿½
+    renderSourceMarker(ctx, edit_src_x, edit_src_z, winW, winH, barHeight, viewOffset, viewZoom);
 
-    // --- ¡¾ÐÂÔö£º»æÖÆÅÅÁÐÍ¼²ã¡¿ ---
+    // --- ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ã¡¿ ---
     if (rec.isShowarray && !rec.receivers.empty()) {
         ImDrawList* fg = ImGui::GetForegroundDrawList();
 
@@ -2941,18 +2997,18 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
             float screenY = (0.5f - Pndc_y * 0.5f) * winH;
 
             if (screenX >= 0.0f && screenX <= winW && screenY >= barHeight && screenY <= winH) {
-                // ²ÉÓÃÑ§Êõ½çÍ¨ÓÃµÄ»ÆÉ«µ¹Èý½ÇÐÎ¸ßÁÁ±êÖ¾¼ì²¨Æ÷
+                // ï¿½ï¿½ï¿½ï¿½Ñ§ï¿½ï¿½ï¿½ï¿½Í¨ï¿½ÃµÄ»ï¿½É«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î¸ï¿½ï¿½ï¿½ï¿½ï¿½Ö¾ï¿½ì²¨ï¿½ï¿½
                 ImVec2 p1(screenX, screenY - 5.0f);
                 ImVec2 p2(screenX - 4.0f, screenY + 3.0f);
                 ImVec2 p3(screenX + 4.0f, screenY + 3.0f);
-                fg->AddTriangleFilled(p1, p2, p3, IM_COL32(255, 230, 51, 230)); // Ó«¹â»Æ
-                fg->AddTriangle(p1, p2, p3, IM_COL32(0, 0, 0, 255), 1.0f);      // ÃèºÚ±ß
+                fg->AddTriangleFilled(p1, p2, p3, IM_COL32(255, 230, 51, 230)); // Ó«ï¿½ï¿½ï¿½
+                fg->AddTriangle(p1, p2, p3, IM_COL32(0, 0, 0, 255), 1.0f);      // ï¿½ï¿½Ú±ï¿½
             }
         }
     }
 
     // -------------------------------------------------------------------------
-    // D. äÖÈ¾¶¥²¿ TopBar ×´Ì¬Ò£²âÀ¸
+    // D. ï¿½ï¿½È¾ï¿½ï¿½ï¿½ï¿½ TopBar ×´Ì¬Ò£ï¿½ï¿½ï¿½ï¿½
     // -------------------------------------------------------------------------
     {
         ImGui::SetNextWindowPos({ 0, 0 });
@@ -3029,7 +3085,7 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
     }
 
     // -------------------------------------------------------------------------
-    // E. äÖÈ¾×ó²àÐü¸¡¿ØÖÆÃæ°å (LAB_CONTROLS)
+    // E. ï¿½ï¿½È¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (LAB_CONTROLS)
     // -------------------------------------------------------------------------
     if (showHUD) {
         ImGui::SetNextWindowPos({ 30 * scale, 80 * scale }, ImGuiCond_FirstUseEver);
@@ -3056,7 +3112,7 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
             if (ImGui::BeginTabBar("ControlTabs")) {
 
                 // ==========================================
-                // Tab 1: Simulation ÔËÐÐÉèÖÃ
+                // Tab 1: Simulation ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                 // ==========================================
                 if (ImGui::BeginTabItem("Simulation")) {
                     ImGui::Spacing();
@@ -3065,6 +3121,12 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                     int temp_type = ctx.flag_type - 1;
                     if (ImGui::Combo("Formulation", &temp_type, sim_types, IM_ARRAYSIZE(sim_types))) {
                         ctx.flag_type = temp_type + 1;
+                        if (ctx.flag_type == 3 && ctx.upFlag && ctx.npml < kStencilRadius) {
+                            ctx.npml = kStencilRadius;
+                            temp_pml = kStencilRadius;
+                            par.FDM.npml = static_cast<float>(kStencilRadius);
+                            updatePmlDampingArrays();
+                        }
                         g_resetSimRequested = true;
                     }
                     ImGui::Spacing();
@@ -3079,38 +3141,41 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                     ImGui::SliderFloat("Time Step (dt)", &temp_dt, 0.00001f, 0.003f, "%.6f s");
                     ImGui::SliderFloat("Grid Spacing (dx)", &temp_dx, 0.1f, 20.0f, "%.2f m");
                     // =========================================================================
-                    // ¡¾ÓÅ»¯¡¿£º¿ª·Å PML ¿í¶ÈÏÂÏÞÖÁ 0£¬ÊµÏÖÒ»¼üÎÞ·ìÇÐ»»ÖÁ¡°ÎïÀíÈ«·´ÉäÄ£Ê½¡±
+                    // ï¿½ï¿½ï¿½Å»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ PML ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 0ï¿½ï¿½Êµï¿½ï¿½Ò»ï¿½ï¿½ï¿½Þ·ï¿½ï¿½Ð»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È«ï¿½ï¿½ï¿½ï¿½Ä£Ê½ï¿½ï¿½
                     // =========================================================================
+                    const int minimumPmlWidth = ctx.flag_type == 3 && ctx.upFlag ? kStencilRadius : 0;
+                    const int maximumPmlWidth = std::min(100, (std::min(ctx.NX, ctx.NZ) - 2 * kStencilRadius - 1) / 2);
+                    temp_pml = std::clamp(temp_pml, minimumPmlWidth, maximumPmlWidth);
                     if (temp_pml == 0) {
-                        ImGui::SliderInt("PML Layer Width", &temp_pml, 0, 100, "0 (Total Reflection)");
+                        ImGui::SliderInt("PML Layer Width", &temp_pml, minimumPmlWidth, maximumPmlWidth, "0 (Total Reflection)");
                     }
                     else {
-                        ImGui::SliderInt("PML Layer Width", &temp_pml, 0, 100, "%d px");
+                        ImGui::SliderInt("PML Layer Width", &temp_pml, minimumPmlWidth, maximumPmlWidth, "%d px");
                     }
                     ImGui::SliderInt("Max Steps (nt)", &temp_nt, 500, 50000);
                     ImGui::SliderInt("Steps / Frame", &steps_per_frame, 1, 100);
 
                     // =========================================================================
-                    // ¡¾ÖØ¹¹¡¿£ºË«¿âÀÊÊý£¨CFL£©¶àÎ¬ÎïÀíÎÈ¶¨ÐÔ·ÖÎöÏµÍ³
+                    // ï¿½ï¿½ï¿½Ø¹ï¿½ï¿½ï¿½ï¿½ï¿½Ë«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½CFLï¿½ï¿½ï¿½ï¿½Î¬ï¿½ï¿½ï¿½ï¿½ï¿½È¶ï¿½ï¿½Ô·ï¿½ï¿½ï¿½ÏµÍ³
                     // =========================================================================
-                    // 1. ÀíÂÛ¾ø¶ÔÊ§ÎÈ¼«ÏÞÖµ£¨CFL ÀíÂÛ¿âÀÊÊý = 0.601£©
-                    float cfl_theory = 0.601f;
+                    // 1. ï¿½ï¿½ï¿½Û¾ï¿½ï¿½ï¿½Ê§ï¿½È¼ï¿½ï¿½ï¿½Öµï¿½ï¿½CFL ï¿½ï¿½ï¿½Û¿ï¿½ï¿½ï¿½ï¿½ï¿½ = 0.601ï¿½ï¿½
+                    float cfl_theory = kCourantLimit2d;
                     float dt_theory_limit = cfl_theory * temp_dx / max_vp;
 
-                    // 2. Êµ¼ÊÓ¦ÓÃ´¦ÀíºóµÄ°²È«ÏÞÖÆ£¨CFL °²È«¿âÀÊÊý = 0.480£¬Áô³ö 20% ÓàÁ¿·À PML ±ß½ç·¢É¢£©
-                    float cfl_safe = 0.480f;
+                    // 2. Êµï¿½ï¿½Ó¦ï¿½Ã´ï¿½ï¿½ï¿½ï¿½ï¿½Ä°ï¿½È«ï¿½ï¿½ï¿½Æ£ï¿½CFL ï¿½ï¿½È«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ = 0.480ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 20% ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ PML ï¿½ß½ç·¢É¢ï¿½ï¿½
+                    float cfl_safe = kSafeCourant2d;
                     float dt_safe_limit = cfl_safe * temp_dx / max_vp;
 
                     ImGui::TextDisabled("CFL Stability Analysis:");
 
-                    // ÀíÂÛ¼«ÏÞÏÔÊ¾
+                    // ï¿½ï¿½ï¿½Û¼ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾
                     ImGui::Text("- Theoretical Limit (CFL = %.3f):", cfl_theory); ImGui::SameLine();
                     ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "%.6f s", dt_theory_limit);
                     if (ImGui::IsItemHovered()) {
                         ImGui::SetTooltip("Absolute mathematical threshold.\nGoing above this will cause instant numerical divergence (NaN).");
                     }
 
-                    // Êµ¼Ê´¦Àíºó£¨°²È«£©ÏÞÖÆÏÔÊ¾
+                    // Êµï¿½Ê´ï¿½ï¿½ï¿½ï¿½ó£¨°ï¿½È«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾
                     ImGui::Text("- Processed Safe Limit (CFL = %.3f):", cfl_safe); ImGui::SameLine();
                     ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.8f, 1.0f), "%.6f s", dt_safe_limit);
                     if (ImGui::IsItemHovered()) {
@@ -3119,26 +3184,26 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
 
                     ImGui::Text("- Current Draft Step (dt): %.6f s", temp_dt);
 
-                    // 3. ÈýÉ«¸ß½×ÎÈ¶¨×´Ì¬¼à¿ØÖ¸Ê¾µÆ
+                    // 3. ï¿½ï¿½É«ï¿½ß½ï¿½ï¿½È¶ï¿½×´Ì¬ï¿½ï¿½ï¿½Ö¸Ê¾ï¿½ï¿½
                     if (temp_dt <= dt_safe_limit) {
-                        // ´¦ÓÚ°²È«ÇøÓò
+                        // ï¿½ï¿½ï¿½Ú°ï¿½È«ï¿½ï¿½ï¿½ï¿½
                         ImGui::TextColored({ 0.2f, 1.0f, 0.4f, 1.0f }, "[ STATUS: CFL STABLE (Highly Safe) ]");
                     }
                     else if (temp_dt <= dt_theory_limit) {
-                        // ´¦ÓÚÁÙ½ç¸ß·çÏÕÇøÓò
+                        // ï¿½ï¿½ï¿½ï¿½ï¿½Ù½ï¿½ß·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                         ImGui::TextColored({ 1.0f, 0.62f, 0.0f, 1.0f }, "[ STATUS: CFL MARGINAL (Risk of PML boundary explosion!) ]");
                         if (ImGui::IsItemHovered()) {
                             ImGui::SetTooltip("Warning: The requested dt is mathematically stable for homogeneous grids,\nbut may diverge inside PML damping layers or free surfaces.");
                         }
                     }
                     else {
-                        // ÒÑ¾­Ô½¹ýÉúËÀÏß£¬±Ø¶¨Òç³ö·¢É¢
+                        // ï¿½Ñ¾ï¿½Ô½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß£ï¿½ï¿½Ø¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É¢
                         ImGui::TextColored({ 1.0f, 0.2f, 0.2f, 1.0f }, "[ STATUS: CFL DIVERGENT (Will blow up!) ]");
                     }
 
                     ImGui::Spacing();
                     if (ImGui::Button("APPLY TIME & SPACING CONTROLS", { -1, 30 * scale })) {
-                        // 1. ÌáÈ¡µ±Ç°ÎïÀí×î´ó²¨ËÙ£¬ÓÃÓÚ°²È«±ß½çÇ¯Î»¼ì²â
+                        // 1. ï¿½ï¿½È¡ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù£ï¿½ï¿½ï¿½ï¿½Ú°ï¿½È«ï¿½ß½ï¿½Ç¯Î»ï¿½ï¿½ï¿½
                         float max_vp = 0.0f;
                         for (int k = 0; k < ctx.total_grid; ++k) {
                             float vp = sqrtf(ctx.lambda2mu[k] / ctx.rho[k]);
@@ -3146,17 +3211,17 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                         }
                         if (max_vp <= 350.0f) max_vp = 2000.0f;
 
-                        // 2. ËãÀíÂÛÉúËÀÏÞ (CFL = 0.601)
-                        float dt_theory_limit = 0.601f * temp_dx / max_vp;
+                        // 2. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (CFL = 0.601)
+                        float dt_theory_limit = kCourantLimit2d * temp_dx / max_vp;
 
-                        // 3. ¡¾°²È«±£»¤¡¿£ºÈôÓÃ»§ÊäÈëµÄ dt ´óÓÚÀíÂÛ¼«ÏÞ£¬Ç¿ÖÆ½«ÆäÇ¯Î»ÖØÖÃÎª 0.480 µÄ°²È«Öµ
+                        // 3. ï¿½ï¿½ï¿½ï¿½È«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ dt ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Û¼ï¿½ï¿½Þ£ï¿½Ç¿ï¿½Æ½ï¿½ï¿½ï¿½Ç¯Î»ï¿½ï¿½ï¿½ï¿½Îª 0.480 ï¿½Ä°ï¿½È«Öµ
                         if (temp_dt > dt_theory_limit) {
-                            temp_dt = 0.480f * temp_dx / max_vp;
+                            temp_dt = kSafeCourant2d * temp_dx / max_vp;
                             popup_message = "Warning: Input dt exceeded CFL stability limit.\nAutomatically clamped to safe value.";
                             show_error_popup = true;
                         }
 
-                        // 4. Ó¦ÓÃ¾­¹ý°²È«À¹½ØµÄ²½³¤Óë¿Õ¼ä²ÎÊý
+                        // 4. Ó¦ï¿½Ã¾ï¿½ï¿½ï¿½ï¿½ï¿½È«ï¿½ï¿½ï¿½ØµÄ²ï¿½ï¿½ï¿½ï¿½ï¿½Õ¼ï¿½ï¿½ï¿½ï¿½
                         ctx.dt = temp_dt;
                         gpu_data.inv_dt = 1.0f / ctx.dt;
                         ctx.nt = temp_nt;
@@ -3167,14 +3232,14 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                         ctx.npml = temp_pml;
                         par.FDM.npml = (float)temp_pml;
 
-                        // 5. ¼«¼ò»¯²î·ÖÏµÊý¸üÐÂ
-                        ctx.c1_h = 1.125022f / temp_dx;
-                        ctx.c2_h = -0.04687594f / temp_dx;
-                        ctx.c3_h = 0.00416669f / temp_dx;
-                        ctx.c4_h = -0.00019234f / temp_dx;
+                        // 5. ï¿½ï¿½ï¿½ò»¯²ï¿½ï¿½Ïµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+                        ctx.c1_h = static_cast<float>(kStaggeredDerivativeWeights[0]) / temp_dx;
+                        ctx.c2_h = static_cast<float>(kStaggeredDerivativeWeights[1]) / temp_dx;
+                        ctx.c3_h = static_cast<float>(kStaggeredDerivativeWeights[2]) / temp_dx;
+                        ctx.c4_h = static_cast<float>(kStaggeredDerivativeWeights[3]) / temp_dx;
 
-                        // 6. ÖØÐÂÖ´ÐÐ¸ßÄÜÐ§×èÄáÆÊÃæÖØËãÓë×ÔÓÉ±íÃæ×ÔÊÊÓ¦¶ÔÆë
-                        UpdatePmlDampingArrays();
+                        // 6. ï¿½ï¿½ï¿½ï¿½Ö´ï¿½Ð¸ï¿½ï¿½ï¿½Ð§ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½
+                        updatePmlDampingArrays();
 
                         ctx.dp_flat.assign(ctx.NX, 0.0f);
                         int fs_idx = ctx.npml;
@@ -3187,9 +3252,9 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                             }
                         }
 
-                        // 7. ÖØÐÂ·Ö¹ÜµÀ¼ÇÂ¼±í²¢ÖØ»æÕðÔ´×Ó²¨
-                        ctx.record_vx.assign(ctx.num_rcv * ctx.nt, 0.0f);
-                        ctx.record_vz.assign(ctx.num_rcv * ctx.nt, 0.0f);
+                        // 7. ï¿½ï¿½ï¿½Â·Ö¹Üµï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½Ø»ï¿½ï¿½ï¿½Ô´ï¿½Ó²ï¿½
+                        ctx.record_vx.assign(static_cast<size_t>(ctx.num_rcv) * ctx.nt, 0.0f);
+                        ctx.record_vz.assign(static_cast<size_t>(ctx.num_rcv) * ctx.nt, 0.0f);
                         generateRickerWavelet(ctx.wavelet, ctx.nt, ctx.dt, par.FDM.f0, par.FDM.t0);
 
                         g_resetSimRequested = true;
@@ -3226,14 +3291,14 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                         par.model.znum = edit_h;
 
                         setupTestContext(ctx, par);
-                        freeGPUSimulation(gpu_data);
+                        releaseGpuSimulation(gpu_data);
 
                         cudaGraphicsUnregisterResource(gl.cudaSeisRes);
                         glBindTexture(GL_TEXTURE_2D, gl.seisTex);
                         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, ctx.NX, ctx.NZ, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-                        cudaGraphicsGLRegisterImage(&gl.cudaSeisRes, gl.seisTex, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard);
+                        CUDA_CHECK(cudaGraphicsGLRegisterImage(&gl.cudaSeisRes, gl.seisTex, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard));
 
-                        initGPUSimulation(gpu_data, ctx);
+                        initializeGpuSimulation(gpu_data, ctx);
                         first_align_needed = true;
                     }
                     ImGui::PopStyleColor(2);
@@ -3288,14 +3353,14 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(uiAccent.x * 0.12f, uiAccent.y * 0.32f, uiAccent.z * 0.42f, 0.8f));
                     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(uiAccent.x * 0.18f, uiAccent.y * 0.52f, uiAccent.z * 0.62f, 1.0f));
                     if (ImGui::Button("OPEN DATA ANALYZER", { -1, 28 * scale })) {
-                        g_analyzerState.isOpen = true; // ´ò¿ªÊý¾Ý·ÖÎöÆÊÃæÊÓ´°
+                        g_analyzerState.isOpen = true; // ï¿½ï¿½ï¿½ï¿½ï¿½Ý·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó´ï¿½
                     }
                     ImGui::PopStyleColor(2);
                     ImGui::EndTabItem();
                 }
 
                 // ==========================================
-                // Tab 2: Source ¼¤·¢ÕðÔ´Óë½Ç¶Èµ÷½Ú
+                // Tab 2: Source ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô´ï¿½ï¿½Ç¶Èµï¿½ï¿½ï¿½
                 // ==========================================
                 if (ImGui::BeginTabItem("Source")) {
                     ImGui::Spacing();
@@ -3305,18 +3370,18 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                     int max_valid_x = ctx.NX - ctx.npml - 5;
                     int max_valid_z = ctx.NZ - ctx.npml - 5;
 
-                    // 1. ×ø±êÎ»ÖÃµ÷½Ú
+                    // 1. ï¿½ï¿½ï¿½ï¿½Î»ï¿½Ãµï¿½ï¿½ï¿½
                     ImGui::SliderInt("Source X (Grid)", &edit_src_x, min_valid_grid, max_valid_x);
                     ImGui::SliderInt("Source Z (Grid)", &edit_src_z, min_valid_grid, max_valid_z);
                     ImGui::Spacing();
 
-                    // 2. ÐÂÔö£º¼¤·¢·ùÖµµ÷½Ú»¬¶¯Ìõ
+                    // 2. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½Ú»ï¿½ï¿½ï¿½ï¿½ï¿½
                     ImGui::SliderFloat("Excitation Amp", &edit_amp, 0.1f, 10.0f, "%.1f x");
                     if (ImGui::IsItemHovered()) {
                         ImGui::SetTooltip("Adjust the source intensity in real-time.");
                     }
 
-                    // 3. ÐÂÔö£ºÎïÀíÕðÔ´¼¤·¢ÀàÐÍÑ¡Ôñ Combo (ÓëÄú¸ø³öµÄÍ¼Æ¬ÍêÃÀ¶ÔÓ¦)
+                    // 3. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ¡ï¿½ï¿½ Combo (ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¼Æ¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦)
                     const char* source_types[] = {
                         "Vertical Force (Tzz)",
                         "Horizontal Force (Txx)",
@@ -3329,7 +3394,7 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                         ImGui::SetTooltip("Select seismic source mechanism (e.g. Pure P-Wave or Shear S-Wave).");
                     }
 
-                    // 4. ÓÅ»¯£º½öÔÚÑ¡Ôñ¡°ÇãÐ±Á¦ (Rotated Force)¡±Ê±£¬²ÅÏÔÊ¾ÊÜÁ¦½Ç¶Èµ÷½Ú£¬±£³ÖÃæ°åÕû½à
+                    // 4. ï¿½Å»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ¡ï¿½ï¿½ï¿½ï¿½Ð±ï¿½ï¿½ (Rotated Force)ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½ï¿½Ç¶Èµï¿½ï¿½Ú£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                     if (edit_source_type == 4) {
                         ImGui::SliderFloat("Force Angle", &edit_angle, -180.0f, 180.0f, "%.1f deg");
                     }
@@ -3347,7 +3412,7 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                         float t = i * preview_dt - edit_t0;
                         float pi2_f0 = M_PI * M_PI * edit_f0 * edit_f0;
                         preview_x[i] = i * preview_dt;
-                        preview_y[i] = (1.0f - 2.0f * pi2_f0 * t * t) * expf(-pi2_f0 * t * t) * edit_amp; // Ô¤ÀÀÍ¬ÑùÓ¦ÓÃ·ùÖµ
+                        preview_y[i] = (1.0f - 2.0f * pi2_f0 * t * t) * expf(-pi2_f0 * t * t) * edit_amp; // Ô¤ï¿½ï¿½Í¬ï¿½ï¿½Ó¦ï¿½Ã·ï¿½Öµ
                     }
 
                     ImPlot::PushStyleColor(ImPlotCol_FrameBg, IM_COL32(125, 125, 125, 255));
@@ -3368,8 +3433,8 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                         ctx.src_z_idx = edit_src_z;
                         ctx.src_idx = edit_src_z * ctx.NX + edit_src_x;
                         ctx.src_angle = edit_angle;
-                        ctx.src_type = edit_source_type; // ¸üÐÂ¼¤·¢ÀàÐÍ
-                        ctx.src_amp = edit_amp;         // ¸üÐÂ¼¤·¢·ùÖµ
+                        ctx.src_type = edit_source_type; // ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+                        ctx.src_amp = edit_amp;         // ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½Öµ
 
                         par.FDM.f0 = edit_f0;
                         par.FDM.t0 = edit_t0;
@@ -3380,16 +3445,16 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                         state.running = false;
                         accumulated_compute_time = 0.0f;
 
-                        freeGPUSimulation(gpu_data);
-                        initGPUSimulation(gpu_data, ctx);
+                        releaseGpuSimulation(gpu_data);
+                        initializeGpuSimulation(gpu_data, ctx);
                     }
                     ImGui::Spacing();
                     if (ImGui::Button("TRIGGER SINGLE SOURCE SHOT (C)", { -1, 30 * scale })) {
                         multi_source_mode = false;
                         ctx.src_z_idx = edit_src_z;
                         ctx.src_idx = edit_src_z * ctx.NX + edit_src_x;
-                        ctx.src_type = edit_source_type; // Ò»¼ü¼¤·¢Ê±Ó¦ÓÃµ±Ç°ÀàÐÍ
-                        ctx.src_amp = edit_amp;         // Ò»¼ü¼¤·¢Ê±Ó¦ÓÃµ±Ç°·ùÖµ
+                        ctx.src_type = edit_source_type; // Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±Ó¦ï¿½Ãµï¿½Ç°ï¿½ï¿½ï¿½ï¿½
+                        ctx.src_amp = edit_amp;         // Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±Ó¦ï¿½Ãµï¿½Ç°ï¿½ï¿½Öµ
                         g_resetSimRequested = true;
                     }
                     ImGui::Spacing();
@@ -3397,7 +3462,7 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                 }
 
                 // ==========================================
-                // Tab 3: Model_INPUT Íâ²¿µ¼ÈëÓëÎïÀíñîºÏ
+                // Tab 3: Model_INPUT ï¿½â²¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                 // ==========================================
                 if (ImGui::BeginTabItem("Model Edit")) {
                     ImGui::Spacing();
@@ -3420,8 +3485,8 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                         ctx.lambda.assign(ctx.total_grid, lambda_val);
                         ctx.lambda2mu.assign(ctx.total_grid, lambda2mu_val);
                         g_resetSimRequested = true;
-                        UpdatePmlDampingArrays();
-                        AutoAlignTimeStep();
+                        updatePmlDampingArrays();
+                        autoAlignTimeStep();
                     }
                     ImGui::Spacing();
                     ImGui::Separator();
@@ -3450,7 +3515,7 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                     ImGui::Spacing();
                     if (ImGui::Button("APPLY SCENARIO & REALLOCATE", { -1, 32 * scale })) {
                         current_scene = selected_scene;
-                        ApplyScenario(current_scene, state);
+                        applyScenario(current_scene, state);
 
                         edit_w = ctx.NX;
                         edit_h = ctx.NZ;
@@ -3458,7 +3523,7 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                         cudaGraphicsUnregisterResource(gl.cudaSeisRes);
                         glBindTexture(GL_TEXTURE_2D, gl.seisTex);
                         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, ctx.NX, ctx.NZ, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-                        cudaGraphicsGLRegisterImage(&gl.cudaSeisRes, gl.seisTex, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard);
+                        CUDA_CHECK(cudaGraphicsGLRegisterImage(&gl.cudaSeisRes, gl.seisTex, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard));
 
                         first_align_needed = true;
                         g_resetSimRequested = true;
@@ -3466,24 +3531,24 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                     ImGui::Spacing();
 
                     // =========================================================================
-                    // 1. ¡¾ÐÂÔö¡¿£ºÊó±ê×ó¼ü»­±ÊÓë¼¤·¢¹¤¾ßÏÂÀ­²Ëµ¥ (12345 ¶ÔÆë)
+                    // 1. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ë¼¤ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ëµï¿½ (12345 ï¿½ï¿½ï¿½ï¿½)
                     // =========================================================================
                     ImGui::SeparatorText("Mouse Interaction Tool");
 
-                    // ÏÂÀ­²Ëµ¥ÏÔÊ¾ÎÄ±¾£¬Óë ToolMode (0 ~ 4) µÄ 1¡¢2¡¢3¡¢4¡¢5 ¼üÍêÃÀ¶ÔÆë
+                    // ï¿½ï¿½ï¿½ï¿½ï¿½Ëµï¿½ï¿½ï¿½Ê¾ï¿½Ä±ï¿½ï¿½ï¿½ï¿½ï¿½ ToolMode (0 ~ 4) ï¿½ï¿½ 1ï¿½ï¿½2ï¿½ï¿½3ï¿½ï¿½4ï¿½ï¿½5 ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                     const char* brush_names[] = {
-                        "1. Default (Trigger Source£© ",//Ä¬ÈÏ¼¤·¢ÕðÔ´
-                        "2. High Velocity Brush ",//(¸ßËÙÓ²ÑÒ»­±Ê)
-                        "3. Low Velocity Brush ",//(µÍËÙÄà²ã»­±Ê)
-                        "4. Custom Material Brush ",//(×Ô¶¨ÒåÎïÐÔ»­±Ê)
-                        "5. Eraser "//(ÏðÆ¤²Á / »Ö¸´±³¾°É°ÑÒ)
+                        "1. Default (Trigger Sourceï¿½ï¿½ ",//Ä¬ï¿½Ï¼ï¿½ï¿½ï¿½ï¿½ï¿½Ô´
+                        "2. High Velocity Brush ",//(ï¿½ï¿½ï¿½ï¿½Ó²ï¿½Ò»ï¿½ï¿½ï¿½)
+                        "3. Low Velocity Brush ",//(ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ã»­ï¿½ï¿½)
+                        "4. Custom Material Brush ",//(ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô»ï¿½ï¿½ï¿½)
+                        "5. Eraser "//(ï¿½ï¿½Æ¤ï¿½ï¿½ / ï¿½Ö¸ï¿½ï¿½ï¿½ï¿½ï¿½É°ï¿½ï¿½)
                     };
 
-                    int current_tool = state.brushType; // ¶ÁÈ¡µ±Ç°×´Ì¬
-                    ImGui::PushItemWidth(-1); // ¿í¶È³ÅÂú£¬ÊÓ¾õÉÏ¸ü¹æÕû
+                    int current_tool = state.brushType; // ï¿½ï¿½È¡ï¿½ï¿½Ç°×´Ì¬
+                    ImGui::PushItemWidth(-1); // ï¿½ï¿½ï¿½È³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¾ï¿½ï¿½Ï¸ï¿½ï¿½ï¿½ï¿½ï¿½
 
                     if (ImGui::Combo("##LeftClickToolCombo", &current_tool, brush_names, IM_ARRAYSIZE(brush_names))) {
-                        state.brushType = current_tool; // Êó±êÑ¡ÔñÊ±Í¬²½¸üÐÂ×´Ì¬
+                        state.brushType = current_tool; // ï¿½ï¿½ï¿½Ñ¡ï¿½ï¿½Ê±Í¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×´Ì¬
                     }
                     ImGui::PopItemWidth();
 
@@ -3492,11 +3557,11 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                     }
 
                     // =========================================================================
-                    // 2. ¡¾ÐÂÔö¡¿£º»­±Ê´óÐ¡µ÷½Ú»¬¿é (½öÔÚÑ¡Ôñ»­±ÊÄ£Ê½ 2, 3, 4, 5 Ê±×Ô¶¯Õ¹Ê¾)
+                    // 2. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê´ï¿½Ð¡ï¿½ï¿½ï¿½Ú»ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½Ñ¡ï¿½ñ»­±ï¿½Ä£Ê½ 2, 3, 4, 5 Ê±ï¿½Ô¶ï¿½Õ¹Ê¾)
                     // =========================================================================
                     if (state.brushType != TOOL_NONE) {
                         ImGui::Spacing();
-                        // µ÷½Ú brushRadius °ë¾¶´óÐ¡ (1 ~ 50 ÏñËØµ¥Ôª)
+                        // ï¿½ï¿½ï¿½ï¿½ brushRadius ï¿½ë¾¶ï¿½ï¿½Ð¡ (1 ~ 50 ï¿½ï¿½ï¿½Øµï¿½Ôª)
                         ImGui::SliderFloat("Brush Radius (px)", &state.brushRadius, 1.0f, 50.0f, "Radius: %.0f px");
                         if (ImGui::IsItemHovered()) {
                             ImGui::SetTooltip("Adjust the physical size of your paintbrush circle.");
@@ -3507,11 +3572,11 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                     ImGui::EndTabItem();
                 }
                 // ==========================================
-                // Tab 4: Model_EXPORT ¿Õ¼ä²Ã¼ôÓë SEGY µ¼³ö
+                // Tab 4: Model_EXPORT ï¿½Õ¼ï¿½Ã¼ï¿½ï¿½ï¿½ SEGY ï¿½ï¿½ï¿½ï¿½
                 // ==========================================
                 if (ImGui::BeginTabItem("Model I/O")) {
                     // -------------------------------------------------------------
-                    // Íâ²¿×Ô¶¨ÒåÎÄ±¾ (TXT) Ä£ÐÍ¸ßËÙ¼ÓÔØÆ÷
+                    // ï¿½â²¿ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½Ä±ï¿½ (TXT) Ä£ï¿½Í¸ï¿½ï¿½Ù¼ï¿½ï¿½ï¿½ï¿½ï¿½
                     // -------------------------------------------------------------
                     ImGui::Separator();
                     ImGui::TextColored(uiAccent, "EXTERNAL MODEL IMPORT (TXT)");
@@ -3522,7 +3587,7 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                     ImGui::SameLine();
                     if (ImGui::Button("Browse##Txt", ImVec2(65 * scale, 0))) {
                         char filePath[512] = { 0 };
-                        if (OpenSystemFileDialog(filePath, sizeof(filePath))) {
+                        if (openSystemFileDialog(filePath, sizeof(filePath))) {
                             strcpy_s(txt_file_path, filePath);
                         }
                     }
@@ -3536,7 +3601,7 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                     ImGui::Spacing();
                     if (ImGui::Button("LOAD CUSTOM MODEL FILE", { -1, 35 * scale })) {
                         if (strlen(txt_file_path) > 0) {
-                            if (LoadModelFromTxt(txt_file_path, flipImportY, gl, state)) {
+                            if (loadModelFromText(txt_file_path, flipImportY, gl, state)) {
                                 popup_message = "External model loaded successfully!";
                                 show_success_popup = true;
                                 g_resetSimRequested = true;
@@ -3554,7 +3619,7 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                     ImGui::Spacing();
 
                     // -------------------------------------------------------------
-                    // Íâ²¿ SEG-Y ¶þÎ¬ÎïÐÔ²âÏß¶à×éµ¼Èë¿ØÖÆÌ¨
+                    // ï¿½â²¿ SEG-Y ï¿½ï¿½Î¬ï¿½ï¿½ï¿½Ô²ï¿½ï¿½ß¶ï¿½ï¿½éµ¼ï¿½ï¿½ï¿½ï¿½ï¿½Ì¨
                     // -------------------------------------------------------------
                     ImGui::Separator();
                     ImGui::TextColored(uiAccent, "EXTERNAL MODEL IMPORT (SEG-Y GROUP)");
@@ -3567,7 +3632,7 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                     ImGui::SameLine();
                     if (ImGui::Button("Browse##Vp", ImVec2(65 * scale, 0))) {
                         char filePath[512] = { 0 };
-                        if (OpenSystemFileDialog(filePath, sizeof(filePath))) {
+                        if (openSystemFileDialog(filePath, sizeof(filePath))) {
                             strcpy_s(vp_file_path, filePath);
                         }
                     }
@@ -3576,7 +3641,7 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                     ImGui::SameLine();
                     if (ImGui::Button("Browse##Vs", ImVec2(65 * scale, 0))) {
                         char filePath[512] = { 0 };
-                        if (OpenSystemFileDialog(filePath, sizeof(filePath))) {
+                        if (openSystemFileDialog(filePath, sizeof(filePath))) {
                             strcpy_s(vs_file_path, filePath);
                         }
                     }
@@ -3585,7 +3650,7 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                     ImGui::SameLine();
                     if (ImGui::Button("Browse##Rho", ImVec2(65 * scale, 0))) {
                         char filePath[512] = { 0 };
-                        if (OpenSystemFileDialog(filePath, sizeof(filePath))) {
+                        if (openSystemFileDialog(filePath, sizeof(filePath))) {
                             strcpy_s(rho_file_path, filePath);
                         }
                     }
@@ -3604,7 +3669,7 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
 
                     if (ImGui::Button("LOAD SEGY MODEL GROUP", { -1, 35 * scale })) {
                         if (strlen(vp_file_path) > 0 && strlen(vs_file_path) > 0 && strlen(rho_file_path) > 0) {
-                            if (LoadModelFromSegy(vp_file_path, vs_file_path, rho_file_path, flipSegyY, flipSegyX, gl, state)) {
+                            if (loadModelFromSegy(vp_file_path, vs_file_path, rho_file_path, flipSegyY, flipSegyX, gl, state)) {
                                 popup_message = "SEGY Model Group loaded successfully!";
                                 show_success_popup = true;
                                 g_resetSimRequested = true;
@@ -3638,7 +3703,7 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                         crop_z_max = ctx.NZ - 1;
                     }
 
-                    // ¡¾×ÔÊÊÓ¦¶ÔÆë¡¿£ºÃ¿´ÎÇÐ»»Ä£ÐÍÊ±£¬×Ô¶¯½«Ä¬ÈÏµ¼³öÄ¿±ê²½³¤ÉèÎªµ±Ç°Ä£ÄâµÄ²½³¤ ctx.h
+                    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ë¡¿ï¿½ï¿½Ã¿ï¿½ï¿½ï¿½Ð»ï¿½Ä£ï¿½ï¿½Ê±ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½Ä¬ï¿½Ïµï¿½ï¿½ï¿½Ä¿ï¿½ê²½ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½Ç°Ä£ï¿½ï¿½Ä²ï¿½ï¿½ï¿½ ctx.h
                     if (first_align_needed) {
                         export_target_dx = ctx.h;
                     }
@@ -3653,7 +3718,7 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                     ImGui::SliderInt("Z Max (Bottom)", &crop_z_max, 0, ctx.NZ - 1);
 
                     // =========================================================
-                    // ¡¾ºËÐÄÐÂÔö¡¿£ºÖØ²ÉÑùÄ¿±ê¿Õ¼ä²½³¤µ÷½Ú»¬¿é
+                    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø²ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½Õ¼ä²½ï¿½ï¿½ï¿½ï¿½ï¿½Ú»ï¿½ï¿½ï¿½
                     // =========================================================
                     ImGui::SliderFloat("Export Target dx (m)", &export_target_dx, 0.1f, 20.0f, "%.2f m");
                     if (ImGui::IsItemHovered()) {
@@ -3682,9 +3747,9 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(uiAccent.x * 0.2f, uiAccent.y * 0.65f, uiAccent.z * 0.75f, 0.9f));
                     if (ImGui::Button("EXPORT SEG-Y GROUP", { -1, 35 * scale })) {
                         char savePath[512] = { 0 };
-                        if (SaveSystemFileDialog(savePath, sizeof(savePath))) {
-                            // ´«ÈëÐÂ²ÎÊý export_target_dx ½øÐÐ¸ß±£ÕæÖØ²ÉÑùµ¼³ö
-                            if (ExportModelToSegy(savePath, export_density_gcm3, export_flip_x, crop_x_min, crop_z_min, crop_x_max, crop_z_max, export_target_dx)) {
+                        if (saveSystemFileDialog(savePath, sizeof(savePath))) {
+                            // ï¿½ï¿½ï¿½ï¿½ï¿½Â²ï¿½ï¿½ï¿½ export_target_dx ï¿½ï¿½ï¿½Ð¸ß±ï¿½ï¿½ï¿½ï¿½Ø²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+                            if (exportModelToSegy(savePath, export_density_gcm3, export_flip_x, crop_x_min, crop_z_min, crop_x_max, crop_z_max, export_target_dx)) {
                                 popup_message = "Cropped & Resampled SEGY Model Group exported successfully!\nCheck out your saved _vp, _vs, _rho files.";
                                 show_success_popup = true;
                             }
@@ -3700,31 +3765,31 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                 }
 
                 // ==========================================
-                // Tab 4: Data Export Êý¾Ý²É¼¯Óë¹Û²âÅÅÁÐ²¼Éè
+                // Tab 4: Data Export ï¿½ï¿½ï¿½Ý²É¼ï¿½ï¿½ï¿½Û²ï¿½ï¿½ï¿½ï¿½Ð²ï¿½ï¿½ï¿½
                 // ==========================================
                 if (ImGui::BeginTabItem("Data Export")) {
                     ImGui::Spacing();
 
                     // ----------------------------------------------------------
-                    // 1. ²É¼¯Óëµ¼³ö²ÎÊý
+                    // 1. ï¿½É¼ï¿½ï¿½ëµ¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                     // ----------------------------------------------------------
                     ImGui::SeparatorText("Acquisition Settings");
                     ImGui::SliderFloat("Sampling Rate (Hz)", &rec.samplingRateHz, 10.0f, 10000.0f, "%.0f Hz");
                     ImGui::DragFloat("Record Duration (s)", &rec.totalDurationSec, 1.0f, 0.1f, 7200.0f, "%.2f s");
                     ImGui::DragFloat("Export Every (s)", &rec.exportIntervalSec, 1.0f, 0.1f, 3600.0f, "%.1f s");
 
-                    // ¼ÆËãµãÊýÌáÊ¾
+                    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾
                     int expectedPoints = (int)(rec.samplingRateHz * rec.totalDurationSec);
                     ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f), "Target Samples: %d points/channel", expectedPoints);
                     ImGui::Spacing();
 
                     // ----------------------------------------------------------
-                    // 2. ¼ì²¨Æ÷²¼¾Ö (Ôö¼Ó X ·¶Î§ÉèÖÃ)
+                    // 2. ï¿½ì²¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ X ï¿½ï¿½Î§ï¿½ï¿½ï¿½ï¿½)
                     // ----------------------------------------------------------
                     ImGui::SeparatorText("Receiver Geometry");
                     ImGui::SliderInt("Channels", &rec.numChannels, 1, 200, "%d");
 
-                    // ×ÔÊÊÓ¦¶ÔÆëµ±Ç°ÎïÀíÍø¸ñµÄ×î´ó³ß´ç
+                    // ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ëµ±Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß´ï¿½
                     ImGui::DragIntRange2("X Range", &rec.startX, &rec.endX, 1.0f, 0, ctx.NX - 1, "Start: %d", "End: %d");
                     ImGui::SliderInt("Depth (Y)", &rec.receiverDepth, 0, ctx.NZ - 1);
 
@@ -3732,21 +3797,21 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                         rec.receivers.clear();
                         rec.initBuffer();
 
-                        // ¸ù¾ÝÓÃ»§ÉèÖÃµÄ startX ºÍ endX ¼ÆËãµÀ¼ä¾à
+                        // ï¿½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½ï¿½Ãµï¿½ startX ï¿½ï¿½ endX ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                         float rangeX = (float)(rec.endX - rec.startX);
                         float spacing = (rec.numChannels > 1) ? (rangeX / (rec.numChannels - 1)) : 0;
 
                         for (int i = 0; i < rec.numChannels; ++i) {
                             rec.receivers.push_back({ (int)(rec.startX + i * spacing), rec.receiverDepth });
                         }
-                        // Í¬²½¼ì²¨Æ÷¿Õ¼äÍØÆËµ½ÏÔ¿¨¶Ë
-                        SyncReceiversToGPU();
+                        // Í¬ï¿½ï¿½ï¿½ì²¨ï¿½ï¿½ï¿½Õ¼ï¿½ï¿½ï¿½ï¿½Ëµï¿½ï¿½Ô¿ï¿½ï¿½ï¿½
+                        syncReceiversToGpu();
                     }
                     ImGui::Checkbox("Show/Hide LINEAR ARRAY", &rec.isShowarray);
                     ImGui::Spacing();
 
                     // ----------------------------------------------------------
-                    // 3. Â¼ÖÆÓëÒ»¼ü¼¤·¢¿ØÖÆ
+                    // 3. Â¼ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                     // ----------------------------------------------------------
                     ImGui::SeparatorText("Recording Control");
 
@@ -3760,9 +3825,9 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                             rec.isRecording = false;
                             state.running = false;
 
-                            // ±£´æÁ½·Ý£ºÒ»·Ý±ê×¼ SGY (º¬µÀÍ·ÎïÀí×ø±ê)£¬Ò»·Ý CSV ÎÄ±¾
-                            ExportToSegy(rec, "manual_export.sgy");
-                            ExportToCSV(rec, "manual_export.csv");
+                            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý£ï¿½Ò»ï¿½Ý±ï¿½×¼ SGY (ï¿½ï¿½ï¿½ï¿½Í·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½)ï¿½ï¿½Ò»ï¿½ï¿½ CSV ï¿½Ä±ï¿½
+                            exportToSegy(rec, "manual_export.sgy");
+                            exportToCsv(rec, "manual_export.csv");
 
                             popup_message = "Gather saved to 'manual_export.sgy' & 'manual_export.csv'";
                             show_success_popup = true;
@@ -3775,7 +3840,7 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                         float availW = ImGui::GetContentRegionAvail().x;
                         float spacingW = ImGui::GetStyle().ItemSpacing.x;
 
-                        // °´Å¥ A: ½ö¿ªÆô²É¼¯ (¾²Ä¬Â¼ÖÆµ±Ç°Ê±ÓÐÊ±ÎÞµÄ¸ÉÈÅ)
+                        // ï¿½ï¿½Å¥ A: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É¼ï¿½ (ï¿½ï¿½Ä¬Â¼ï¿½Æµï¿½Ç°Ê±ï¿½ï¿½Ê±ï¿½ÞµÄ¸ï¿½ï¿½ï¿½)
                         if (ImGui::Button("START CAPTURE", ImVec2(availW * 0.4f, 45))) {
                             rec.totalTimer = 0.0f;
                             rec.exportTimer = 0.0f;
@@ -3783,13 +3848,13 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                             rec.currentFileIndex = 1;
                             rec.initBuffer();
 
-                            SyncReceiversToGPU();
+                            syncReceiversToGpu();
                             rec.isRecording = true;
                             state.running = true;
                         }
                         ImGui::SameLine();
 
-                        // °´Å¥ B: Ò»¼ü×Ô¶¯¼¤·¢²¢¿ªÊ¼È«×Ô¶¯²É¼¯ (¸ßÁÁºìÉ«)
+                        // ï¿½ï¿½Å¥ B: Ò»ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼È«ï¿½Ô¶ï¿½ï¿½É¼ï¿½ (ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É«)
                         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
                         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.2f, 0.2f, 1.0f));
                         if (ImGui::Button("TRIGGER & ACQUIRE", ImVec2(availW * 0.6f - spacingW, 45))) {
@@ -3799,8 +3864,8 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                             rec.currentFileIndex = 1;
                             rec.initBuffer();
 
-                            // Çå¿Õ²¨³¡ÖØ¶¨Î»µ½Ö¸¶¨Î»ÖÃ·ÅÔ´£¬²¢Ò»¼üÍê³É¼ì²¨Æ÷ÏÔ´æÍ¬²½
-                            TriggerSingleShot(gl, state);
+                            // ï¿½ï¿½Õ²ï¿½ï¿½ï¿½ï¿½Ø¶ï¿½Î»ï¿½ï¿½Ö¸ï¿½ï¿½Î»ï¿½Ã·ï¿½Ô´ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½É¼ì²¨ï¿½ï¿½ï¿½Ô´ï¿½Í¬ï¿½ï¿½
+                            triggerSingleShot(gl, state);
 
                             rec.isRecording = true;
                             state.running = true;
@@ -3814,29 +3879,29 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                     }
 
                     // =========================================================================
-                    // 4. È«×Ô¶¯¶àÅÚµÀ¼¯Ñ­»·²É¼¯¿ØÖÆÌ¨ (Pre-stack Sequencer - ´øÊµÊ±ÊÓ¿ÚÍ¬²½)
+                    // 4. È«ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½Úµï¿½ï¿½ï¿½Ñ­ï¿½ï¿½ï¿½É¼ï¿½ï¿½ï¿½ï¿½ï¿½Ì¨ (Pre-stack Sequencer - ï¿½ï¿½ÊµÊ±ï¿½Ó¿ï¿½Í¬ï¿½ï¿½)
                     // =========================================================================
                     ImGui::SeparatorText("Automated Multi-Shot Gather");
 
                     ImGui::SliderInt("Total Shots", &g_autoAcq.totalShots, 1, 100);
 
-                    // --- ¡¾ºËÐÄÓÅ»¯ A¡¿£º»¬ÌõÊµÊ±Áª¶¯¡£µ±ÍÏ¶¯ÆðÊ¼ X »¬ÌõÊ±£¬ÆÁÄ»×¼ÐÇ×Ô¶¯Í¬²½Î»ÒÆ ---
+                    // --- ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å»ï¿½ Aï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÊµÊ±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¶ï¿½ï¿½ï¿½Ê¼ X ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½Ä»×¼ï¿½ï¿½ï¿½Ô¶ï¿½Í¬ï¿½ï¿½Î»ï¿½ï¿½ ---
                     if (ImGui::SliderInt("Start Shot X (Grid)", &g_autoAcq.startX, ctx.npml + 5, ctx.NX - ctx.npml - 5)) {
                         if (g_autoAcq.state == AUTO_ACQ_IDLE) {
-                            edit_src_x = g_autoAcq.startX; // ÊµÊ±À­¶¯£¬ÆÁÄ»ÐÇºÅÁ¢¿Ì¸úÊÖÒÆ¶¯
+                            edit_src_x = g_autoAcq.startX; // ÊµÊ±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä»ï¿½Çºï¿½ï¿½ï¿½ï¿½Ì¸ï¿½ï¿½ï¿½ï¿½Æ¶ï¿½
                         }
                     }
 
-                    // --- ¡¾ºËÐÄÓÅ»¯ B¡¿£º»¬ÌõÊµÊ±Áª¶¯¡£µ±ÍÏ¶¯¼¤·¢Éî¶È Z »¬ÌõÊ±£¬ÆÁÄ»×¼ÐÇ×Ô¶¯ÉÏÏÂÎ»ÒÆ ---
+                    // --- ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å»ï¿½ Bï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÊµÊ±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Z ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½Ä»×¼ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½ ---
                     if (ImGui::SliderInt("Shot Depth Z (Grid)", &g_autoAcq.shotDepthZ, ctx.npml + 5, ctx.NZ - ctx.npml - 5)) {
                         if (g_autoAcq.state == AUTO_ACQ_IDLE) {
-                            edit_src_z = g_autoAcq.shotDepthZ; // Éî¶ÈÍ¬²½¸üÐÂ£¬ÆÁÄ»Á¢¿ÌÏìÓ¦
+                            edit_src_z = g_autoAcq.shotDepthZ; // ï¿½ï¿½ï¿½Í¬ï¿½ï¿½ï¿½ï¿½ï¿½Â£ï¿½ï¿½ï¿½Ä»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦
                         }
                     }
 
                     ImGui::SliderInt("Shot Spacing (Grid)", &g_autoAcq.shotIntervalX, 5, 200);
 
-                    // ¶¯Ì¬¼ÆËã×îºóÒ»ÅÚµÄ X ×ø±ê£¬·ÀÖ¹³ö½çÔ¤¾¯
+                    // ï¿½ï¿½Ì¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½Úµï¿½ X ï¿½ï¿½ï¿½ê£¬ï¿½ï¿½Ö¹ï¿½ï¿½ï¿½ï¿½Ô¤ï¿½ï¿½
                     int end_shot_x = g_autoAcq.startX + (g_autoAcq.totalShots - 1) * g_autoAcq.shotIntervalX;
                     if (end_shot_x >= ctx.NX - ctx.npml - 5) {
                         ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "Warning: End Shot X (%d) exceeds right boundary!", end_shot_x);
@@ -3845,7 +3910,7 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                         ImGui::TextDisabled("Estimated End Shot X: %d (Within Boundary)", end_shot_x);
                     }
 
-                    // µ¼³öÎÄ¼þ¼ÐÃûÂ·¾¶ÊäÈë
+                    // ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                     static char export_dir[128] = "exports/";
                     ImGui::InputText("Export Folder", export_dir, IM_ARRAYSIZE(export_dir));
                     g_autoAcq.exportFolder = export_dir;
@@ -3853,8 +3918,8 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                     ImGui::Spacing();
 
                     // =========================================================================
-                    // ¡¾ºËÐÄÓÅ»¯ C¡¿£ºÐÂÔöÒ»¼üÊÖ¶¯¶ÔÆëÓëÔ¤ÀÀ°´Å¥ (PREVIEW & SYNC POSITION)
-                    //  µã»÷ºó×Ô¶¯ÖØ¶¨Î»µ±Ç°µ¥µãÕðÔ´£¬Çå³ýÀúÊ·¸ÉÈÅ£¬ÈÃ²¨³¡´ÓÊ×ÅÚÆðµãÖØÐÂÑÝ»¯
+                    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å»ï¿½ Cï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ö¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¤ï¿½ï¿½ï¿½ï¿½Å¥ (PREVIEW & SYNC POSITION)
+                    //  ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½Ø¶ï¿½Î»ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê·ï¿½ï¿½ï¿½Å£ï¿½ï¿½Ã²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý»ï¿½
                     // =========================================================================
                     if (g_autoAcq.state == AUTO_ACQ_IDLE) {
                         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(uiAccent.x * 0.10f, uiAccent.y * 0.20f, uiAccent.z * 0.30f, 0.65f));
@@ -3863,21 +3928,21 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                             edit_src_x = g_autoAcq.startX;
                             edit_src_z = g_autoAcq.shotDepthZ;
 
-                            // Ò»¼üÍê³É´óÏµÍ³²ÎÊý¶ÔÆë²¢ÖØÐÂ×¢Éä¼¤·¢
-                            TriggerSingleShot(gl, state);
+                            // Ò»ï¿½ï¿½ï¿½ï¿½É´ï¿½ÏµÍ³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ë²¢ï¿½ï¿½ï¿½ï¿½×¢ï¿½ä¼¤ï¿½ï¿½
+                            triggerSingleShot(gl, state);
                         }
                         ImGui::PopStyleColor(2);
                         ImGui::Spacing();
                     }
 
                     if (g_autoAcq.state == AUTO_ACQ_RUNNING) {
-                        // »æÖÆ¶àÅÚ½ø¶ÈÌõ
+                        // ï¿½ï¿½ï¿½Æ¶ï¿½ï¿½Ú½ï¿½ï¿½ï¿½ï¿½ï¿½
                         float progress = (float)g_autoAcq.currentShotIdx / g_autoAcq.totalShots;
                         char  acqBuf[64];
                         sprintf_s(acqBuf, "Acquiring: Shot %d / %d", g_autoAcq.currentShotIdx + 1, g_autoAcq.totalShots);
                         ImGui::ProgressBar(progress, ImVec2(-1, 30 * scale), acqBuf);
 
-                        // Ç¿ÐÐÖÕÖ¹°´Å¥
+                        // Ç¿ï¿½ï¿½ï¿½ï¿½Ö¹ï¿½ï¿½Å¥
                         if (ImGui::Button("ABORT AUTO GATHER", ImVec2(-1, 30 * scale))) {
                             g_autoAcq.state = AUTO_ACQ_IDLE;
                             state.running = false;
@@ -3888,14 +3953,14 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                         bool ready_to_acquire = !rec.receivers.empty() && (rec.receivers.size() == rec.numChannels);
                         if (!ready_to_acquire) ImGui::BeginDisabled();
 
-                        // ÁÁÇà/Ó«¹âÉ«Ò»¼ü¶àÅÚ¼¤·¢²¢È«Á¿²É¼¯
+                        // ï¿½ï¿½ï¿½ï¿½/Ó«ï¿½ï¿½É«Ò»ï¿½ï¿½ï¿½ï¿½ï¿½Ú¼ï¿½ï¿½ï¿½ï¿½ï¿½È«ï¿½ï¿½ï¿½É¼ï¿½
                         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(uiAccent.x * 0.15f, uiAccent.y * 0.45f, uiAccent.z * 0.55f, 0.75f));
                         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(uiAccent.x * 0.2f, uiAccent.y * 0.65f, uiAccent.z * 0.75f, 0.9f));
                         if (ImGui::Button("RUN AUTO SHOT GATHER", ImVec2(-1, 40 * scale))) {
                             g_autoAcq.Start();
                             rec.initBuffer();
 
-                            TriggerSingleShot(gl, state);
+                            triggerSingleShot(gl, state);
                             rec.isRecording = true;
                             state.running = true;
                         }
@@ -3909,13 +3974,13 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                 }
 
                 // =============================================================
-                // Tab 6: Replay (²¨³¡µçÓ°»Ø·ÅÒÇ - ×Ô¶¯½âÎö¶ÔÆëÓÅ»¯°æ)
+                // Tab 6: Replay (ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó°ï¿½Ø·ï¿½ï¿½ï¿½ - ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å»ï¿½ï¿½ï¿½)
                 // =============================================================
                 if (ImGui::BeginTabItem("Replay")) {
                     ImGui::Spacing();
 
                     // ---------------------------------------------------------
-                    // 1. Â¼ÖÆ¿ØÖÆÓë²ÎÊý (Recording Controls)
+                    // 1. Â¼ï¿½Æ¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (Recording Controls)
                     // ---------------------------------------------------------
                     ImGui::SeparatorText("Recording");
 
@@ -3936,7 +4001,7 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                         ImGui::SetTooltip("Save 1 frame every N simulation steps.");
                     }
 
-                    // ÏÔ¿¨ÏµÍ³¼¶ÎïÀíÏÔ´æ¼à¿Ø
+                    // ï¿½Ô¿ï¿½ÏµÍ³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô´ï¿½ï¿½ï¿½
                     size_t free_mem = 0, total_mem = 0;
                     float used_vram_mb = 0.0f, total_vram_mb = 0.0f;
                     if (cudaMemGetInfo(&free_mem, &total_mem) == cudaSuccess) {
@@ -3983,7 +4048,7 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                     ImGui::Spacing();
 
                     // ------------------------------------------------------
-                    // 2. »Ø·Å¿ØÖÆ (Playback Controls)
+                    // 2. ï¿½Ø·Å¿ï¿½ï¿½ï¿½ (Playback Controls)
                     // ------------------------------------------------------
                     ImGui::SeparatorText("Playback Control");
 
@@ -4019,18 +4084,18 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
 
                     ImGui::SameLine();
 
-                    // SAVE ×Ô¶¯Æ´½Ó£º _NXxNZ_vz.bin 
+                    // SAVE ï¿½Ô¶ï¿½Æ´ï¿½Ó£ï¿½ _NXxNZ_vz.bin 
                     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 1.0f));
                     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
                     if (ImGui::Button("SAVE", ImVec2(ctrlBtnW, 0))) {
                         char savePath[512] = { 0 };
-                        if (SaveSystemFileDialog(savePath, sizeof(savePath))) {
+                        if (saveSystemFileDialog(savePath, sizeof(savePath))) {
                             std::string path_str(savePath);
                             size_t dot_pos = path_str.find_last_of('.');
                             if (dot_pos != std::string::npos) {
                                 path_str = path_str.substr(0, dot_pos);
                             }
-                            // ºËÐÄ×Ô¶¯ÃüÃû£º½«µ±Ç°·ÂÕæ³ß´ç (ctx.NX x ctx.NZ) ×Ô¶¯·â×°½øºó×ºÖÐ£¡
+                            // ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½ß´ï¿½ (ctx.NX x ctx.NZ) ï¿½Ô¶ï¿½ï¿½ï¿½×°ï¿½ï¿½ï¿½ï¿½×ºï¿½Ð£ï¿½
                             std::string final_path = path_str + "_" + std::to_string(ctx.NX) + "x" + std::to_string(ctx.NZ) + "_vz.bin";
 
                             if (g_replay.exportToBinary(final_path, 1)) {
@@ -4066,43 +4131,43 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                     ImGui::Spacing();
 
                     // ------------------------------------------------------
-                    // 3. ¡¾ÐÂÖØ¹¹¡¿£ºÊý¾ÝµçÓ°µ¼Èë¿ØÖÆÌ¨ (´øÄæÏòºó×ºÕýÔò½âÎö & ×ÔÊÊÓ¦Íø¸ñÖØÕû)
+                    // 3. ï¿½ï¿½ï¿½ï¿½ï¿½Ø¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ýµï¿½Ó°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì¨ (ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×ºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ & ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½)
                     // ------------------------------------------------------
                     ImGui::SeparatorText("Import Wavefield Movie");
 
-                    static char movie_load_path[512] = ""; // ¾²Ì¬Â·¾¶»º³åÇø
-                    static int  movie_load_w = 0;  // »º´æ´ýµ¼ÈëµÄ NX
-                    static int  movie_load_z = 0;  // »º´æ´ýµ¼ÈëµÄ NZ
+                    static char movie_load_path[512] = ""; // ï¿½ï¿½Ì¬Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+                    static int  movie_load_w = 0;  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ NX
+                    static int  movie_load_z = 0;  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ NZ
 
-                    // A. ÎÄ¼þÑ¡ÔñÐÐ (Browse)
+                    // A. ï¿½Ä¼ï¿½Ñ¡ï¿½ï¿½ï¿½ï¿½ (Browse)
                     ImGui::InputText("Movie Path", movie_load_path, IM_ARRAYSIZE(movie_load_path));
                     ImGui::SameLine();
                     if (ImGui::Button("Browse##Mv", ImVec2(65 * scale, 0))) {
                         char openPath[512] = { 0 };
-                        if (OpenSystemFileDialog(openPath, sizeof(openPath))) {
+                        if (openSystemFileDialog(openPath, sizeof(openPath))) {
                             strcpy_s(movie_load_path, openPath);
 
-                            // ºËÐÄ×Ô¶¯ÄæÏò½âÎöÂß¼­
+                            // ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß¼ï¿½
                             int parsed_w = 0, parsed_z = 0;
-                            if (ParseDimensionsFromPath(std::string(movie_load_path), parsed_w, parsed_z)) {
-                                movie_load_w = parsed_w; // ×Ô¶¯Ìî³ä
-                                movie_load_z = parsed_z; // ×Ô¶¯Ìî³ä
+                            if (parseDimensionsFromPath(std::string(movie_load_path), parsed_w, parsed_z)) {
+                                movie_load_w = parsed_w; // ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½
+                                movie_load_z = parsed_z; // ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½
                             }
                             else {
-                                // Èç¹ûÎ´ÄÜÔÚÎÄ¼þÃûÀïÊ¶±ð£¬½µ¼¶Ä¬ÈÏ²ÉÓÃµ±Ç°Íø¸ñ´óÐ¡×÷Îª·À´ôÖµ
+                                // ï¿½ï¿½ï¿½Î´ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½Ê¶ï¿½ð£¬½ï¿½ï¿½ï¿½Ä¬ï¿½Ï²ï¿½ï¿½Ãµï¿½Ç°ï¿½ï¿½ï¿½ï¿½ï¿½Ð¡ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½Öµ
                                 movie_load_w = ctx.NX;
                                 movie_load_z = ctx.NZ;
                             }
                         }
                     }
 
-                    // B. ¶þÎ¬ÊýÖµ±à¼­²ÎÊý¿ò (ÔÊÐíÓÃ»§ÊÖ¶¯¶þ´ÎÎ¢µ÷)
+                    // B. ï¿½ï¿½Î¬ï¿½ï¿½Öµï¿½à¼­ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½ï¿½Ö¶ï¿½ï¿½ï¿½ï¿½ï¿½Î¢ï¿½ï¿½)
                     ImGui::PushItemWidth(120 * scale);
                     ImGui::InputInt("Import NX", &movie_load_w, 0, 0); ImGui::SameLine();
                     ImGui::InputInt("Import NZ", &movie_load_z, 0, 0);
                     ImGui::PopItemWidth();
 
-                    // C. ¼¤»îÓëµ¼Èë´ó°´Å¥
+                    // C. ï¿½ï¿½ï¿½ï¿½ï¿½ëµ¼ï¿½ï¿½ï¿½Å¥
                     bool can_load_movie = (strlen(movie_load_path) > 0) && (movie_load_w > 0) && (movie_load_z > 0);
                     if (!can_load_movie) ImGui::BeginDisabled();
 
@@ -4111,11 +4176,11 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                         if (g_replay.importFromBinary(movie_load_path, movie_load_w, movie_load_z)) {
                             popup_message = "Wavefield movie imported and locked successfully!\nClick [PLAY] to watch.";
                             show_success_popup = true;
-                            state.running = false; // ÔØÈëµçÓ°ºó×Ô¶¯Í£Ö¹µ±Ç°Ê±ÑÝ
+                            state.running = false; // ï¿½ï¿½ï¿½ï¿½ï¿½Ó°ï¿½ï¿½ï¿½Ô¶ï¿½Í£Ö¹ï¿½ï¿½Ç°Ê±ï¿½ï¿½
 
                             // =========================================================
-                            // ¡¾¸ßÄÜ×ÔÊÊÓ¦°²È«¶ÔÆë¡¿£ºÈç¹ûµ¼ÈëµÄµçÓ°Íø¸ñÓëÏµÍ³µ±Ç°Íø¸ñ²»Ò»ÖÂ£¬
-                            //  ÏµÍ³½«È«×Ô¶¯ÖØÐÂÅÅ²¼ GPU ÉÏÏÂÎÄ¡¢ÖØÉèÍø¸ñ³ß´ç²¢ÖØ×°ÏÔ´æ£¬·ÀÖ¹Ô½½çÉÁÍË£¡
+                            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½È«ï¿½ï¿½ï¿½ë¡¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Äµï¿½Ó°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÏµÍ³ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½Ò»ï¿½Â£ï¿½
+                            //  ÏµÍ³ï¿½ï¿½È«ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å²ï¿½ GPU ï¿½ï¿½ï¿½ï¿½ï¿½Ä¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß´ç²¢ï¿½ï¿½×°ï¿½Ô´æ£¬ï¿½ï¿½Ö¹Ô½ï¿½ï¿½ï¿½ï¿½ï¿½Ë£ï¿½
                             // =========================================================
                             if (movie_load_w != ctx.NX || movie_load_z != ctx.NZ) {
                                 std::cout << "[Replay IO] Triggering Auto-Reallocation for imported movie: "
@@ -4127,14 +4192,14 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                                 par.model.znum = edit_h;
 
                                 setupTestContext(ctx, par);
-                                freeGPUSimulation(gpu_data);
+                                releaseGpuSimulation(gpu_data);
 
                                 cudaGraphicsUnregisterResource(gl.cudaSeisRes);
                                 glBindTexture(GL_TEXTURE_2D, gl.seisTex);
                                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, ctx.NX, ctx.NZ, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-                                cudaGraphicsGLRegisterImage(&gl.cudaSeisRes, gl.seisTex, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard);
+                                CUDA_CHECK(cudaGraphicsGLRegisterImage(&gl.cudaSeisRes, gl.seisTex, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard));
 
-                                initGPUSimulation(gpu_data, ctx);
+                                initializeGpuSimulation(gpu_data, ctx);
                                 first_align_needed = true;
                             }
                         }
@@ -4149,13 +4214,13 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                 }
 
                 // ==========================================
-                // Tab 5: visual É«Æ×äÖÈ¾Óë±ê³ßÍø¸ñµ÷½Ú
+                // Tab 5: visual É«ï¿½ï¿½ï¿½ï¿½È¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                 // ==========================================
                 if (ImGui::BeginTabItem("Visual")) {
                     ImGui::Spacing();
                     ImGui::SliderFloat("Color Gain", &color_scale, 0.01f, 100.0f, "%.3f", ImGuiSliderFlags_Logarithmic);
 
-                    // ÍêÈ«¶ÔÆëÍ¼Æ¬ÖÐµÄ×¨ÒµÎïÀí³¡·ÖÁ¿Àà±ð
+                    // ï¿½ï¿½È«ï¿½ï¿½ï¿½ï¿½Í¼Æ¬ï¿½Ðµï¿½×¨Òµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                     const char* components[] = {
                         "Velocity Mag",
                         "Velocity X",
@@ -4170,19 +4235,19 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                     ImGui::Spacing();
 
                     const char* style_types[] = {
-                        "0_Seismic Bipolar",      // ±ê×¼µØÕðºì°×À¶
-                        "1_Coolwarm",             // Matplotlib ¾­µäÀäÅ¯
-                        "2_PuOr",                 // ×Ï³ÈË«¼«Õñ·ù
-                        "3_Grayscale",            // »Ò¶ÈÕñ·ùÍ¼
-                        "4_Inferno",              // Éîåäºì»ÆÄÜÁ¿³¡
-                        "5_Plasma",               // ¸ÐÖª¾ùÔÈÄÞºç
-                        "6_Viridis",              // Matplotlib ±ê×¼
-                        "7_Turbo",                // Google Turbo ¸ß¶¯Ì¬
-                        "8_Magma Glow",           // ÈÛÑÒ·¢¹â·ç¸ñ
-                        "9_Jet Rainbow",          // ¾­µä²Êºç
-                        "10_Hot",                 // ÈÈ»ðÉ«Æ×
-                        "11_Cold",                // ±ùÀäÉ«Æ×
-                        "12_Terrain Map"          // µØÃ²µØÖÊÍ¼
+                        "0_Seismic Bipolar",      // ï¿½ï¿½×¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+                        "1_Coolwarm",             // Matplotlib ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å¯
+                        "2_PuOr",                 // ï¿½Ï³ï¿½Ë«ï¿½ï¿½ï¿½ï¿½ï¿½
+                        "3_Grayscale",            // ï¿½Ò¶ï¿½ï¿½ï¿½ï¿½Í¼
+                        "4_Inferno",              // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+                        "5_Plasma",               // ï¿½ï¿½Öªï¿½ï¿½ï¿½ï¿½ï¿½Þºï¿½
+                        "6_Viridis",              // Matplotlib ï¿½ï¿½×¼
+                        "7_Turbo",                // Google Turbo ï¿½ß¶ï¿½Ì¬
+                        "8_Magma Glow",           // ï¿½ï¿½ï¿½Ò·ï¿½ï¿½ï¿½ï¿½ï¿½
+                        "9_Jet Rainbow",          // ï¿½ï¿½ï¿½ï¿½Êºï¿½
+                        "10_Hot",                 // ï¿½È»ï¿½É«ï¿½ï¿½
+                        "11_Cold",                // ï¿½ï¿½ï¿½ï¿½É«ï¿½ï¿½
+                        "12_Terrain Map"          // ï¿½ï¿½Ã²ï¿½ï¿½ï¿½ï¿½Í¼
                     };
                     ImGui::Combo("Visual Style", &waveStyle, style_types, IM_ARRAYSIZE(style_types));
                     ImGui::Spacing();
@@ -4211,7 +4276,7 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                 ImGui::EndTabBar();
             }
 
-            // µ×²¿Ö÷Ìâ±äÉ«Æ÷É«°å
+            // ï¿½×²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É«ï¿½ï¿½É«ï¿½ï¿½
             ImGui::SetCursorPosY(ImGui::GetWindowHeight() - 55 * scale);
             float avail_w = ImGui::GetContentRegionAvail().x;
             float reset_btn_w = 60.0f * scale;
@@ -4226,7 +4291,7 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
 
             ImGui::SameLine();
             if (ImGui::Button("Reset##Theme", ImVec2(reset_btn_w, 0))) {
-                uiAccent = ImVec4(0.5f, 1.0f, 0.5f, 1.0f); // »Ö¸´Ó«¹âÂÌ
+                uiAccent = ImVec4(0.5f, 1.0f, 0.5f, 1.0f); // ï¿½Ö¸ï¿½Ó«ï¿½ï¿½ï¿½ï¿½
             }
             if (ImGui::IsItemHovered()) {
                 ImGui::SetTooltip("Reset UI Accent Color to Default Cyan");
@@ -4239,14 +4304,14 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
     }
 
     // -------------------------------------------------------------------------
-    // F. ¶ÀÁ¢¼à²âÊÓ´° (Simulation & PML Monitor)
+    // F. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó´ï¿½ (Simulation & PML Monitor)
     // -------------------------------------------------------------------------
     if (show_Monitor_par) {
         ImGui::SetNextWindowPos(ImVec2(30 * scale, 80 * scale), ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSize(ImVec2(420 * scale, 520 * scale), ImGuiCond_FirstUseEver);
 
-        ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.05f, 0.08f, 0.1f, 0.85f));   // ÉîÉ«îÑ½ð±³¾°
-        ImGui::PushStyleColor(ImGuiCol_Border, uiAccent);                             // Ó«¹â±ß¿ò
+        ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.05f, 0.08f, 0.1f, 0.85f));   // ï¿½ï¿½É«ï¿½Ñ½ð±³¾ï¿½
+        ImGui::PushStyleColor(ImGuiCol_Border, uiAccent);                             // Ó«ï¿½ï¿½ß¿ï¿½
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.5f);
 
@@ -4261,10 +4326,10 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
 
             ImGui::Spacing();
             if (ImGui::CollapsingHeader("ACTIVE PARAMETERS MONITOR", ImGuiTreeNodeFlags_DefaultOpen)) {
-                // ºôÎü¾¯¸æÉ« (ÉÁË¸ÆµÂÊ 6Hz£¬Æ½»¬ÕýÏÒ²åÖµ)
+                // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É« (ï¿½ï¿½Ë¸Æµï¿½ï¿½ 6Hzï¿½ï¿½Æ½ï¿½ï¿½ï¿½ï¿½ï¿½Ò²ï¿½Öµ)
                 float time = (float)ImGui::GetTime();
                 float alpha = 0.35f + 0.65f * (sinf(time * 6.0f) * 0.5f + 0.5f);
-                ImVec4 warningCol = ImVec4(1.0f, 0.82f, 0.0f, alpha); // çúçêÓ«¹â»Æ
+                ImVec4 warningCol = ImVec4(1.0f, 0.82f, 0.0f, alpha); // ï¿½ï¿½ï¿½ï¿½Ó«ï¿½ï¿½ï¿½
 
                 ImGui::TextDisabled("Grid Dimensions:"); ImGui::SameLine();
                 ImGui::Text("%d x %d (Total: %d)", ctx.NX, ctx.NZ, ctx.total_grid);
@@ -4273,33 +4338,33 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                 ImGui::Text("%.1f m x %.1f m", ctx.NX * ctx.h, ctx.NZ * ctx.h);
 
                 // =========================================================================
-                // ¡¾ºËÐÄÐÞ¸´¡¿£º»ùÓÚ cudaMemGetInfo µÄÊµÊ±ÎïÀíÓ²¼þ VRAM Õ¼ÓÃÕï¶ÏÆ÷
+                // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Þ¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ cudaMemGetInfo ï¿½ï¿½ÊµÊ±ï¿½ï¿½ï¿½ï¿½Ó²ï¿½ï¿½ VRAM Õ¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                 // =========================================================================
                 size_t free_mem = 0;
                 size_t total_mem = 0;
                 float used_vram_mb = 0.0f;
                 float total_vram_mb = 0.0f;
 
-                // Ö±½ÓÏò CUDA ÔËÐÐÊ±Çý¶¯·¢Æð¿ìËÙÓ²¼þ²éÑ¯
+                // Ö±ï¿½ï¿½ï¿½ï¿½ CUDA ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó²ï¿½ï¿½ï¿½ï¿½Ñ¯
                 if (cudaMemGetInfo(&free_mem, &total_mem) == cudaSuccess) {
                     used_vram_mb = static_cast<float>(total_mem - free_mem) / (1024.0f * 1024.0f);
                     total_vram_mb = static_cast<float>(total_mem) / (1024.0f * 1024.0f);
                 }
 
-                // 1. Õ¹ÏÖÏµÍ³µ×²ãÕæÊµµÄÏÔ´æÕûÌå¸ºÔØ
+                // 1. Õ¹ï¿½ï¿½ÏµÍ³ï¿½×²ï¿½ï¿½ï¿½Êµï¿½ï¿½ï¿½Ô´ï¿½ï¿½ï¿½ï¿½å¸ºï¿½ï¿½
                 ImGui::TextDisabled("System GPU VRAM:"); ImGui::SameLine();
                 ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.8f, 1.0f), "%.1f / %.1f MB", used_vram_mb, total_vram_mb);
                 if (ImGui::IsItemHovered()) {
                     ImGui::SetTooltip("System-wide allocated VRAM on the active GPU (Current Used / Total Capacity).");
                 }
 
-                // 2. Õ¹ÏÖµ±Ç°ÊýÖµÍø¸ñ£¨ÏµÊý³¡+²¨¶¯Ó¦Á¦³¡£©¹ÀËãµÄÕ¼ÓÃÁ¿ (ÈÃÑ§ÕßÇåÎúÕÆÎÕËã·¨¿ªÏú)
+                // 2. Õ¹ï¿½Öµï¿½Ç°ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½Ïµï¿½ï¿½ï¿½ï¿½+ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ¼ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½Ñ§ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ã·¨ï¿½ï¿½ï¿½ï¿½)
                 ImGui::TextDisabled("Grid VRAM (Est.):"); ImGui::SameLine();
                 ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.8f, 1.0f), "%.2f MB", cached_vram_mb);
                 if (ImGui::IsItemHovered()) {
                     ImGui::SetTooltip("Estimated memory allocated strictly for this finite-difference simulation grid.");
                 }
-                // 1. ³¢ÊÔ¶èÐÔÔØÈë NVML
+                // 1. ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ NVML
                 g_nvml.Load();
 
                 unsigned int gpu_util = 0;
@@ -4307,23 +4372,23 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                 unsigned int gpu_power_mw = 0;
                 bool         nvml_ok = false;
 
-                // 2. Èç¹û³É¹¦Á¬½Ó£¬Ö±½ÓÏòÏÔ¿¨Çý¶¯ÌáÈ¡ÊµÊ±Ó²¼þ×´Ì¬
+                // 2. ï¿½ï¿½ï¿½ï¿½É¹ï¿½ï¿½ï¿½ï¿½Ó£ï¿½Ö±ï¿½ï¿½ï¿½ï¿½ï¿½Ô¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¡ÊµÊ±Ó²ï¿½ï¿½×´Ì¬
                 if (g_nvml.loaded) {
                     nvmlUtilization_t util{};
                     if (g_nvml.getUtil(g_nvml.devHandle, &util) == NVML_SUCCESS) {
                         gpu_util = util.gpu;
                     }
                     if (g_nvml.getTemp(g_nvml.devHandle, NVML_TEMPERATURE_GPU, &gpu_temp) == NVML_SUCCESS) {
-                        // ³É¹¦²¶»ñºËÐÄÎÂ¶È
+                        // ï¿½É¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¶ï¿½
                     }
                     if (g_nvml.getPower(g_nvml.devHandle, &gpu_power_mw) == NVML_SUCCESS) {
-                        // ³É¹¦²¶»ñÊµÊ±¹¦ºÄ (ºÁÍß)
+                        // ï¿½É¹ï¿½ï¿½ï¿½ï¿½ï¿½ÊµÊ±ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½)
                     }
                     nvml_ok = true;
                 }
 
                 // -------------------------------------------------------------
-                // 3. Õ¹ÏÖ GPU Core ÊµÊ±ÔËÐÐÕ¼ÓÃÂÊ
+                // 3. Õ¹ï¿½ï¿½ GPU Core ÊµÊ±ï¿½ï¿½ï¿½ï¿½Õ¼ï¿½ï¿½ï¿½ï¿½
                 // -------------------------------------------------------------
                 ImGui::TextDisabled("GPU Core Usage:"); ImGui::SameLine();
                 if (nvml_ok) {
@@ -4337,11 +4402,11 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                 }
 
                 // -------------------------------------------------------------
-                // 4. Õ¹ÏÖ GPU ºËÐÄÊµÊ±¹¤×÷ÎÂ¶È
+                // 4. Õ¹ï¿½ï¿½ GPU ï¿½ï¿½ï¿½ï¿½ÊµÊ±ï¿½ï¿½ï¿½ï¿½ï¿½Â¶ï¿½
                 // -------------------------------------------------------------
                 ImGui::TextDisabled("GPU Temperature:"); ImGui::SameLine();
                 if (nvml_ok) {
-                    // ÎÂ¶È¾¯¸æ£ºµ±ºËÐÄÎÂ¶È³¬¹ý 82¡ãC Ê±£¬×Ô¶¯±äÉ«¾¯Ê¾
+                    // ï¿½Â¶È¾ï¿½ï¿½æ£ºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¶È³ï¿½ï¿½ï¿½ 82ï¿½ï¿½C Ê±ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½É«ï¿½ï¿½Ê¾
                     ImVec4 tempColor = (gpu_temp >= 82) ? ImVec4(1.0f, 0.2f, 0.2f, 1.0f) : uiAccent;
                     ImGui::TextColored(tempColor, "%u oC", gpu_temp);
                 }
@@ -4353,7 +4418,7 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
                 }
 
                 // -------------------------------------------------------------
-                // 5. Õ¹ÏÖ GPU ÊµÊ±ºË¼¶¹¤×÷¹¦ºÄ
+                // 5. Õ¹ï¿½ï¿½ GPU ÊµÊ±ï¿½Ë¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                 // -------------------------------------------------------------
                 ImGui::TextDisabled("GPU Power Draw:"); ImGui::SameLine();
                 if (nvml_ok) {
@@ -4420,7 +4485,7 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
             ImGui::Spacing();
             ImGui::TextDisabled("PML Damping Profile (dx) Real-Time Monitor:");
 
-            // Éú³ÉÁÙÊ± X ÖáÍø¸ñ×ø±ê
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê± X ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             std::vector<float> pml_x_axis(ctx.NX);
             for (int j = 0; j < ctx.NX; ++j) {
                 pml_x_axis[j] = (float)j;
@@ -4464,10 +4529,10 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
         ImGui::PopStyleColor(4);
     }
 
-    RenderAnalysisWindow(g_analyzerState);
+    renderAnalysisWindow(g_analyzerState);
 
     // -------------------------------------------------------------------------
-    // G. äÖÈ¾µ×²¿×¨Òµ×´Ì¬¼à¿ØÀ¸ (BottomBar)
+    // G. ï¿½ï¿½È¾ï¿½×²ï¿½×¨Òµ×´Ì¬ï¿½ï¿½ï¿½ï¿½ï¿½ (BottomBar)
     // -------------------------------------------------------------------------
     {
         ImGui::SetNextWindowPos({ 0, (float)winH - barHeight });
@@ -4537,59 +4602,60 @@ inline void RenderSeisHUD(SimState& state, int winW, int winH, float barHeight, 
 }
 
 // =============================================================================
-// 30. GPU ºËÐÄäÖÈ¾Èë¿ÚÖ÷Çý¶¯ (µ¯ÐÔ²¨ÊýÖµÄ£ÄâÆÁÄ»ºËÐÄäÖÈ¾Á÷Ë®Ïß)
+// 30. GPU ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½Ô²ï¿½ï¿½ï¿½ÖµÄ£ï¿½ï¿½ï¿½ï¿½Ä»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¾ï¿½ï¿½Ë®ï¿½ï¿½)
 // =============================================================================
-inline void RenderSeisSimScreen_GPU(SimState& state, int winW, int winH, GLHandles& gl, const GpuInfo& info) {
-    // 1. »ùÓÚ´°¿ÚÎïÀí¿í¶È¼ÆËã OSD ±ÈÀýÒò×ÓÓë¶¥²¿/µ×²¿²Ëµ¥À¸¸ß¶È
+/** Runs one frame of the 2D seismic workspace: initialize, interact, compute, render, and present HUD. */
+inline void renderSeisSimScreenGpu(SimState& state, int winW, int winH, GLHandles& gl, const GpuInfo& info) {
+    // 1. ï¿½ï¿½ï¿½Ú´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¼ï¿½ï¿½ï¿½ OSD ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ë¶¥ï¿½ï¿½/ï¿½×²ï¿½ï¿½Ëµï¿½ï¿½ï¿½ï¿½ß¶ï¿½
     const float scale = (float)winW / 1920.0f;
     const float barHeight = 38.0f * scale;
 
-    // 2. ÑÓ³Ù³õÊ¼»¯
-    InitializeSeismicSimulation(gl);
+    // 2. ï¿½Ó³Ù³ï¿½Ê¼ï¿½ï¿½
+    initializeSeismicSimulation(gl);
 
-    // 3. ÊÓ¿Ú×ÔÊÊÓ¦¶ÔÆëÓë°²È«Îü¸½
-    ApplyCameraAutoAlignment(winW, winH, barHeight);
+    // 3. ï¿½Ó¿ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½ï¿½ë°²È«ï¿½ï¿½ï¿½ï¿½
+    applyCameraAutoAlignment(winW, winH, barHeight);
 
-    // 4. ÓÃ»§ÊäÈë²¶»ñ
-    HandleSeismicInteractions(state, winW, winH, barHeight);
+    // 4. ï¿½Ã»ï¿½ï¿½ï¿½ï¿½ë²¶ï¿½ï¿½
+    handleSeismicInteractions(state, winW, winH, barHeight);
 
     // =========================================================================
-    // ¡¾ºËÐÄÖØ¹¹¡¿£ºÎïÀíÊ±ÑÝÍÆ½øÓë²¨³¡»Ø·ÅÂß¼­µÄ·ÖÁ÷¿ØÖÆ
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½Æ½ï¿½ï¿½ë²¨ï¿½ï¿½ï¿½Ø·ï¿½ï¿½ß¼ï¿½ï¿½Ä·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     // =========================================================================
     if (g_replay.state != REPLAY_PLAYING && g_replay.state != REPLAY_PAUSED) {
-        // A. Õý³£Ä£Äâ¸üÐÂ×´Ì¬
-        UpdateWavefieldSimulation(state);
+        // A. ï¿½ï¿½ï¿½ï¿½Ä£ï¿½ï¿½ï¿½ï¿½ï¿½×´Ì¬
+        updateWavefieldSimulation(state);
 
-        // --- ¡¾ºËÐÄÐÂÔö¡¿£ºÔÚÍÆ½øÊ±ÑÝµÄÏÂÒ»ÐÐ£¬Ö´ÐÐ¶àÅÚÑ­»·×´Ì¬»ú¼ì²â ---
-        UpdateAutoAcquisitionWorkflow(state, gl);
+        // --- ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ½ï¿½Ê±ï¿½Ýµï¿½ï¿½ï¿½Ò»ï¿½Ð£ï¿½Ö´ï¿½Ð¶ï¿½ï¿½ï¿½Ñ­ï¿½ï¿½×´Ì¬ï¿½ï¿½ï¿½ï¿½ï¿½ ---
+        updateAutoAcquisitionWorkflow(state, gl);
     }
     else {
-        // B. ´¦ÓÚ²¨³¡»Ø·Å»òÔÝÍ£ÍÏ×§×´Ì¬£¬Í£Ö¹ÎïÀíÍÆ½ø£¬¸ÄÎª¸ßËÙ¸²¸ÇÏÔ¿¨ÖÐµÄ Vz Êý¾Ý
+        // B. ï¿½ï¿½ï¿½Ú²ï¿½ï¿½ï¿½ï¿½Ø·Å»ï¿½ï¿½ï¿½Í£ï¿½ï¿½×§×´Ì¬ï¿½ï¿½Í£Ö¹ï¿½ï¿½ï¿½ï¿½ï¿½Æ½ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½Ù¸ï¿½ï¿½ï¿½ï¿½Ô¿ï¿½ï¿½Ðµï¿½ Vz ï¿½ï¿½ï¿½ï¿½
         ImGuiIO& io = ImGui::GetIO();
 
         if (g_replay.state == REPLAY_PLAYING && !g_replay.frames.empty()) {
-            // ¸ù¾Ý²¥·Å±¶ÂÊ×ÔÊÊÓ¦ÍÆ½øÊ±¼äÖá
+            // ï¿½ï¿½ï¿½Ý²ï¿½ï¿½Å±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½Æ½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½
             g_replay.currentFrameFloat += g_replay.playbackSpeed * (io.DeltaTime * 60.0f);
             g_replay.currentFrameIndex = static_cast<int>(g_replay.currentFrameFloat);
 
             if (g_replay.currentFrameIndex >= static_cast<int>(g_replay.frames.size())) {
-                g_replay.currentFrameIndex = 0; // ×Ô¶¯Ñ­»·²¥·Å
+                g_replay.currentFrameIndex = 0; // ï¿½Ô¶ï¿½Ñ­ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                 g_replay.currentFrameFloat = 0.0f;
             }
-            g_replay.uploadFrameToGPU(g_replay.currentFrameIndex, gpu_data);
+            g_replay.uploadFrameToGpu(g_replay.currentFrameIndex, gpu_data);
         }
         else if (g_replay.state == REPLAY_PAUSED && !g_replay.frames.empty()) {
-            // ÔÝÍ£ÍÏ×§Ê±£¬³ÖÐø¸²Ð´µ±Ç°ÍÏ¶¯µÄ Frame£¬±£Ö¤»­ÃæºÍÊ±¼äÖá 1:1 ¶¯Ì¬ÊµÊ±Ë¢ÐÂ
-            g_replay.uploadFrameToGPU(g_replay.currentFrameIndex, gpu_data);
+            // ï¿½ï¿½Í£ï¿½ï¿½×§Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð´ï¿½ï¿½Ç°ï¿½Ï¶ï¿½ï¿½ï¿½ Frameï¿½ï¿½ï¿½ï¿½Ö¤ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ 1:1 ï¿½ï¿½Ì¬ÊµÊ±Ë¢ï¿½ï¿½
+            g_replay.uploadFrameToGpu(g_replay.currentFrameIndex, gpu_data);
         }
     }
 
-    // 6. µ×Í¼äÖÈ¾£ºÖ´ÐÐÏÔ´æ 2D ¿½±´Óë OpenGL È«ÆÁ×ÅÉ«äÖÈ¾
-    RenderFullBackbufferWavefield(winW, winH, barHeight, gl);
+    // 6. ï¿½ï¿½Í¼ï¿½ï¿½È¾ï¿½ï¿½Ö´ï¿½ï¿½ï¿½Ô´ï¿½ 2D ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ OpenGL È«ï¿½ï¿½ï¿½ï¿½É«ï¿½ï¿½È¾
+    renderFullBackbufferWavefield(winW, winH, barHeight, gl);
 
-    // 7. GUI/HUD ¸²¸Ç
-    RenderSeisHUD(state, winW, winH, barHeight, scale, gl, info);
+    // 7. GUI/HUD ï¿½ï¿½ï¿½ï¿½
+    renderSeisHud(state, winW, winH, barHeight, scale, gl, info);
 
-    // 8. Ä£Ì¬µ¯´°
-    RenderSeisPopups();
+    // 8. Ä£Ì¬ï¿½ï¿½ï¿½ï¿½
+    renderSeisPopups();
 }

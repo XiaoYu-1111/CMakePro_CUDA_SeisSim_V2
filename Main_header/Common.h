@@ -11,6 +11,7 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 #include <sstream>
 #include <thread>
 #include <limits>
@@ -133,10 +134,12 @@ struct GLHandles {
     int simH = 1080;
 
     // --- 5. 地震模拟专用资源 ---
-    GLuint                 seisProg; // 地震模拟专用着色器程序
-    GLuint                 seisTex;  // 地震波场纹理
-    cudaGraphicsResource_t cudaSeisRes;
-    cudaArray_t            cudaSeisArray;
+    GLuint                 seisProg = 0; // 地震模拟专用着色器程序
+    GLuint                 seisTex = 0;  // 地震波场纹理
+    cudaGraphicsResource_t cudaSeisRes = nullptr;
+    cudaArray_t            cudaSeisArray = nullptr;
+    uchar4* deviceWavefieldRgba = nullptr;
+    int wavefieldRgbaCapacity = 0;
 };
 
 // =============================================================================
@@ -468,7 +471,7 @@ struct ReplayManager {
     // =========================================================================
     // 【核心修复】：只在此处保留函数声明，具体实现移至 Cuda_Check.cu 中
     // =========================================================================
-    void uploadFrameToGPU(int frameIdx, GPUSimData& gpu);
+    void uploadFrameToGpu(int frameIdx, GPUSimData& gpu);
 };
 
 // =============================================================================
@@ -478,7 +481,7 @@ struct ReplayManager {
 /**
  * @brief 从物理文件加载完整的着色器源码文本
  */
-inline std::string loadShaderFromFile(const std::string& filePath) {
+inline std::string loadShaderFromFile(const std::filesystem::path& filePath) {
     std::ifstream shaderFile;
     shaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
     try {
@@ -500,22 +503,50 @@ inline GLuint createShader(const std::string& source, GLenum type) {
     if (source.empty()) return 0;
     const char* src = source.c_str();
     GLuint shader = glCreateShader(type);
+    if (!shader) return 0;
     glShaderSource(shader, 1, &src, nullptr);
     glCompileShader(shader);
 
-    int success;
+    int success = GL_FALSE;
     glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
     if (!success) {
-        char infoLog[512];
+        char infoLog[512]{};
         glGetShaderInfoLog(shader, 512, nullptr, infoLog);
         std::cerr << "CORE::SHADER::COMPILATION_ERROR ("
             << (type == GL_VERTEX_SHADER ? "VERT" : (type == GL_FRAGMENT_SHADER ? "FRAG" : "COMP"))
             << ")\n" << infoLog << std::endl;
+        glDeleteShader(shader);
         return 0;
     }
     return shader;
 }
 
+// 编译并链接一组着色器；失败时释放临时对象并阻止无效管线进入渲染循环。
+inline GLuint createShaderProgram(const std::string& vertexSource, const std::string& fragmentSource) {
+    const GLuint vertexShader = createShader(vertexSource, GL_VERTEX_SHADER);
+    const GLuint fragmentShader = createShader(fragmentSource, GL_FRAGMENT_SHADER);
+    if (!vertexShader || !fragmentShader) {
+        if (vertexShader) glDeleteShader(vertexShader);
+        if (fragmentShader) glDeleteShader(fragmentShader);
+        throw std::runtime_error("Cannot compile the required OpenGL shaders");
+    }
+    const GLuint program = glCreateProgram();
+    glAttachShader(program, vertexShader);
+    glAttachShader(program, fragmentShader);
+    glLinkProgram(program);
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+    GLint linked = GL_FALSE;
+    glGetProgramiv(program, GL_LINK_STATUS, &linked);
+    if (!linked) {
+        char infoLog[1024]{};
+        glGetProgramInfoLog(program, sizeof(infoLog), nullptr, infoLog);
+        glDeleteProgram(program);
+        throw std::runtime_error(std::string("Cannot link the OpenGL shader program: ") + infoLog);
+    }
+    return program;
+}
+
 // 离屏渲染基础几何体的声明
-void InitQuad(GLHandles& gl);
+void initializeQuad(GLHandles& gl);
 
