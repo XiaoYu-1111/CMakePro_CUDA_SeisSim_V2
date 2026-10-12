@@ -12,6 +12,8 @@
 #include "ResourcePaths.h"
 #include"Seis_Sim.h"
 #include "Seis3D_Sim.h"
+#include "AppTheme.h"
+#include "HomeScreen.h"
 
 constexpr float PI = 3.14159265358979323846f;
 
@@ -192,6 +194,8 @@ void Init_Imgui(GLFWwindow* window) {
 
     // 4. 设置样式
     SetupImGuiStyle();
+    AppUi::initializeTheme();
+    uiAccent = AppUi::palette().accent;
 
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
         ImGuiStyle& style = ImGui::GetStyle();
@@ -211,280 +215,11 @@ ImU32 GetColorFromHSV(float h, float s, float v, float a) {
     return ImGui::ColorConvertFloat4ToU32(ImVec4(r, g, b, a));
 }
 // 主界面0，中转切换
-void RenderIntroScreen0(SimState& state, const GpuInfo& info, int winW, int winH, bool& isIntroMode, AsyncLoader& loader) {
-    const float scale = (float)winW / 1920.0f;
-    const float t = (float)ImGui::GetTime();
-    ImDrawList* drawList = ImGui::GetBackgroundDrawList();
-    ImVec2 screenCenter(winW * 0.5f, winH * 0.5f);
-
-    // =====================================================
-    // 1. 背景渲染：石墨黑到深绿，呼应 CUDA 计算工作台
-    // =====================================================
-    // 低饱和背景让 NVIDIA 绿只用于关键信息与数据轨迹
-    drawList->AddRectFilledMultiColor(ImVec2(0, 0), ImVec2((float)winW, (float)winH),
-        IM_COL32(24, 31, 29, 255), IM_COL32(24, 31, 29, 255),
-        IM_COL32(11, 15, 14, 255), IM_COL32(11, 15, 14, 255));
-
-    // 绘制静态随机噪点，模拟金属质感
-    static std::vector<ImVec2> static_noise;
-    if (static_noise.empty()) {
-        for (int i = 0; i < 1500; i++) static_noise.push_back(ImVec2((float)(rand() % winW), (float)(rand() % winH)));
-    }
-    for (auto& np : static_noise) drawList->AddRectFilled(np, ImVec2(np.x + 1, np.y + 1), IM_COL32(130, 190, 145, 6));
-
-    // =====================================================
-    // 2. 对称钛金网格系统 (参考 IntroScreen2)
-    // =====================================================
-    float subStep = 30.0f * scale;
-    float mainStep = 150.0f * scale;
-
-    // 绘制细微辅助线
-    for (float x = 0; screenCenter.x + x < winW || screenCenter.x - x > 0; x += subStep) {
-        ImU32 col = IM_COL32(145, 185, 155, 7);
-        drawList->AddLine({ screenCenter.x + x, 0 }, { screenCenter.x + x, (float)winH }, col);
-        if (x > 0) drawList->AddLine({ screenCenter.x - x, 0 }, { screenCenter.x - x, (float)winH }, col);
-    }
-    // 绘制主坐标网格与低亮度绿色采样点
-    for (float x = 0; screenCenter.x + x < winW || screenCenter.x - x > 0; x += mainStep) {
-        for (float y = 0; screenCenter.y + y < winH || screenCenter.y - y > 0; y += mainStep) {
-            ImU32 dotCol = IM_COL32(118, 220, 135, 27);
-            drawList->AddCircleFilled({ screenCenter.x + x, screenCenter.y + y }, 2.0f * scale, dotCol);
-            if (x > 0) drawList->AddCircleFilled({ screenCenter.x - x, screenCenter.y + y }, 2.0f * scale, dotCol);
-            if (y > 0) drawList->AddCircleFilled({ screenCenter.x + x, screenCenter.y - y }, 2.0f * scale, dotCol);
-            if (x > 0 && y > 0) drawList->AddCircleFilled({ screenCenter.x - x, screenCenter.y - y }, 2.0f * scale, dotCol);
-        }
-    }
-
-    // --- 底部计算数据流：多通道波形、采样刻度与移动数据包 ---
-    {
-        const int lineCount = 7;
-        const int segments = 160;
-        const float baseY = winH * 0.885f;
-
-        // 时间轴与等距采样刻度，明确这是计算/采集数据的视觉表达。
-        const float axisY = baseY + 44.0f * scale;
-        drawList->AddLine({ 0.0f, axisY }, { (float)winW, axisY }, IM_COL32(112, 190, 125, 34), 1.0f * scale);
-        for (int tick = 0; tick <= 32; ++tick) {
-            const float x = (float)winW * tick / 32.0f;
-            const float tickH = (tick % 4 == 0 ? 10.0f : 4.0f) * scale;
-            drawList->AddLine({ x, axisY - tickH * 0.5f }, { x, axisY + tickH * 0.5f },
-                IM_COL32(120, 205, 135, tick % 4 == 0 ? 48 : 22), 1.0f);
-        }
-
-        for (int i = 0; i < lineCount; ++i) {
-            static std::vector<ImVec2> points;
-            points.clear();
-
-            const float phase = t * (0.42f + i * 0.035f) + i * 0.62f;
-            const float ampBase = (7.0f + (i % 4) * 5.0f) * scale;
-            const float signalPulse = 0.72f + 0.18f * sinf(t * 1.6f + i * 0.55f);
-
-            for (int j = 0; j <= segments; ++j) {
-                float ratio = (float)j / (float)segments;
-                float x = ratio * winW;
-                const float envelope = 0.3f + 0.7f * sinf(ratio * 3.14159f);
-                const float carrier = sinf(ratio * 10.0f + phase) * ampBase;
-                const float detail = sinf(ratio * 34.0f - phase * 1.7f) * (2.2f * scale);
-                const float y = baseY + (carrier + detail) * envelope + (i - 3) * 5.5f * scale;
-                points.push_back({ x, y });
-            }
-
-            const int alpha = (int)((38 + (i % 3) * 10) * signalPulse);
-            const ImU32 traceColor = (i == 3)
-                ? IM_COL32(118, 235, 93, alpha + 28)
-                : IM_COL32(62, 164 + (i % 2) * 24, 93, alpha);
-            drawList->AddPolyline(points.data(), (int)points.size(), traceColor, 0, (i == 3 ? 1.35f : 0.8f) * scale);
-
-            // Narrow moving packet with a short trail, instead of the previous decorative star flare.
-            const float packetPos = fmodf(t * (0.055f + i * 0.004f) + i * 0.137f, 1.0f);
-            const int index = (int)(packetPos * segments);
-            const ImVec2 p = points[index];
-            const int trailIndex = (std::max)(0, index - 8);
-            drawList->AddLine(points[trailIndex], p, IM_COL32(118, 235, 93, 115), 1.4f * scale);
-            drawList->AddCircleFilled(p, 2.1f * scale, IM_COL32(175, 255, 151, 225));
-            if (i == 3) {
-                drawList->AddLine({ p.x, axisY - 7.0f * scale }, { p.x, axisY + 7.0f * scale },
-                    IM_COL32(142, 238, 116, 150), 1.0f * scale);
-            }
-        }
-    }
-
-    // =====================================================
-    // 3. UI 容器：钛金风格标题与按钮
-    // =====================================================
-    ImGui::SetNextWindowPos({ 0, 0 });
-    ImGui::SetNextWindowSize({ (float)winW, (float)winH });
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0, 0 });
-    ImGui::Begin("TitaniumHub", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBackground);
-    {
-        // Scientific workstation layout: primary workflow, verified device facts, and a clear process map.
-        const float margin = 72.0f * scale;
-        const float contentW = winW - 2.0f * margin;
-        ImGui::SetCursorPos({ margin, 54.0f * scale });
-        ImGui::BeginGroup();
-        ImGui::SetWindowFontScale(2.15f * scale);
-        ImGui::TextColored({ 0.92f, 0.98f, 0.91f, 1.0f }, "弹性波数值模拟平台");
-        ImGui::SetWindowFontScale(0.94f * scale);
-        ImGui::TextColored({ 0.62f, 0.71f, 0.81f, 1.0f }, "ELASTIC WAVE SIMULATION  /  MODELING · COMPUTATION · ACQUISITION");
-        ImGui::EndGroup();
-        drawList->AddLine({ margin, 154.0f * scale }, { winW - margin, 154.0f * scale }, IM_COL32(130, 195, 140, 58), 1.0f);
-
-        const float gap = 22.0f * scale;
-        const float bodyY = 178.0f * scale;
-        const float bodyH = (std::max)(300.0f * scale, winH - 448.0f * scale);
-        const float mainW = (contentW - gap) * 0.5f;
-        const float sideW = contentW - gap - mainW;
-        const ImVec2 mainPos(margin, bodyY);
-        const ImVec2 sidePos(margin + mainW + gap, bodyY);
-        const ImVec2 mainSize(mainW, bodyH);
-        const ImU32 panelBg = IM_COL32(20, 28, 38, 242);
-        const ImU32 panelBorder = IM_COL32(120, 165, 128, 72);
-
-        // Main task panel and a restrained wavefront schematic.
-        ImGui::SetCursorScreenPos(mainPos);
-        ImGui::InvisibleButton("##launchSimulation", mainSize);
-        const bool launchHovered = ImGui::IsItemHovered();
-        const bool launchClicked = ImGui::IsItemClicked();
-        drawList->AddRectFilled(mainPos, { mainPos.x + mainW, mainPos.y + bodyH }, panelBg, 9.0f * scale);
-        drawList->AddRect(mainPos, { mainPos.x + mainW, mainPos.y + bodyH },
-            launchHovered ? IM_COL32(118, 235, 93, 230) : panelBorder, 9.0f * scale, 0, 1.2f * scale);
-        drawList->AddRectFilled(mainPos, { mainPos.x + 5.0f * scale, mainPos.y + bodyH }, IM_COL32(118, 221, 74, 255), 3.0f * scale);
-
-        ImGui::SetCursorScreenPos({ mainPos.x + 34.0f * scale, mainPos.y + 28.0f * scale });
-        ImGui::SetWindowFontScale(0.84f * scale);
-        ImGui::TextColored(ImVec4(0.58f, 0.88f, 0.48f, 1.0f), "2D WAVEFIELD SANDBOX / CUDA");
-        ImGui::SetCursorScreenPos({ mainPos.x + 34.0f * scale, mainPos.y + 72.0f * scale });
-        ImGui::SetWindowFontScale(1.75f * scale);
-        ImGui::TextColored(ImVec4(0.96f, 0.98f, 1.0f, 1.0f), "二维弹性波沙盒");
-        ImGui::SetCursorScreenPos({ mainPos.x + 34.0f * scale, mainPos.y + 124.0f * scale });
-        ImGui::SetWindowFontScale(0.96f * scale);
-        ImGui::PushTextWrapPos(mainPos.x + mainW * 0.65f);
-        ImGui::TextColored(ImVec4(0.69f, 0.76f, 0.84f, 1.0f),
-            "配置介质与震源，求解二维弹性波方程，并实时查看波场传播和观测数据。");
-        ImGui::PopTextWrapPos();
-
-        const float diagramL = mainPos.x + mainW * 0.69f;
-        const float diagramR = mainPos.x + mainW - 30.0f * scale;
-        const float diagramT = mainPos.y + 52.0f * scale;
-        const float diagramB = mainPos.y + bodyH - 62.0f * scale;
-
-        // Small multi-channel schematic uses the open area under the task description.
-        const float plotL = mainPos.x + 34.0f * scale;
-        const float plotR = diagramL - 18.0f * scale;
-        const float plotT = mainPos.y + 208.0f * scale;
-        const float plotB = mainPos.y + bodyH - 64.0f * scale;
-        drawList->AddRectFilled({ plotL, plotT }, { plotR, plotB }, IM_COL32(9, 16, 22, 185), 5.0f * scale);
-        drawList->AddRect({ plotL, plotT }, { plotR, plotB }, IM_COL32(100, 160, 108, 48), 5.0f * scale);
-        for (int i = 1; i < 6; ++i) {
-            const float gx = plotL + (plotR - plotL) * i / 6.0f;
-            drawList->AddLine({ gx, plotT + 20.0f * scale }, { gx, plotB - 14.0f * scale }, IM_COL32(117, 169, 126, 25));
-        }
-        for (int i = 1; i < 4; ++i) {
-            const float gy = plotT + (plotB - plotT) * i / 4.0f;
-            drawList->AddLine({ plotL + 8.0f * scale, gy }, { plotR - 8.0f * scale, gy }, IM_COL32(117, 169, 126, 25));
-        }
-        drawList->AddText({ plotL + 12.0f * scale, plotT + 8.0f * scale }, IM_COL32(122, 188, 126, 190), "MULTI-CHANNEL WAVEFORM / SCHEMATIC");
-        const ImU32 waveColors[] = {
-            IM_COL32(126, 226, 104, 205), IM_COL32(71, 176, 112, 185), IM_COL32(95, 151, 103, 160)
-        };
-        for (int channel = 0; channel < 3; ++channel) {
-            std::vector<ImVec2> wavePoints;
-            wavePoints.reserve(97);
-            const float centerY = plotT + (plotB - plotT) * (0.36f + channel * 0.27f);
-            for (int sample = 0; sample <= 96; ++sample) {
-                const float u = sample / 96.0f;
-                const float envelope = expf(-3.0f * u) * (0.55f + 0.45f * sinf(u * 3.14159f));
-                const float signal = sinf(u * 53.0f - t * 1.15f + channel * 0.9f)
-                    + 0.32f * sinf(u * 91.0f - t * 0.72f + channel * 1.4f);
-                const float x = plotL + 12.0f * scale + u * (plotR - plotL - 24.0f * scale);
-                const float y = centerY + signal * envelope * 19.0f * scale;
-                wavePoints.push_back({ x, y });
-            }
-            drawList->AddPolyline(wavePoints.data(), (int)wavePoints.size(), waveColors[channel], 0, 1.25f * scale);
-        }
-        drawList->AddText({ plotL + 12.0f * scale, plotB - 19.0f * scale }, IM_COL32(100, 145, 110, 175), "VX     VZ     PRESSURE");
-
-        drawList->AddRectFilled({ diagramL, diagramT }, { diagramR, diagramB }, IM_COL32(9, 16, 25, 170), 5.0f * scale);
-        drawList->AddRect({ diagramL, diagramT }, { diagramR, diagramB }, IM_COL32(111, 188, 105, 70), 5.0f * scale);
-        for (int i = 1; i < 5; ++i) {
-            const float gx = diagramL + (diagramR - diagramL) * i / 5.0f;
-            const float gy = diagramT + (diagramB - diagramT) * i / 5.0f;
-            drawList->AddLine({ gx, diagramT }, { gx, diagramB }, IM_COL32(140, 175, 205, 24));
-            drawList->AddLine({ diagramL, gy }, { diagramR, gy }, IM_COL32(140, 175, 205, 24));
-        }
-        const ImVec2 source((diagramL + diagramR) * 0.5f, diagramT + (diagramB - diagramT) * 0.42f);
-        const float maxRadius = (std::min)((diagramR - diagramL) * 0.46f, (diagramB - diagramT) * 0.40f);
-        const float rippleSpeed = 62.0f * scale;
-        for (int ring = 0; ring < 6; ++ring) {
-            const float radius = fmodf(t * rippleSpeed + ring * maxRadius / 6.0f, maxRadius);
-            const float fade = 1.0f - radius / maxRadius;
-            const int alpha = (int)(18.0f + fade * 82.0f);
-            drawList->AddCircle(source, radius, IM_COL32(104, 221, 111, alpha / 3), 72, 3.2f * scale);
-            drawList->AddCircle(source, radius, IM_COL32(126, 239, 112, alpha), 72, 1.1f * scale);
-        }
-        const float sourcePulse = 3.5f * scale + (sinf(t * 3.0f) + 1.0f) * 1.6f * scale;
-        drawList->AddCircleFilled(source, sourcePulse * 2.4f, IM_COL32(103, 220, 111, 42));
-        drawList->AddCircleFilled(source, sourcePulse, IM_COL32(188, 255, 147, 245));
-        drawList->AddText({ diagramL + 12.0f * scale, diagramB - 24.0f * scale }, IM_COL32(120, 155, 185, 190), "WAVEFRONT / SCHEMATIC");
-
-        ImGui::SetCursorScreenPos({ mainPos.x + 34.0f * scale, mainPos.y + bodyH - 72.0f * scale });
-        ImGui::SetWindowFontScale(0.9f * scale);
-        ImGui::TextColored(ImVec4(0.62f, 0.91f, 0.52f, 1.0f), "进入模拟工作区    →");
-        ImGui::SetWindowFontScale(1.0f);
-        if (launchClicked) {
-            state.currentScreen = AppScreen::SeisSim_GPU;
-            isIntroMode = false;
-        }
-
-        // The second launch card owns no simulation resources until its workspace is initialized.
-        const int route3D = Seis3D::drawIntroCard3D(sidePos.x, sidePos.y, sideW, bodyH, scale,
-            info.success ? info.name : "CUDA device unavailable", (double)info.totalMem / (1024.0 * 1024.0 * 1024.0));
-        if (route3D != 0) {
-            state.currentScreen = route3D == 1 ? AppScreen::SeisSim_3D : AppScreen::CudaDiagno;
-            isIntroMode = false;
-        }
-        // Compact workflow strip explains the scientific task sequence and fills the lower workspace.
-        const float flowY = bodyY + bodyH + 18.0f * scale;
-        const float flowH = 74.0f * scale;
-        drawList->AddLine({ margin, flowY }, { winW - margin, flowY }, IM_COL32(140, 170, 195, 42));
-        const char* flowTitles[] = { "01  建立模型", "02  配置震源与边界", "03  求解并采集", "04  回放与导出" };
-        const char* flowDetails[] = { "介质参数 / 网格", "激发方式 / 吸收层", "波场 / 检波器", "分析 / SEG-Y" };
-        const float flowW = contentW / 4.0f;
-        for (int i = 0; i < 4; ++i) {
-            const float x = margin + i * flowW;
-            ImGui::SetCursorScreenPos({ x + 12.0f * scale, flowY + 13.0f * scale });
-            ImGui::SetWindowFontScale(0.86f * scale);
-            ImGui::TextColored(ImVec4(0.78f, 0.87f, 0.95f, 1.0f), "%s", flowTitles[i]);
-            ImGui::SetCursorScreenPos({ x + 12.0f * scale, flowY + 42.0f * scale });
-            ImGui::SetWindowFontScale(0.72f * scale);
-            ImGui::TextColored(ImVec4(0.48f, 0.59f, 0.70f, 1.0f), "%s", flowDetails[i]);
-            if (i > 0) drawList->AddLine({ x, flowY + 12.0f * scale }, { x, flowY + flowH - 5.0f * scale }, IM_COL32(140, 170, 195, 35));
-        }
-        ImGui::SetWindowFontScale(1.0f);
-
-        // --- 底部装饰栏 ---
-        float footY = winH - 60.0f * scale;
-        drawList->AddLine({ 40 * scale, footY }, { winW - 40 * scale, footY }, IM_COL32(255, 255, 255, 20));
-
-        char timeBuf[32];
-        time_t now = time(nullptr);
-        tm t_struct; localtime_s(&t_struct, &now);
-        strftime(timeBuf, sizeof(timeBuf), "LOCAL TIME: %H:%M:%S", &t_struct);
-        drawList->AddText(nullptr, 16.0f * scale, { 60 * scale, footY + 15 * scale }, IM_COL32(255, 255, 255, 100), timeBuf);
-
-        // --- 底部右侧：开发者与协议信息 (换行排列) ---
-        float infoX = winW - 250 * scale; // 起始 X 坐标
-        float firstLineY = footY + 8 * scale;  // 第一行偏移
-        float secondLineY = footY + 28 * scale; // 第二行偏移（增加约 20 像素间距）
-
-        // 第一行：开发者
-        drawList->AddText(nullptr, 20.0f * scale, { infoX, firstLineY }, IM_COL32(135, 222, 116, 180), "AUTHOR_REF : XIAO YU");
-
-        // 第二行：协议（颜色稍微调暗，字体略微缩小，增加精密感）
-        drawList->AddText(nullptr, 16.0f * scale, { infoX, secondLineY }, IM_COL32(119, 177, 122, 120), "LIC_TYPE   : MIT LICENSE");
-    }
-    ImGui::End();
-    ImGui::PopStyleVar();
+// Draw the shared application home screen and apply its requested route.
+void RenderIntroScreen0(SimState& state,const GpuInfo& info,int winW,int winH,bool& isIntroMode,AsyncLoader& loader) {
+    (void)loader;
+    state.currentScreen=drawHomeScreen(info,winW,winH);
+    isIntroMode=state.currentScreen==AppScreen::Intro0;
 }
 // 界面1，初始版本界面
 void RenderIntroScreen1(SimState& state, int winW, int winH, bool& isIntroMode, AsyncLoader& loader) {
@@ -1804,6 +1539,7 @@ bool IsIntroScreen(AppScreen screen) {
 
 void RenderApp(AppScreen screen, SimState& state, const GpuInfo& info, int winW, int winH, GLHandles& gl, AsyncLoader& loader,
     Seis3D::Seis3D_State& state3D) {
+    AppUi::LegacyContrastScope legacyContrast(screen!=AppScreen::Intro0&&screen!=AppScreen::SeisSim_3D);
 
     switch (screen) {
     case AppScreen::Intro0:

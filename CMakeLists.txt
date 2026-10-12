@@ -18,6 +18,7 @@ set(CMAKE_CUDA_ARCHITECTURES native)
 
 # [关键修改] 显式声明支持 CUDA 语言
 project(CMakePro_CUDA_SeisSim_V1 LANGUAGES CXX C CUDA)
+include("${CMAKE_CURRENT_LIST_DIR}/../cmake/MsvcDependencies.cmake")
 
 set(TARGET_NAME "CMakePro_CUDA_SeisSim_V2")
 
@@ -169,11 +170,19 @@ source_group("Source Files\\ImGui" FILES ${IMGUIDocking_SRCS})
 add_library(Seis3D STATIC
     "include/Common3D.h" "include/Seis3D_Sim.h"
     "cuda/Cuda_Seis3D.cuh" "cuda/Cuda_Seis3D.cu" "src/Seis3D_Sim.cpp"
-    "src/Seis3D/Renderer3D.cpp" "src/Seis3D/Workspace3D.cpp"
+    "src/Seis3D/Renderer3D.cpp" "src/Seis3D/Workspace3D.cpp" "src/Seis3D/SliceView3D.cpp" "src/Seis3D/TraceView3D.cpp"
     "src/Seis3D/ModelIo3D.cpp" "src/Seis3D/Acquisition3D.cpp"
     "src/Seis3D/Internal3D.h" "src/Seis3D/Visual3D.h")
 get_target_property(SEIS3D_SHARED_INCLUDE_DIRS ${TARGET_NAME} INCLUDE_DIRECTORIES)
 get_target_property(SEIS3D_SHARED_LINK_DIRS ${TARGET_NAME} LINK_DIRECTORIES)
+add_library(AppUi STATIC "Main_header/AppTheme.h" "Main_cpp/AppTheme.cpp"
+    "Main_header/HomeScreen.h" "Main_cpp/HomeScreen.cpp")
+target_include_directories(AppUi PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/Main_header" PRIVATE ${SEIS3D_SHARED_INCLUDE_DIRS})
+target_compile_definitions(AppUi PRIVATE GLEW_STATIC)
+set_target_properties(AppUi PROPERTIES CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON MSVC_DEBUG_INFORMATION_FORMAT Embedded)
+if(MSVC)
+    target_compile_options(AppUi PRIVATE /utf-8)
+endif()
 target_include_directories(Seis3D PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/cuda")
 target_include_directories(Seis3D PRIVATE ${SEIS3D_SHARED_INCLUDE_DIRS})
 target_link_directories(Seis3D PRIVATE ${SEIS3D_SHARED_LINK_DIRS})
@@ -184,9 +193,9 @@ if(MSVC)
     target_compile_options(Seis3D PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/utf-8>
         $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=/utf-8>)
 endif()
-target_link_libraries(Seis3D PRIVATE cudart.lib glew32s.lib opengl32.lib)
-target_link_libraries(${TARGET_NAME} PRIVATE Seis3D)
-source_group("Seis3D\\Workspace" FILES "src/Seis3D/Workspace3D.cpp" "src/Seis3D/Visual3D.h")
+target_link_libraries(Seis3D PRIVATE AppUi cudart.lib glew32s.lib opengl32.lib)
+target_link_libraries(${TARGET_NAME} PRIVATE AppUi Seis3D)
+source_group("Seis3D\\Workspace" FILES "src/Seis3D/Workspace3D.cpp" "src/Seis3D/SliceView3D.cpp" "src/Seis3D/TraceView3D.cpp" "src/Seis3D/Visual3D.h")
 source_group("Seis3D\\Rendering" FILES "src/Seis3D/Renderer3D.cpp")
 source_group("Seis3D\\Data IO" FILES "src/Seis3D/ModelIo3D.cpp" "src/Seis3D/Acquisition3D.cpp")
 file(GLOB SEIS3D_SHADER_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*")

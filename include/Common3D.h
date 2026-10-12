@@ -8,7 +8,7 @@ namespace Seis3D {
 
 constexpr int stencilRadius3D = 4;
 constexpr std::size_t memoryLimit3D = std::size_t(4) * 1024 * 1024 * 1024;
-constexpr int maxReceivers3D = 4096;
+constexpr int maxReceivers3D = 100; // Total spatial receiver locations per shot, each with Vx/Vy/Vz.
 constexpr int maxSegySamples3D = 32767;
 constexpr int maxSegyIntervalUs3D = 32767; // SEG-Y rev1 signed two-byte positive values.
 
@@ -62,7 +62,7 @@ struct GPUSimData3D {
     float* coefficients3D[3]{}; // Center/half-grid {a,b,1/kappa} per axis node.
     Receiver3D* receivers3D = nullptr;
     float* receiverValues3D = nullptr;
-    float* hostReceiverValues3D = nullptr; // Pinned, at most 4096 x 3 floats.
+    float* hostReceiverValues3D = nullptr; // Pinned, at most maxReceivers3D x 3 floats.
     unsigned int* viewStatistics3D = nullptr; // Wave abs max, non-finite flag, material min/max bits.
     cudaStream_t stream3D = nullptr;
     cudaEvent_t startEvent3D = nullptr, stopEvent3D = nullptr;

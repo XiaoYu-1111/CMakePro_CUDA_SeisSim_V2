@@ -1,6 +1,7 @@
 #include "Internal3D.h"
 #include "Visual3D.h"
 #include "imgui_internal.h"
+#include "AppTheme.h"
 #include "Seis3D_Sim.h"
 #include "Cuda_Seis3D.cuh"
 #include "ResourcePaths.h"
@@ -62,7 +63,7 @@ void drawSimulationControls3D(Seis3D_State& s) {
         ImGui::SeparatorText("MEMORY / STABILITY");
         ImGui::Text("Fields + materials: %.2f GiB",budget.fieldBytes3D/gibibyte3D);
         ImGui::Text("Compact CPML: %.2f GiB",budget.cpmlBytes3D/gibibyte3D);
-        ImGui::TextColored(budget.totalBytes3D<=memoryLimit3D?ImVec4(0.55f,0.9f,0.38f,1):ImVec4(1,0.45f,0.3f,1),
+        ImGui::TextColored(budget.totalBytes3D<=memoryLimit3D?AppUi::palette().accent:ImVec4(1,0.45f,0.3f,1),
             "Total estimate: %.2f / 4.00 GiB",budget.totalBytes3D/gibibyte3D);
         ImGui::Text("Safe dt: %.3f ms / Vp max %.0f",preview.dt3D*1000,preview.maxVp3D);
         ImGui::TextDisabled("Includes padding, staging and display textures.");
@@ -96,7 +97,7 @@ void drawSourceControls3D(Seis3D_State& s) {
         s.slice3D[0]=s.source3D.x3D;s.slice3D[1]=s.source3D.y3D;s.slice3D[2]=s.source3D.z3D;s.dirty3D=true;
     }
     if(ImGui::Button("Reset wavefield + fire",ImVec2(-1,0))) performAction3D(s,[&]{
-        resetGpu3D(s.gpu3D,s.context3D);s.step3D=0;s.running3D=true;s.dirty3D=true;
+        restartSimulation3D(s,true);
     });
     ImGui::EndDisabled();
     ImGui::TextWrapped("A normalized 3 x 3 x 3 spatial source reduces grid-scale excitation. Wavelet delay is 1.2 / f0.");
@@ -115,21 +116,49 @@ void drawModelControls3D(Seis3D_State& s) {
     ImGui::TextDisabled("Exports preserve existing files; choose a new name.");
 }
 
+// Restore a complete, readable display recipe without touching physical amplitudes or acquisition.
+void applyVisualPreset3D(Seis3D_State& s,int preset) {
+    s.visualPreset3D=(std::clamp)(preset,0,4);s.displayMode3D=0;s.autoScale3D=true;
+    s.materialRangeAuto3D=true;s.waveOpacity3D=.95f;s.waveThreshold3D=.008f;s.waveGamma3D=.6f;
+    s.materialBrightness3D=.65f;s.gain3D=1;s.modelOpacity3D=.12f;s.gridOpacity3D=.10f;
+    s.volumeThreshold3D=.025f;s.volumeOpacity3D=2;s.showVolume3D=true;
+    s.component3D=preset==1?0:3;s.waveStyle3D=preset==1?0:preset==2?6:preset==3?13:7;
+    s.modelStyle3D=preset==2?1:0;
+    if(preset==2) {s.materialBrightness3D=.9f;s.modelOpacity3D=.3f;s.waveGamma3D=.8f;}
+    if(preset==4) {
+        s.component3D=3;s.waveStyle3D=1;s.modelStyle3D=4;
+        s.materialBrightness3D=1;s.modelOpacity3D=.16f;s.gridOpacity3D=.16f;
+        s.gain3D=1.8f;s.waveOpacity3D=1;s.waveGamma3D=.5f;
+        s.volumeOpacity3D=1.4f;s.volumeThreshold3D=.02f;
+    }
+    s.dirty3D=true;
+}
+
 // Configure independent geological material, signed wave transfer functions and rendering cadence.
 void drawViewControls3D(Seis3D_State& s) {
+    AppUi::drawThemeSelector(fieldLabel3D("Interface theme").c_str(),-1);
+    int preset=s.visualPreset3D;
+    if(ImGui::Combo(fieldLabel3D("Visual preset").c_str(),&preset,"Wavefront contrast\0Signed seismic\0Geological layers\0CUDA glow\0Paper scientific\0")) applyVisualPreset3D(s,preset);
+    if(ImGui::Button("Restore readable display",ImVec2(-1,0))) applyVisualPreset3D(s,AppUi::palette().light?4:0);
     ImGui::SeparatorText("COMPOSITION");
     ImGui::Combo(fieldLabel3D("Display").c_str(),&s.displayMode3D,"Model + wavefield\0Wavefield only\0Material only\0");
     if(ImGui::Combo(fieldLabel3D("Wave component").c_str(),&s.component3D,"Vz\0Vx\0Vy\0Velocity magnitude\0Pressure\0")) s.dirty3D=true;
+    if(s.component3D<3) ImGui::TextWrapped("A signed component can be near zero on a symmetry plane. Use velocity magnitude to inspect all wavefronts.");
     ImGui::Combo(fieldLabel3D("Wave palette").c_str(),&s.waveStyle3D,waveStyleNames3D);
     ImGui::Checkbox("Automatic common scale",&s.autoScale3D);
     if(!s.autoScale3D) ImGui::SliderFloat(fieldLabel3D("Amplitude scale").c_str(),&s.manualScale3D,1e-8f,1e10f,"%.3e",ImGuiSliderFlags_Logarithmic|ImGuiSliderFlags_AlwaysClamp);
     ImGui::SliderFloat(fieldLabel3D("Display gain").c_str(),&s.gain3D,0.1f,20.0f,"%.2f",ImGuiSliderFlags_Logarithmic|ImGuiSliderFlags_AlwaysClamp);
     ImGui::SliderFloat(fieldLabel3D("Wave opacity").c_str(),&s.waveOpacity3D,0,1,"%.2f",ImGuiSliderFlags_AlwaysClamp);
     ImGui::SliderFloat(fieldLabel3D("Wave cutoff").c_str(),&s.waveThreshold3D,0,0.8f,"%.3f",ImGuiSliderFlags_AlwaysClamp);
+    ImGui::SliderFloat(fieldLabel3D("Weak-wave visibility").c_str(),&s.waveGamma3D,.35f,1.5f,"%.2f",ImGuiSliderFlags_AlwaysClamp);
+    ImGui::PushTextWrapPos(0.0f);
+    ImGui::TextDisabled("Lower values reveal weak waves; samples retain SI amplitudes.");
+    ImGui::PopTextWrapPos();
     ImGui::SeparatorText("GEOLOGICAL MATERIAL");
     int material=s.materialComponent3D-5;
     if(ImGui::Combo(fieldLabel3D("Property").c_str(),&material,"Vp (m/s)\0Vs (m/s)\0Density (kg/m3)\0")) {s.materialComponent3D=material+5;s.dirty3D=true;}
     ImGui::Combo(fieldLabel3D("Model palette").c_str(),&s.modelStyle3D,"Dark Titanium\0Geological Map\0Grayscale Velocity\0WaveStyle Synced\0Scientific White\0");
+    ImGui::SliderFloat(fieldLabel3D("Model backdrop brightness").c_str(),&s.materialBrightness3D,.2f,1,"%.2f",ImGuiSliderFlags_AlwaysClamp);
     ImGui::Checkbox("Auto material range (visible data)",&s.materialRangeAuto3D);
     if(!s.materialRangeAuto3D) {
         ImGui::InputFloat2(fieldLabel3D("Range min / max").c_str(),s.manualMaterialRange3D,"%.1f");
@@ -148,8 +177,9 @@ void drawViewControls3D(Seis3D_State& s) {
     ImGui::SliderFloat(fieldLabel3D("Volume model opacity").c_str(),&s.modelOpacity3D,0,1,"%.2f",ImGuiSliderFlags_AlwaysClamp);
     ImGui::SliderInt(fieldLabel3D("Display every N steps").c_str(),&s.displayStride3D,1,16,"%d",ImGuiSliderFlags_AlwaysClamp);
     ImGui::TextDisabled("Display cadence preserves dt and receiver sampling.");
-    if(ImGui::Button("Reset orbit camera")) s.camera3D=VolumeCamera3D{};
-    ImGui::TextWrapped("Left drag: orbit. Right drag / wheel: zoom. Middle drag: pan. Slice click: link positions.");
+    if(ImGui::Button("Reset all slice views",ImVec2(-1,0))) resetSliceViews3D(s);
+    if(ImGui::Button("Reset orbit camera",ImVec2(-1,0))) s.camera3D=VolumeCamera3D{};
+    ImGui::TextWrapped("Slices: wheel zooms at cursor; middle drag pans; left click links positions. Each Reset view fits its slice. Volume: left drag orbits, right drag / wheel zooms, middle drag pans. R resets all views.");
 }
 
 // Show the exact transfer palette and physical range separately from display opacity.
@@ -176,33 +206,21 @@ void drawLegend3D(Seis3D_State& s) {
     }
 }
 
-// Plot a bounded preview of the selected receiver, retaining exact frozen sample times.
-void drawTracePreview3D(Seis3D_State& s) {
-    const auto& g=s.gather3D;
-    if(!g.sampleCount3D||g.receivers3D.empty()) return;
-    s.selectedReceiver3D=(std::clamp)(s.selectedReceiver3D,0,int(g.receivers3D.size())-1);
-    ImGui::SliderInt("Preview receiver",&s.selectedReceiver3D,0,int(g.receivers3D.size())-1);
-    std::array<float,2048> times{},vx{},vy{},vz{};
-    const int decimation=(std::max)(1,(g.sampleCount3D+2047)/2048);
-    int count=0;
-    for(int i=0;i<g.sampleCount3D;i+=decimation) {
-        const auto offset=(std::size_t(i)*g.receivers3D.size()+s.selectedReceiver3D)*3;
-        times[count]=float(g.firstSampleTime3D+i*g.sampleIntervalUs3D*1e-6);
-        vx[count]=g.samples3D[offset];vy[count]=g.samples3D[offset+1];vz[count]=g.samples3D[offset+2];++count;
-    }
-    if(ImPlot::BeginPlot("3-C receiver",ImVec2(-1,(std::max)(70.0f,ImGui::GetContentRegionAvail().y)))) {
-        ImPlot::SetupAxes("Time (s)","Velocity (m/s)",ImPlotAxisFlags_AutoFit,ImPlotAxisFlags_AutoFit);
-        ImPlot::PlotLine("Vx",times.data(),vx.data(),count); ImPlot::PlotLine("Vy",times.data(),vy.data(),count);
-        ImPlot::PlotLine("Vz",times.data(),vz.data(),count); ImPlot::EndPlot();
-    }
-}
-
 // Configure surface receiver bins and multi-line shots, locking geometry for each active capture.
 void drawAcquisitionControls3D(Seis3D_State& s) {
     auto& q=s.survey3D;
     ImGui::BeginDisabled(!s.ready3D||s.recording3D);
     ImGui::SeparatorText("SURFACE RECEIVER MESH");
-    ImGui::InputInt(fieldLabel3D("Receiver count X").c_str(),&q.receiverCountX3D); ImGui::InputInt(fieldLabel3D("Receiver count Y").c_str(),&q.receiverCountY3D);
+    ImGui::Text("Receiver channels: %d / %d",q.receiverCountX3D*q.receiverCountY3D,maxReceivers3D);
+    ImGui::TextDisabled("Total channels = X x Y; each stores Vx / Vy / Vz.");
+    if(ImGui::Button("8 x 8 / 64")) {q.receiverCountX3D=q.receiverCountY3D=8;fitSurvey3D(s);}
+    ImGui::SameLine();if(ImGui::Button("10 x 10 / 100")) {q.receiverCountX3D=q.receiverCountY3D=10;fitSurvey3D(s);}
+    if(ImGui::InputInt(fieldLabel3D("Receiver count X").c_str(),&q.receiverCountX3D)) {
+        q.receiverCountX3D=(std::clamp)(q.receiverCountX3D,1,maxReceivers3D);
+        q.receiverCountY3D=(std::clamp)(q.receiverCountY3D,1,maxReceivers3D/q.receiverCountX3D);
+    }
+    if(ImGui::InputInt(fieldLabel3D("Receiver count Y").c_str(),&q.receiverCountY3D))
+        q.receiverCountY3D=(std::clamp)(q.receiverCountY3D,1,maxReceivers3D/(std::max)(1,q.receiverCountX3D));
     ImGui::InputInt3(fieldLabel3D("Receiver origin XYZ").c_str(),q.receiverOrigin3D); ImGui::InputInt2(fieldLabel3D("Receiver spacing XY").c_str(),q.receiverSpacing3D);
     if(ImGui::Button("Fit spread to model")) { fitSurvey3D(s); }
     ImGui::SameLine(); if(ImGui::Button("Deploy mesh")) performAction3D(s,[&]{configureReceivers3D(s);});
@@ -243,77 +261,14 @@ ImVec2 fittedImageSize3D(float ratio,ImVec2 available) {
     return width/height>ratio ? ImVec2(height*ratio,height) : ImVec2(width,width/ratio);
 }
 
-// Draw linked crosshairs and physical-coordinate source/receiver overlays for a single plane.
-void drawSliceOverlay3D(Seis3D_State& s,int plane,ImVec2 origin,ImVec2 size) {
-    const auto& c=s.context3D;
-    const int width=plane==1?c.ny3D:c.nx3D, height=plane==2?c.ny3D:c.nz3D;
-    const int a=plane==1?s.slice3D[1]:s.slice3D[0],b=plane==2?s.slice3D[1]:s.slice3D[2];
-    auto* draw=ImGui::GetWindowDrawList();
-    const float x=origin.x+(a+0.5f)*size.x/width,y=origin.y+(b+0.5f)*size.y/height;
-    if(s.showCrosshair3D) draw->AddLine(ImVec2(x,origin.y),ImVec2(x,origin.y+size.y),IM_COL32(149,221,146,100));
-    if(s.showCrosshair3D) draw->AddLine(ImVec2(origin.x,y),ImVec2(origin.x+size.x,y),IM_COL32(149,221,146,100));
-    if(s.showGrid3D) {
-        const ImU32 gridColor=ImGui::ColorConvertFloat4ToU32(ImVec4(.7f,.83f,.82f,s.gridOpacity3D));
-        for(int i=1;i<5;++i) {
-            const float u=origin.x+size.x*i/5, v=origin.y+size.y*i/5;
-            draw->AddLine(ImVec2(u,origin.y),ImVec2(u,origin.y+size.y),gridColor);
-            draw->AddLine(ImVec2(origin.x,v),ImVec2(origin.x+size.x,v),gridColor);
-        }
-    }
-    // Project only markers that intersect this plane, preventing misleading 3-D positions.
-    const auto project=[&](int px,int py,int pz,ImU32 color,float radius) {
-        const bool intersects=plane==0?std::abs(py-s.slice3D[1])<=1:plane==1?std::abs(px-s.slice3D[0])<=1:std::abs(pz-s.slice3D[2])<=1;
-        if(!intersects) return;
-        const int u=plane==1?py:px,v=plane==2?py:pz;
-        draw->AddCircleFilled(ImVec2(origin.x+(u+0.5f)*size.x/width,origin.y+(v+0.5f)*size.y/height),radius,color);
-    };
-    project(s.source3D.x3D,s.source3D.y3D,s.source3D.z3D,IM_COL32(255,188,69,255),4);
-    for(const auto& receiver:s.receivers3D) project(receiver.x3D,receiver.y3D,receiver.z3D,IM_COL32(90,218,247,220),2);
-    draw->AddRect(origin,ImVec2(origin.x+size.x,origin.y+size.y),IM_COL32(92,175,102,180),2);
-}
-
-// Draw one linked full-resolution slice with grid picking and material reverse lookup.
-void drawSlicePanel3D(Seis3D_State& s,int plane) {
-    ImGui::PushID(plane); ImGui::BeginChild("slicePanel",ImVec2(0,0),ImGuiChildFlags_None);
-    if(!s.ready3D) { ImGui::TextWrapped("Initialize a 3D model to inspect this plane.");ImGui::EndChild();ImGui::PopID();return; }
-    const int axis=plane==0?1:plane==1?0:2;
-    const int count=axis==0?s.context3D.nx3D:axis==1?s.context3D.ny3D:s.context3D.nz3D;
-    ImGui::SetNextItemWidth(-1);
-    if(ImGui::SliderInt("##position",s.slice3D+axis,0,count-1,"%d",ImGuiSliderFlags_AlwaysClamp)) s.dirty3D=true;
-    ImGui::TextDisabled("%c = %.0f m | span %.0f x %.0f m",'X'+axis,
-        s.slice3D[axis]*s.context3D.spacing3D,
-        (s.gl3D.layout3D.sliceWidth3D[plane]-1)*s.context3D.spacing3D,
-        (s.gl3D.layout3D.sliceHeight3D[plane]-1)*s.context3D.spacing3D);
-    const int width=s.gl3D.layout3D.sliceWidth3D[plane],height=s.gl3D.layout3D.sliceHeight3D[plane];
-    const ImVec2 size=fittedImageSize3D(float(width)/height,ImGui::GetContentRegionAvail());
-    const auto available=ImGui::GetContentRegionAvail();
-    const auto cursor=ImGui::GetCursorPos();
-    ImGui::SetCursorPos(ImVec2(cursor.x+(available.x-size.x)*.5f,cursor.y+(available.y-size.y)*.5f));
-    const ImVec2 origin=ImGui::GetCursorScreenPos();
-    ImGui::Image(ImTextureID(s.gl3D.displayTextures3D[plane]),size,ImVec2(0,0),ImVec2(1,1));
-    drawSliceOverlay3D(s,plane,origin,size);
-    if(ImGui::IsItemHovered()) {
-        const ImVec2 mouse=ImGui::GetIO().MousePos;
-        const int u=(std::clamp)(int((mouse.x-origin.x)*width/size.x),0,width-1);
-        const int v=(std::clamp)(int((mouse.y-origin.y)*height/size.y),0,height-1);
-        const Receiver3D point=plane==0?Receiver3D{u,s.slice3D[1],v}:plane==1?Receiver3D{s.slice3D[0],u,v}:Receiver3D{u,v,s.slice3D[2]};
-        if(!s.hoverValid3D||point.x3D!=s.hoverPoint3D.x3D||point.y3D!=s.hoverPoint3D.y3D||point.z3D!=s.hoverPoint3D.z3D)
-            performAction3D(s,[&]{probeMaterial3D(s.gpu3D,s.context3D,point,s.hoverMaterial3D);});
-        s.hoverPoint3D=point;s.hoverValid3D=true;
-        if(ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-            s.slice3D[0]=point.x3D;s.slice3D[1]=point.y3D;s.slice3D[2]=point.z3D;s.dirty3D=true;
-        }
-    }
-    ImGui::EndChild();ImGui::PopID();
-}
-
 // Draw the bounded raymarching exploration view and own all orbit-camera gestures locally.
 void drawVolumePanel3D(Seis3D_State& s) {
     ImGui::BeginChild("volumePanel3D",ImVec2(0,0),ImGuiChildFlags_None);
     if(!s.ready3D||!s.showVolume3D) {
         ImGui::TextWrapped("Enable the auxiliary volume in Slice View. The three slices always use full-resolution solver data.");
     } else {
-        ImGui::TextDisabled("LMB orbit / RMB zoom / MMB pan");
+        if(ImGui::SmallButton("Reset camera")) s.camera3D=VolumeCamera3D{};
+        ImGui::SameLine();ImGui::TextDisabled("LMB orbit / RMB zoom / MMB pan");
         const auto available=ImGui::GetContentRegionAvail();
         const auto size=fittedImageSize3D(1,available);
         const auto cursor=ImGui::GetCursorPos();
@@ -354,7 +309,7 @@ void buildDockLayout3D(Seis3D_State& s,ImGuiID dockId,ImVec2 size) {
         ImGui::DockBuilderDockWindow(panelNames3D[6],controls);
         for(int i=2;i<6;++i) ImGui::DockBuilderDockWindow(panelNames3D[i],center);
     } else {
-        ImGuiID traces=ImGui::DockBuilderSplitNode(center,ImGuiDir_Down,.22f,nullptr,&center);
+        ImGuiID traces=ImGui::DockBuilderSplitNode(center,ImGuiDir_Down,.27f,nullptr,&center);
         ImGui::DockBuilderDockWindow(panelNames3D[6],traces);
         ImGuiID left=ImGui::DockBuilderSplitNode(center,ImGuiDir_Left,s.layoutPreset3D==1?.38f:.5f,nullptr,&center);
         if(s.layoutPreset3D==1) {
@@ -379,31 +334,15 @@ bool renderScreen3D(Seis3D_State& s,int width,int height) {
     ImGui::PushFont(nullptr,ImGui::GetFontSize()*.86f);
     s.homeRequested3D=false;
     if(!ImGui::GetIO().WantTextInput&&!ImGui::IsAnyItemActive()) {
-        if(ImGui::IsKeyPressed(ImGuiKey_Space,false)&&s.ready3D) s.running3D=!s.running3D;
-        if(ImGui::IsKeyPressed(ImGuiKey_C,false)&&s.ready3D&&!s.recording3D) performAction3D(s,[&]{resetGpu3D(s.gpu3D,s.context3D);s.step3D=0;s.dirty3D=true;});
-        if(ImGui::IsKeyPressed(ImGuiKey_R,false)) s.camera3D=VolumeCamera3D{};
+        if(ImGui::IsKeyPressed(ImGuiKey_Space,false)&&s.ready3D) performAction3D(s,[&]{toggleSimulation3D(s);});
+        if(ImGui::IsKeyPressed(ImGuiKey_C,false)&&s.ready3D&&!s.recording3D) performAction3D(s,[&]{restartSimulation3D(s,false);});
+        if(ImGui::IsKeyPressed(ImGuiKey_R,false)) {resetSliceViews3D(s);s.camera3D=VolumeCamera3D{};}
     }
     if(ImGui::GetTime()-s.memoryRefreshTime3D>1) {
         s.memoryRefreshTime3D=ImGui::GetTime();
         if(cudaMemGetInfo(&s.freeVram3D,&s.totalVram3D)!=cudaSuccess) s.freeVram3D=s.totalVram3D=0;
     }
     performAction3D(s,[&]{advanceSimulation3D(s);});
-    ImGui::PushStyleColor(ImGuiCol_WindowBg,ImVec4(.04f,.065f,.075f,1));
-    ImGui::PushStyleColor(ImGuiCol_ChildBg,ImVec4(.04f,.065f,.075f,1));
-    ImGui::PushStyleColor(ImGuiCol_Border,ImVec4(.22f,.47f,.26f,.8f));
-    ImGui::PushStyleColor(ImGuiCol_CheckMark,ImVec4(.48f,.92f,.25f,1));
-    ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(.12f,.24f,.16f,1));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered,ImVec4(.22f,.4f,.18f,1));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive,ImVec4(.3f,.55f,.19f,1));
-    ImGui::PushStyleColor(ImGuiCol_SliderGrab,ImVec4(.43f,.76f,.3f,1));
-    ImGui::PushStyleColor(ImGuiCol_SliderGrabActive,ImVec4(.57f,.96f,.34f,1));
-    ImGui::PushStyleColor(ImGuiCol_TabSelected,ImVec4(.15f,.29f,.2f,1));
-    ImGui::PushStyleColor(ImGuiCol_TabHovered,ImVec4(.23f,.42f,.24f,1));
-    ImGui::PushStyleColor(ImGuiCol_DockingPreview,ImVec4(.45f,.85f,.3f,.5f));
-    ImGui::PushStyleColor(ImGuiCol_TabDimmedSelected,ImVec4(.12f,.24f,.18f,1));
-    ImGui::PushStyleColor(ImGuiCol_TabDimmed,ImVec4(.07f,.12f,.12f,1));
-    ImGui::PushStyleColor(ImGuiCol_FrameBg,ImVec4(.09f,.16f,.17f,1));
-    ImGui::PushStyleColor(ImGuiCol_Header,ImVec4(.12f,.24f,.18f,1));
     const auto* viewport=ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(viewport->WorkPos);ImGui::SetNextWindowSize(viewport->WorkSize);
     ImGui::SetNextWindowViewport(viewport->ID);
@@ -412,12 +351,15 @@ bool renderScreen3D(Seis3D_State& s,int width,int height) {
         ImGuiWindowFlags_NoDocking|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoBringToFrontOnFocus);
     ImGui::PopStyleVar(2);
     if(ImGui::Button("Home")) s.homeRequested3D=true;
-    ImGui::SameLine();ImGui::TextColored(ImVec4(.57f,.94f,.34f,1),"SEIS3D");
+    ImGui::SameLine();ImGui::TextColored(AppUi::palette().accent,"SEIS3D");
+    if(!s.ready3D) {ImGui::SameLine();if(ImGui::Button("Initialize 3D")) performAction3D(s,[&]{initializeSession3D(s,false);});}
     ImGui::SameLine();ImGui::BeginDisabled(!s.ready3D);
-    if(ImGui::Button(s.running3D?"Pause":"Run")) s.running3D=!s.running3D;
+    const bool completed=!s.recording3D&&s.step3D>=std::uint64_t((std::clamp)(s.maximumSteps3D,1,1000000));
+    if(ImGui::Button(s.running3D?"Pause":completed?"Replay":"Run")) performAction3D(s,[&]{toggleSimulation3D(s);});
     ImGui::SameLine();if(ImGui::Button("Step")) {s.running3D=false;s.singleStep3D=true;}
     ImGui::SameLine();ImGui::BeginDisabled(s.recording3D);
-    if(ImGui::Button("Reset fields")) performAction3D(s,[&]{resetGpu3D(s.gpu3D,s.context3D);s.step3D=0;s.running3D=false;s.dirty3D=true;});
+    if(ImGui::Button("Reset fields")) performAction3D(s,[&]{restartSimulation3D(s,false);});
+    ImGui::SameLine();if(ImGui::Button("Fire + capture")) performAction3D(s,[&]{s.sequence3D=false;s.traceView3D=2;startGather3D(s,1);});
     ImGui::EndDisabled();ImGui::EndDisabled();ImGui::SameLine();
     if(ImGui::Button("Workspace")) ImGui::OpenPopup("WorkspaceMenu3D");
     if(ImGui::BeginPopup("WorkspaceMenu3D")) {
@@ -425,11 +367,19 @@ bool renderScreen3D(Seis3D_State& s,int width,int height) {
         if(ImGui::MenuItem("Volume focus",nullptr,s.layoutPreset3D==1)) {s.layoutPreset3D=1;s.resetLayout3D=true;}
         if(ImGui::MenuItem("Compact / tabbed",nullptr,s.layoutPreset3D==2)) {s.layoutPreset3D=2;s.resetLayout3D=true;}
         if(ImGui::MenuItem("Restore current preset")) s.resetLayout3D=true;
+        if(ImGui::BeginMenu("Visual preset")) {
+            const char* presets[]={"Wavefront contrast","Signed seismic","Geological layers","CUDA glow","Paper scientific"};
+            for(int i=0;i<5;++i) if(ImGui::MenuItem(presets[i],nullptr,s.visualPreset3D==i)) applyVisualPreset3D(s,i);
+            ImGui::EndMenu();
+        }
+        AppUi::drawThemeMenu();
         ImGui::Separator();
         const char* labels[]={"Simulation controls","Display / materials","Inline","Crossline","Depth","Volume","Receiver traces"};
         for(int i=0;i<7;++i) ImGui::MenuItem(labels[i],nullptr,&s.panelsOpen3D[i]);
         ImGui::EndPopup();
     }
+    ImGui::SameLine();if(ImGui::Button("Reset views")) {resetSliceViews3D(s);s.camera3D=VolumeCamera3D{};}
+    if(ImGui::IsItemHovered()) ImGui::SetTooltip("Fit all three slices and reset the orbit camera (R). Keeps wavefield and slice positions.");
     ImGui::SameLine();ImGui::TextDisabled("%s | %.0f FPS | %.2f ms/batch",s.running3D?"RUNNING":s.ready3D?"PAUSED":"SETUP",ImGui::GetIO().Framerate,s.computeMs3D);
     ImGui::Text("t %.4f s | step %llu | Inline Y %d / Crossline X %d | VRAM %.2f / %.2f GiB",
         s.step3D*double(s.context3D.dt3D),static_cast<unsigned long long>(s.step3D),s.slice3D[1],s.slice3D[0],
@@ -450,7 +400,7 @@ bool renderScreen3D(Seis3D_State& s,int width,int height) {
             s.materialComponent3D==5?"Vp":s.materialComponent3D==6?"Vs":"Density",range[0],range[1],
             s.materialComponent3D==7?"kg/m3":"m/s",s.viewMaximum3D);
     } else ImGui::TextDisabled("Initialize a model in Simulation | Workspace: layouts and panels | Space: run/pause");
-    ImGui::TextColored(s.messageIsError3D?ImVec4(1,.55f,.38f,1):ImVec4(.6f,.78f,.65f,1),"%s",s.message3D.c_str());
+    ImGui::TextColored(s.messageIsError3D?ImVec4(1,.55f,.38f,1):AppUi::palette().muted,"%s",s.message3D.c_str());
     if(ImGui::IsItemHovered()) ImGui::SetTooltip("%s",s.message3D.c_str());
     ImGui::End();
     for(int panel=0;panel<7;++panel) {
@@ -471,15 +421,12 @@ bool renderScreen3D(Seis3D_State& s,int width,int height) {
             if(panel==1) {drawViewControls3D(s);drawLegend3D(s);}
             if(panel>=2&&panel<=4) drawSlicePanel3D(s,panel-2);
             if(panel==5) drawVolumePanel3D(s);
-            if(panel==6) {
-                if(s.gather3D.sampleCount3D==0) ImGui::TextWrapped("Deploy receivers and capture a shot in Acquisition to inspect Vx / Vy / Vz traces here.");
-                drawTracePreview3D(s);
-            }
+            if(panel==6) drawTracePreview3D(s);
             ImGui::PopItemWidth();
         }
         ImGui::End();
     }
-    ImGui::PopStyleColor(16);ImGui::PopFont();
+    ImGui::PopFont();
     return s.homeRequested3D;
 }
 

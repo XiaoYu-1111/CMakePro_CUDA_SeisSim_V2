@@ -14,6 +14,20 @@ std::string sessionSuffix3D();
 void initializeGraphics3D(Seis3D_State& s);
 // Refresh scalar data as needed and render the current transfer functions.
 void updateGraphics3D(Seis3D_State& s);
+// Draw one orthogonal slice using its independent normalized zoom/pan camera.
+void drawSlicePanel3D(Seis3D_State& s,int plane);
+// Fit all slice cameras without changing physical slice positions or the solver.
+void resetSliceViews3D(Seis3D_State& s);
+// Apply a coherent scientific display preset without changing the physical model or time step.
+void applyVisualPreset3D(Seis3D_State& s,int preset);
+// Clear fields and live monitor samples before starting a new source wavelet.
+void restartSimulation3D(Seis3D_State& s,bool running);
+// Pause/resume normally, or restart a completed run so the source is emitted again.
+void toggleSimulation3D(Seis3D_State& s);
+// Append a single, bounded monitor frame from the deployed receiver mesh.
+void appendLiveTrace3D(Seis3D_State& s);
+// Draw a styled live monitor or a frozen, exportable receiver gather.
+void drawTracePreview3D(Seis3D_State& s);
 // Replace the simulation using validated procedural or imported material data.
 void initializeSession3D(Seis3D_State& s,bool imported);
 // Inspect all imported cells before replacing live GPU resources.

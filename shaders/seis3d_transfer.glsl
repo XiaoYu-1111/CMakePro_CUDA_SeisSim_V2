@@ -2,6 +2,12 @@ uniform vec3 palette3D[5];
 uniform int displayMode3D, modelStyle3D, unsignedWave3D;
 uniform vec2 materialRange3D;
 uniform float waveOpacity3D, waveThreshold3D, modelOpacity3D;
+uniform float waveGamma3D, materialBrightness3D;
+// Adjust display opacity only; preserve the signed color mapping and physical sample amplitudes.
+float waveVisibility3D(float magnitude3D) {
+    float visible3D=clamp((magnitude3D-waveThreshold3D)/max(1.0-waveThreshold3D,1e-6),0.0,1.0);
+    return pow(visible3D,max(waveGamma3D,0.1));
+}
 // Interpolate the same five stops used by the workspace legend.
 vec3 waveColor3D(float value3D) {
     float q3D=clamp(unsignedWave3D!=0 ? abs(value3D) : value3D*0.5+0.5,0.0,1.0)*4.0;
@@ -18,5 +24,5 @@ vec3 materialColor3D(float value3D) {
         : mix(vec3(.48,.65,.46),vec3(.78,.52,.31),(q3D-.5)*2.0);
     if(modelStyle3D==2) return vec3(mix(.12,.85,q3D));
     if(modelStyle3D==3) return waveColor3D(unsignedWave3D!=0?q3D:q3D*2.0-1.0);
-    return mix(vec3(.95,.96,.94),vec3(.42,.54,.58),q3D);
+    return mix(vec3(.97,.96,.93),vec3(.79,.84,.85),q3D);
 }

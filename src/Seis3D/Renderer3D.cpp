@@ -153,6 +153,8 @@ void setTransferUniforms3D(GLuint program,const Seis3D_State& s) {
     glUniform1f(glGetUniformLocation(program,"waveOpacity3D"),s.waveOpacity3D);
     glUniform1f(glGetUniformLocation(program,"waveThreshold3D"),s.waveThreshold3D);
     glUniform1f(glGetUniformLocation(program,"modelOpacity3D"),s.modelOpacity3D);
+    glUniform1f(glGetUniformLocation(program,"waveGamma3D"),s.waveGamma3D);
+    glUniform1f(glGetUniformLocation(program,"materialBrightness3D"),s.materialBrightness3D);
 }
 
 // Update only scalar slices/volume through CUDA-GL interop, with guaranteed unmapping on failure.
@@ -166,7 +168,7 @@ void updateGraphics3D(Seis3D_State& s) {
         float(s.waveStyle3D),float(s.modelStyle3D),float(s.materialRangeAuto3D),s.manualMaterialRange3D[0],
         s.manualMaterialRange3D[1],s.waveOpacity3D,s.waveThreshold3D,s.modelOpacity3D,s.volumeOpacity3D,
         s.volumeThreshold3D,float(s.showVolume3D),s.camera3D.yaw3D,s.camera3D.pitch3D,s.camera3D.distance3D,
-        s.camera3D.pan3D[0],s.camera3D.pan3D[1],float(s.component3D)};
+        s.camera3D.pan3D[0],s.camera3D.pan3D[1],float(s.component3D),s.waveGamma3D,s.materialBrightness3D};
     if(!extract && g.rendered3D && settings==g.renderedSettings3D) return;
     GLStateScope3D saved;
     if (extract) {
@@ -221,6 +223,7 @@ void updateGraphics3D(Seis3D_State& s) {
         glUniform1f(glGetUniformLocation(program,"opacity3D"),s.volumeOpacity3D);
         glUniform1f(glGetUniformLocation(program,"threshold3D"),s.volumeThreshold3D); glDrawArrays(GL_TRIANGLES,0,3);
     }
+    if(glGetError()!=GL_NO_ERROR) throw std::runtime_error("Seis3D texture upload or offscreen draw failed. Rebuild the application and check GPU diagnostics.");
     g.renderedSettings3D=settings;g.rendered3D=true;
 }
 

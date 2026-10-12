@@ -95,6 +95,7 @@
 // 5. 本项目自定义头文件 (Project Specific Headers)
 // =================================================================================
 #include "CMakePro_cuda.h" // 包含启动界面逻辑、系统结构体及核心计算单元
+#include "../src/Seis3D/Internal3D.h"
 
 // =================================================================================
 // GLFW 错误捕获回调
@@ -141,7 +142,20 @@ void initializeQuad(GLHandles& gl) {
 // =================================================================================
 // 主函数入口
 // =================================================================================
-static int runApplication() {
+// Save the actual application backbuffer at native resolution for documentation figures.
+static void saveApplicationScreenshot(GLFWwindow* window,const char* filename) {
+    glBindFramebuffer(GL_READ_FRAMEBUFFER,0);
+    int frameWidth=0,frameHeight=0;glfwGetFramebufferSize(window,&frameWidth,&frameHeight);
+    std::vector<unsigned char> pixels(std::size_t(frameWidth)*frameHeight*4);
+    glReadPixels(0,0,frameWidth,frameHeight,GL_RGBA,GL_UNSIGNED_BYTE,pixels.data());
+    stbi_flip_vertically_on_write(1);
+    const auto imagePath=pathToUtf8(getExecutableDirectory()/filename);
+    if(!stbi_write_png(imagePath.c_str(),frameWidth,frameHeight,4,pixels.data(),frameWidth*4))
+        throw std::runtime_error("Cannot save application screenshot.");
+}
+
+// Run normal interaction or an isolated screenshot session without saving user layout preferences.
+static int runApplication(bool displayCheck3D=false,bool paperCapture3D=false) {
     // 启动前确认必要着色器可读，避免将空源码交给 OpenGL 并继续初始化。
     const std::string vsSrc = loadShaderFromFile(resolveResourcePath("shader/vs_code.vert"));
     const std::string fsSrc = loadShaderFromFile(resolveResourcePath("shader/fs_code.frag"));
@@ -257,12 +271,26 @@ static int runApplication() {
 
     // 可选演示资源在进入对应页面时才分配，主程序仅初始化地震工作区所需资源。
     Init_Imgui(window);
+    if(displayCheck3D) {
+        // Exercise real startup with all four views visible, without changing saved user preferences.
+        ImGui::LoadIniSettingsFromDisk(pathToUtf8(getExecutableDirectory()/"imgui.ini").c_str());
+        ImGui::GetIO().IniFilename=nullptr;
+        if(paperCapture3D) AppUi::setTheme(AppUi::ThemeId::PaperSand,false);
+        state.currentScreen=paperCapture3D?AppScreen::Intro0:AppScreen::SeisSim_3D;
+        state3D.targetSamples3D=256;state3D.stepsPerFrame3D=8;
+        state3D.resetLayout3D=true;
+        if(!paperCapture3D) {
+            Seis3D::Detail3D::initializeSession3D(state3D,false);
+            Seis3D::Detail3D::startGather3D(state3D,1);
+        }
+    }
 
     // 初始运行状态设定 (强制开启启动屏逻辑)
     state.isIntroMode = true;
     glfwSwapInterval(state.vsyncEnabled ? 1 : 0);
     bool firstFramePresented = false;
     AppScreen lastRenderedScreen = state.currentScreen;
+    int displayCheckFrames3D=0;
 
     // =============================================================================
     // 主渲染循环
@@ -272,7 +300,8 @@ static int runApplication() {
 
         // 1. 清空主后备缓冲区底色
         // 为窗口首帧和未覆盖区域提供与首页一致的深色底色。
-        glClearColor(0.043f, 0.059f, 0.055f, 1.0f);
+        const auto& clearTheme = AppUi::palette();
+        glClearColor(clearTheme.background.x,clearTheme.background.y,clearTheme.background.z,1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
         // 2. 动态垂直同步检测
@@ -294,6 +323,10 @@ static int runApplication() {
 
         // 5. 事件响应与输入控制处理
         ProcessInput(window, config, state, gl);
+        static auto lastUiTheme=AppUi::currentTheme();
+        if(lastUiTheme!=AppUi::currentTheme()) {
+            uiAccent=AppUi::palette().accent;lastUiTheme=AppUi::currentTheme();
+        }
 
         // 6. 场景渲染分发 (包含启动页与核心模拟页面)
         // Previous-frame draw commands have completed before deleting their textures.
@@ -311,6 +344,43 @@ static int runApplication() {
         // 7. GUI 指令集提交
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        if(displayCheck3D) {
+            if(state3D.messageIsError3D) throw std::runtime_error(state3D.message3D);
+            ++displayCheckFrames3D;
+            if(paperCapture3D&&state.currentScreen==AppScreen::Intro0&&displayCheckFrames3D==2) {
+                saveApplicationScreenshot(window,"seis3d-paper-home.png");
+                Seis3D::Detail3D::applyVisualPreset3D(state3D,4);
+                Seis3D::Detail3D::initializeSession3D(state3D,false);
+                Seis3D::Detail3D::startGather3D(state3D,1);
+                state.currentScreen=AppScreen::SeisSim_3D;displayCheckFrames3D=0;
+            }
+            if(displayCheckFrames3D==20) {
+                std::cout<<"[Seis3D display] ready "<<state3D.ready3D<<" rendered "<<state3D.gl3D.rendered3D<<" waveMax "<<state3D.viewMaximum3D<<" step "<<state3D.step3D<<'\n';
+                for(int plane=0;plane<3;++plane) {
+                    unsigned char pixel[4]{};
+                    glBindFramebuffer(GL_READ_FRAMEBUFFER,state3D.gl3D.framebuffers3D[plane]);
+                    glReadPixels(state3D.gl3D.layout3D.sliceWidth3D[plane]/2,state3D.gl3D.layout3D.sliceHeight3D[plane]/2,1,1,GL_RGBA,GL_UNSIGNED_BYTE,pixel);
+                    std::cout<<"[Seis3D display] plane "<<plane<<" RGBA "<<int(pixel[0])<<','<<int(pixel[1])<<','<<int(pixel[2])<<','<<int(pixel[3])<<'\n';
+                    if(pixel[3]!=255) throw std::runtime_error("Seis3D display target was not filled; offscreen rendering failed.");
+                    bool submitted3D=false;
+                    for(const auto* list3D:ImGui::GetDrawData()->CmdLists)
+                        for(const auto& command3D:list3D->CmdBuffer)
+                            if(command3D.GetTexID()==ImTextureID(state3D.gl3D.displayTextures3D[plane])&&command3D.ElemCount>=6)
+                                submitted3D=true;
+                    if(!submitted3D) throw std::runtime_error("Seis3D slice texture never reached the application UI.");
+                }
+                saveApplicationScreenshot(window,paperCapture3D?"seis3d-paper-guide.png":"seis3d-app-display-check.png");
+            }
+            if(paperCapture3D&&displayCheckFrames3D==24) ImGui::SetWindowFocus("Display / materials###Seis3D.Display");
+            if(paperCapture3D&&displayCheckFrames3D==28) saveApplicationScreenshot(window,"seis3d-paper-display.png");
+            if(glGetError()!=GL_NO_ERROR) throw std::runtime_error("OpenGL error during real application display check.");
+            if(displayCheckFrames3D>=64) {
+                if(state3D.gather3D.sampleCount3D!=256||state3D.gather3D.receivers3D.size()!=100)
+                    throw std::runtime_error("Real application 100-channel capture did not complete.");
+                std::cout<<"PASS: real application 96 cubed, opaque slice targets, 100-channel capture and full-size UI.\n";
+                return 0;
+            }
+        }
 
         // 8. 多视口支持 (针对分离窗口渲染状态)
         if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
@@ -321,7 +391,7 @@ static int runApplication() {
         }
 
         glfwSwapBuffers(window);
-        if (!firstFramePresented) {
+        if (!firstFramePresented&&!displayCheck3D) {
             // 首帧已在隐藏状态完成渲染并交换到前缓冲，再显示窗口。
             glfwShowWindow(window);
             firstFramePresented = true;
@@ -335,9 +405,11 @@ static int runApplication() {
 }
 
 // 将输入验证和 CUDA 异常转换为明确诊断，避免失败后继续计算损坏的波场。
-int main() {
+int main(int argc,char** argv) {
     try {
-        return runApplication();
+        const bool paperCapture3D=argc==2&&std::string(argv[1])=="--capture-seis3d-paper";
+        const bool displayCheck3D=paperCapture3D||(argc==2&&std::string(argv[1])=="--check-seis3d-display");
+        return runApplication(displayCheck3D,paperCapture3D);
     }
     catch (const std::exception& error) {
         std::cerr << "Application stopped safely: " << error.what() << std::endl;

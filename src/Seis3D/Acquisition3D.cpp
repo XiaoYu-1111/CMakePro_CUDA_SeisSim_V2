@@ -20,9 +20,9 @@ namespace Seis3D::Detail3D {
 // Build a bounded surface receiver mesh in physical grid coordinates, checking 64-bit extents first.
 void configureReceivers3D(Seis3D_State& s) {
     const auto& q=s.survey3D; const auto& c=s.context3D;
-    if(q.receiverCountX3D<1||q.receiverCountY3D<1||q.receiverCountX3D>64||q.receiverCountY3D>64
-        ||q.receiverCountX3D*q.receiverCountY3D>maxReceivers3D||q.receiverSpacing3D[0]<1||q.receiverSpacing3D[1]<1)
-        throw std::runtime_error("Receiver mesh must have 1..4096 nodes and positive spacing.");
+    if(q.receiverCountX3D<1||q.receiverCountY3D<1||q.receiverCountX3D>maxReceivers3D||q.receiverCountY3D>maxReceivers3D
+        ||std::int64_t(q.receiverCountX3D)*q.receiverCountY3D>maxReceivers3D||q.receiverSpacing3D[0]<1||q.receiverSpacing3D[1]<1)
+        throw std::runtime_error("Receiver mesh must have 1..100 total channels (X times Y) and positive spacing.");
     const auto lastX=std::int64_t(q.receiverOrigin3D[0])+std::int64_t(q.receiverCountX3D-1)*q.receiverSpacing3D[0];
     const auto lastY=std::int64_t(q.receiverOrigin3D[1])+std::int64_t(q.receiverCountY3D-1)*q.receiverSpacing3D[1];
     if(q.receiverOrigin3D[0]<0||q.receiverOrigin3D[1]<0||lastX>=c.nx3D||lastY>=c.ny3D
@@ -30,7 +30,9 @@ void configureReceivers3D(Seis3D_State& s) {
     std::vector<Receiver3D> receivers;
     for(int y=0;y<q.receiverCountY3D;++y) for(int x=0;x<q.receiverCountX3D;++x)
         receivers.push_back({q.receiverOrigin3D[0]+x*q.receiverSpacing3D[0],q.receiverOrigin3D[1]+y*q.receiverSpacing3D[1],q.receiverOrigin3D[2]});
-    setReceivers3D(s.gpu3D,c,receivers.data(),int(receivers.size())); s.receivers3D=std::move(receivers);
+    LiveTrace3D monitor;monitor.receiverCount3D=int(receivers.size());
+    monitor.samples3D.resize(std::size_t(LiveTrace3D::capacity3D)*receivers.size()*3);
+    setReceivers3D(s.gpu3D,c,receivers.data(),int(receivers.size()));s.receivers3D=std::move(receivers);s.liveTrace3D=std::move(monitor);
     s.message3D="3D receiver mesh deployed.";
 }
 
@@ -214,7 +216,7 @@ void startGather3D(Seis3D_State& s,int shotId) {
         throw std::runtime_error("World coordinates exceed the SEG-Y integer range.");
     gather.coordinateScalar3D=coordinateFactor==1?1:-coordinateFactor;
     gather.samples3D.resize(values);
-    resetGpu3D(s.gpu3D,s.context3D); s.gather3D=std::move(gather); s.step3D=0;
+    restartSimulation3D(s,false);s.gather3D=std::move(gather);
     s.recording3D=true; s.running3D=true; s.dirty3D=true; s.message3D="Capturing frozen-geometry 3D shot gather.";
 }
 

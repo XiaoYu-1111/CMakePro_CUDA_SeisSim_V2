@@ -22,7 +22,7 @@ void main() {
     vec3 near3D = min(first3D,second3D), far3D = max(first3D,second3D);
     float enter3D = max(max(near3D.x,near3D.y),near3D.z);
     float exit3D = min(min(far3D.x,far3D.y),far3D.z);
-    vec3 background3D = vec3(0.025,0.041,0.05);
+    vec3 background3D = modelStyle3D==4?vec3(.97,.96,.93):vec3(0.025,0.041,0.05);
     if (exit3D <= max(enter3D,0.0)) { color3D=vec4(background3D,1); return; }
     enter3D = max(enter3D,0.0);
     vec4 accumulated3D = vec4(0);
@@ -34,7 +34,7 @@ void main() {
         vec2 sample3D=texture(volumeTexture3D,uvw3D).rg;
         float scalar3D=sample3D.r*gain3D/max(scale3D,1e-20);
         float magnitude3D=abs(scalar3D);
-        float waveDensity3D=displayMode3D==2?0.0:max(magnitude3D-max(threshold3D,waveThreshold3D),0.0)*opacity3D*waveOpacity3D*40.0;
+        float waveDensity3D=displayMode3D==2||magnitude3D<=threshold3D?0.0:waveVisibility3D(magnitude3D)*opacity3D*waveOpacity3D*28.0;
         float materialDensity3D=displayMode3D==1?0.0:modelOpacity3D*3.0;
         float density3D=waveDensity3D+materialDensity3D;
         float alpha3D=1.0-exp(-density3D*delta3D);
@@ -47,6 +47,7 @@ void main() {
     vec3 edge3D=abs(abs(entry3D)-0.5);
     float secondEdge3D=max(min(edge3D.x,edge3D.y),min(max(edge3D.x,edge3D.y),edge3D.z));
     vec3 result3D=accumulated3D.rgb+(1.0-accumulated3D.a)*background3D;
-    result3D=mix(result3D,vec3(0.35,0.76,0.38),1.0-smoothstep(0.002,0.006,secondEdge3D));
+    vec3 outline3D=modelStyle3D==4?vec3(.22,.43,.46):vec3(0.35,0.76,0.38);
+    result3D=mix(result3D,outline3D,1.0-smoothstep(0.002,0.006,secondEdge3D));
     color3D=vec4(result3D,1);
 }

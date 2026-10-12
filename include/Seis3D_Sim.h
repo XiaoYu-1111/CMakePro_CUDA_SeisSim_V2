@@ -24,8 +24,14 @@ struct VolumeCamera3D {
     float pan3D[2]{};
 };
 
+// Each slice owns a normalized view; zoom changes presentation without allocating GPU storage.
+struct SliceCamera3D {
+    float zoom3D = 1.0f;
+    float center3D[2] = {0.5f,0.5f};
+};
+
 struct Survey3D {
-    int receiverCountX3D = 8, receiverCountY3D = 8;
+    int receiverCountX3D = 10, receiverCountY3D = 10;
     int receiverOrigin3D[3] = { 8, 8, 0 };
     int receiverSpacing3D[2] = { 10, 10 };
     int shotCountX3D = 3, shotCountY3D = 2;
@@ -47,6 +53,14 @@ struct Gather3D {
     double firstSampleTime3D = 0.0;
 };
 
+// Bounded UI monitor, sampled once per compute batch; formal SEG-Y samples remain in Gather3D.
+struct LiveTrace3D {
+    static constexpr int capacity3D=512;
+    std::array<double,capacity3D> times3D{};
+    std::vector<float> samples3D; // Ring [frame][receiver][Vx,Vy,Vz], at most 600 KiB.
+    int receiverCount3D=0, count3D=0, next3D=0;
+};
+
 struct Seis3D_State {
     SimulationContext3D context3D, editContext3D;
     GPUSimData3D gpu3D;
@@ -54,26 +68,30 @@ struct Seis3D_State {
     Source3D source3D;
     Survey3D survey3D;
     Gather3D gather3D;
+    LiveTrace3D liveTrace3D;
     VolumeCamera3D camera3D;
+    SliceCamera3D sliceCameras3D[3];
     std::vector<Receiver3D> receivers3D;
     bool ready3D = false, running3D = false, dirty3D = true;
     bool showVolume3D = true, autoScale3D = true, recording3D = false, sequence3D = false;
     bool homeRequested3D = false, singleStep3D = false;
     bool resetLayout3D = false, showGrid3D = true, showCrosshair3D = true;
     bool panelsOpen3D[7] = {true,true,true,true,true,true,true};
-    int layoutPreset3D = 0, displayMode3D = 0, waveStyle3D = 13, modelStyle3D = 1;
+    int layoutPreset3D = 0, displayMode3D = 0, waveStyle3D = 7, modelStyle3D = 0;
+    int visualPreset3D = 0, traceView3D = 0;
     int materialComponent3D = 5, displayStride3D = 1;
     std::uint64_t displayedStep3D = 0;
     bool materialRangeAuto3D = true;
     float materialRange3D[2] = {0,1}, manualMaterialRange3D[2] = {1500,5000};
-    float waveOpacity3D = 0.9f, waveThreshold3D = 0.025f;
-    float modelOpacity3D = 0.3f, gridOpacity3D = 0.18f;
-    int component3D = 0, stepsPerFrame3D = 2, slice3D[3] = {48,48,24};
+    float waveOpacity3D = 0.95f, waveThreshold3D = 0.008f;
+    float waveGamma3D = 0.6f, materialBrightness3D = 0.65f;
+    float modelOpacity3D = 0.12f, gridOpacity3D = 0.10f;
+    int component3D = 3, stepsPerFrame3D = 2, slice3D[3] = {48,48,24};
     int targetSamples3D = 512, samplingStride3D = 2, sequenceIndex3D = 0;
     int maximumSteps3D = 2000, selectedReceiver3D = 0;
     std::uint64_t step3D = 0;
     float viewMaximum3D = 1.0f, manualScale3D = 0.01f, gain3D = 1.0f;
-    float volumeOpacity3D = 1.5f, volumeThreshold3D = 0.06f, computeMs3D = 0.0f;
+    float volumeOpacity3D = 2.0f, volumeThreshold3D = 0.025f, computeMs3D = 0.0f;
     double memoryRefreshTime3D = -1.0;
     std::size_t freeVram3D = 0, totalVram3D = 0;
     Receiver3D hoverPoint3D{-1,-1,-1};
@@ -95,9 +113,6 @@ struct Seis3D_State {
 
 // Draw the complete independent workspace; return true when Home/Tab requests a cold route change.
 bool renderScreen3D(Seis3D_State& state3D, int width3D, int height3D);
-// Draw the independent launch card; return 1 for the sandbox, 2 for device details, otherwise 0.
-int drawIntroCard3D(float x3D, float y3D, float width3D, float height3D, float scale3D,
-    const char* deviceName3D, double vramGiB3D);
 // Release CUDA/GL resources in the correct order; no global device reset and no 2-D state access.
 void releaseSandbox3D(Seis3D_State& state3D) noexcept;
 
