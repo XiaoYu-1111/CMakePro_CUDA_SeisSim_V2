@@ -39,6 +39,7 @@ enum class AppScreen {
     LifeGame2,      // 生命游戏gpu
     HamStation,
     SeisSim_GPU,    // CUDA 地震波场模拟屏
+    SeisSim_3D,     // 独立三维弹性波沙盒
     Count
 };
 

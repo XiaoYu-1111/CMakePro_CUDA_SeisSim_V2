@@ -1,4 +1,4 @@
-﻿// CMakePro_gui_intro.h: 标准系统包含文件的包含文件
+// CMakePro_gui_intro.h: 标准系统包含文件的包含文件
 // 或项目特定的包含文件。
 
 #pragma once
@@ -11,6 +11,7 @@
 #include "Common.h"
 #include "ResourcePaths.h"
 #include"Seis_Sim.h"
+#include "Seis3D_Sim.h"
 
 constexpr float PI = 3.14159265358979323846f;
 
@@ -132,6 +133,10 @@ void Init_Imgui(GLFWwindow* window) {
     ImPlot::CreateContext();
 
     ImGuiIO& io = ImGui::GetIO();
+
+    // Keep dock layouts beside the executable, independent of the launch working directory.
+    static const std::string imguiSettingsPath = pathToUtf8(getExecutableDirectory() / "imgui.ini");
+    io.IniFilename = imguiSettingsPath.c_str();
 
     // 2. 配置 Flags
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
@@ -327,7 +332,7 @@ void RenderIntroScreen0(SimState& state, const GpuInfo& info, int winW, int winH
         const float gap = 22.0f * scale;
         const float bodyY = 178.0f * scale;
         const float bodyH = (std::max)(300.0f * scale, winH - 448.0f * scale);
-        const float mainW = (contentW - gap) * 0.64f;
+        const float mainW = (contentW - gap) * 0.5f;
         const float sideW = contentW - gap - mainW;
         const ImVec2 mainPos(margin, bodyY);
         const ImVec2 sidePos(margin + mainW + gap, bodyY);
@@ -347,10 +352,10 @@ void RenderIntroScreen0(SimState& state, const GpuInfo& info, int winW, int winH
 
         ImGui::SetCursorScreenPos({ mainPos.x + 34.0f * scale, mainPos.y + 28.0f * scale });
         ImGui::SetWindowFontScale(0.84f * scale);
-        ImGui::TextColored(ImVec4(0.58f, 0.88f, 0.48f, 1.0f), "SIMULATION WORKSPACE  /  CUDA ACCELERATED");
+        ImGui::TextColored(ImVec4(0.58f, 0.88f, 0.48f, 1.0f), "2D WAVEFIELD SANDBOX / CUDA");
         ImGui::SetCursorScreenPos({ mainPos.x + 34.0f * scale, mainPos.y + 72.0f * scale });
         ImGui::SetWindowFontScale(1.75f * scale);
-        ImGui::TextColored(ImVec4(0.96f, 0.98f, 1.0f, 1.0f), "开始新的模拟任务");
+        ImGui::TextColored(ImVec4(0.96f, 0.98f, 1.0f, 1.0f), "二维弹性波沙盒");
         ImGui::SetCursorScreenPos({ mainPos.x + 34.0f * scale, mainPos.y + 124.0f * scale });
         ImGui::SetWindowFontScale(0.96f * scale);
         ImGui::PushTextWrapPos(mainPos.x + mainW * 0.65f);
@@ -431,65 +436,13 @@ void RenderIntroScreen0(SimState& state, const GpuInfo& info, int winW, int winH
             isIntroMode = false;
         }
 
-        // Device panel displays only fields collected by CUDA device discovery.
-        drawList->AddRectFilled(sidePos, { sidePos.x + sideW, sidePos.y + bodyH }, panelBg, 9.0f * scale);
-        drawList->AddRect(sidePos, { sidePos.x + sideW, sidePos.y + bodyH }, IM_COL32(112, 205, 119, 155), 9.0f * scale, 0, 1.35f * scale);
-        drawList->AddRectFilled({ sidePos.x, sidePos.y }, { sidePos.x + sideW, sidePos.y + 4.0f * scale },
-            IM_COL32(101, 207, 110, 205), 2.0f * scale);
-        drawList->AddRectFilled({ sidePos.x + sideW - 7.0f * scale, sidePos.y + 18.0f * scale },
-            { sidePos.x + sideW - 4.0f * scale, sidePos.y + bodyH - 18.0f * scale },
-            IM_COL32(93, 178, 103, 55), 2.0f * scale);
-        ImGui::SetCursorScreenPos({ sidePos.x + 24.0f * scale, sidePos.y + 24.0f * scale });
-        ImGui::SetWindowFontScale(0.84f * scale);
-        ImGui::TextColored(ImVec4(0.59f, 0.72f, 0.82f, 1.0f), "COMPUTE DEVICE");
-        ImGui::SetCursorScreenPos({ sidePos.x + 24.0f * scale, sidePos.y + 57.0f * scale });
-        ImGui::SetWindowFontScale(1.12f * scale);
-        ImGui::PushTextWrapPos(sidePos.x + sideW - 18.0f * scale);
-        ImGui::TextColored(info.success ? ImVec4(0.91f, 0.96f, 1.0f, 1.0f) : ImVec4(1.0f, 0.55f, 0.42f, 1.0f),
-            "%s", info.success ? info.name : "CUDA 设备不可用");
-        ImGui::PopTextWrapPos();
-        ImGui::SetWindowFontScale(1.0f * scale);
-        ImGui::SetCursorScreenPos({ sidePos.x + 24.0f * scale, sidePos.y + 112.0f * scale });
-        ImGui::TextColored(ImVec4(0.56f, 0.66f, 0.76f, 1.0f), "CUDA 架构");
-        ImGui::SetCursorScreenPos({ sidePos.x + sideW * 0.56f, sidePos.y + 112.0f * scale });
-        ImGui::TextColored(ImVec4(0.86f, 0.91f, 0.96f, 1.0f), info.success ? "SM %d.%d" : "—", info.computeCapabilityMajor, info.computeCapabilityMinor);
-        ImGui::SetCursorScreenPos({ sidePos.x + 24.0f * scale, sidePos.y + 151.0f * scale });
-        ImGui::TextColored(ImVec4(0.56f, 0.66f, 0.76f, 1.0f), "显存容量");
-        ImGui::SetCursorScreenPos({ sidePos.x + sideW * 0.56f, sidePos.y + 151.0f * scale });
-        if (info.success) ImGui::TextColored(ImVec4(0.86f, 0.91f, 0.96f, 1.0f), "%.1f GB", (double)info.totalMem / (1024.0 * 1024.0 * 1024.0));
-        else ImGui::TextColored(ImVec4(0.86f, 0.91f, 0.96f, 1.0f), "—");
-        ImGui::SetCursorScreenPos({ sidePos.x + 24.0f * scale, sidePos.y + 190.0f * scale });
-        ImGui::TextColored(ImVec4(0.56f, 0.66f, 0.76f, 1.0f), "多处理器");
-        ImGui::SetCursorScreenPos({ sidePos.x + sideW * 0.56f, sidePos.y + 190.0f * scale });
-        if (info.success) ImGui::TextColored(ImVec4(0.86f, 0.91f, 0.96f, 1.0f), "%d SM", info.multiProcessorCount);
-        else ImGui::TextColored(ImVec4(0.86f, 0.91f, 0.96f, 1.0f), "—");
-
-        const float infoDividerY = sidePos.y + 238.0f * scale;
-        drawList->AddLine({ sidePos.x + 24.0f * scale, infoDividerY },
-            { sidePos.x + sideW - 24.0f * scale, infoDividerY }, IM_COL32(117, 177, 124, 65), 1.0f);
-        const ImU32 statusColor = info.success ? IM_COL32(117, 235, 112, 255) : IM_COL32(245, 118, 90, 255);
-        drawList->AddCircleFilled({ sidePos.x + 31.0f * scale, sidePos.y + 273.0f * scale }, 4.0f * scale, statusColor);
-        ImGui::SetCursorScreenPos({ sidePos.x + 45.0f * scale, sidePos.y + 262.0f * scale });
-        ImGui::SetWindowFontScale(0.96f * scale);
-        ImGui::TextColored(info.success ? ImVec4(0.66f, 0.94f, 0.60f, 1.0f) : ImVec4(1.0f, 0.56f, 0.42f, 1.0f),
-            "%s", info.success ? "CUDA 设备已识别" : "未检测到 CUDA 设备");
-        ImGui::SetWindowFontScale(0.80f * scale);
-        ImGui::SetCursorScreenPos({ sidePos.x + 24.0f * scale, sidePos.y + 292.0f * scale });
-        ImGui::TextColored(ImVec4(0.57f, 0.68f, 0.62f, 1.0f), "GPU 加速弹性波场求解");
-        ImGui::SetCursorScreenPos({ sidePos.x + 24.0f * scale, sidePos.y + 318.0f * scale });
-        ImGui::TextColored(ImVec4(0.57f, 0.68f, 0.62f, 1.0f), "实时波场显示与数据采集");
-        ImGui::SetWindowFontScale(1.0f);
-
-        ImGui::SetCursorScreenPos({ sidePos.x + 24.0f * scale, sidePos.y + bodyH - 68.0f * scale });
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.15f, 0.32f, 0.19f, 0.95f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.20f, 0.46f, 0.24f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.12f, 0.27f, 0.16f, 1.0f));
-        if (ImGui::Button("查看完整设备信息  →", { sideW - 48.0f * scale, 38.0f * scale })) {
-            state.currentScreen = AppScreen::CudaDiagno;
+        // The second launch card owns no simulation resources until its workspace is initialized.
+        const int route3D = Seis3D::drawIntroCard3D(sidePos.x, sidePos.y, sideW, bodyH, scale,
+            info.success ? info.name : "CUDA device unavailable", (double)info.totalMem / (1024.0 * 1024.0 * 1024.0));
+        if (route3D != 0) {
+            state.currentScreen = route3D == 1 ? AppScreen::SeisSim_3D : AppScreen::CudaDiagno;
             isIntroMode = false;
         }
-        ImGui::PopStyleColor(3);
-
         // Compact workflow strip explains the scientific task sequence and fills the lower workspace.
         const float flowY = bodyY + bodyH + 18.0f * scale;
         const float flowH = 74.0f * scale;
@@ -1849,7 +1802,8 @@ bool IsIntroScreen(AppScreen screen) {
     return (screen == AppScreen::Intro0 || screen == AppScreen::Intro1);
 }
 
-void RenderApp(AppScreen screen, SimState& state, const GpuInfo& info, int winW, int winH, GLHandles& gl, AsyncLoader& loader) {
+void RenderApp(AppScreen screen, SimState& state, const GpuInfo& info, int winW, int winH, GLHandles& gl, AsyncLoader& loader,
+    Seis3D::Seis3D_State& state3D) {
 
     switch (screen) {
     case AppScreen::Intro0:
@@ -1870,6 +1824,9 @@ void RenderApp(AppScreen screen, SimState& state, const GpuInfo& info, int winW,
     case AppScreen::SeisSim_GPU:
         // 调用我们下面实现的专业地震模拟渲染窗口
         renderSeisSimScreenGpu(state, winW, winH, gl, info);
+        break;
+    case AppScreen::SeisSim_3D:
+        if (Seis3D::renderScreen3D(state3D, winW, winH)) state.currentScreen = AppScreen::Intro0;
         break;
 
     default: break;
@@ -1916,6 +1873,26 @@ void CheckIdleStatus(GLFWwindow* window, SimState& state) {
     //        std::cout << "[System] Idle timeout reached. Returning to Intro Screen." << std::endl;
     //    }
     //}
+}
+
+// 冷切换只释放二维工作区，保留主程序的通用渲染资源和着色器。
+void releaseSeismicWorkspace2D(GLHandles& gl, SimState& state) {
+    state.running = false;
+    rec.isRecording = false;
+    g_autoAcq.state = AUTO_ACQ_IDLE;
+    g_replay.clear();
+    g_replay.state = REPLAY_IDLE;
+    releaseGpuSimulation(gpu_data);
+    is_seis_initialized = false;
+    if (gl.cudaSeisRes) cudaGraphicsUnregisterResource(gl.cudaSeisRes);
+    gl.cudaSeisRes = nullptr; gl.cudaSeisArray = nullptr;
+    cudaFree(gl.deviceWavefieldRgba); gl.deviceWavefieldRgba = nullptr; gl.wavefieldRgbaCapacity = 0;
+    if (gl.seisTex) glDeleteTextures(1, &gl.seisTex);
+    gl.seisTex = 0;
+    if (g_modelTex) glDeleteTextures(1, &g_modelTex);
+    g_modelTex = 0;
+    current_it = 0; accumulated_compute_time = 0;
+    g_resetSimRequested = g_resetViewportRequested = false;
 }
 
 //资源清理
@@ -1983,6 +1960,12 @@ void cleanup(GLHandles& gl) {
 
 //处理键盘操作
 void ProcessInput(GLFWwindow* window, SimConfig& cfg, SimState& state, GLHandles& gl) {
+    // 三维快捷键由三维状态机自己处理，不能修改二维全局画笔或运行状态。
+    if (state.currentScreen == AppScreen::SeisSim_3D) {
+        if (!ImGui::GetIO().WantTextInput && ImGui::IsKeyPressed(ImGuiKey_Tab, false))
+            state.currentScreen = AppScreen::Intro0;
+        return;
+    }
     // 只有在用户没有在任何 ImGui 文本框/输入框中编辑时，快捷键才起作用 (安全保护)
     if (!ImGui::GetIO().WantTextInput) {
 

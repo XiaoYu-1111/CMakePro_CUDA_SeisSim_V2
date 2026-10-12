@@ -177,12 +177,15 @@ static int runApplication() {
     SimConfig config;       // 程序配置
     GLHandles gl;           // OpenGL 资源句柄
     AsyncLoader g_loader;   // 后台加载器
+    Seis3D::Seis3D_State state3D; // CPU-only until the 3-D sandbox is initialized.
     GLFWwindow* window = nullptr;
     // 正常退出和异常展开共用清理路径；各资源句柄均从空状态开始。
     struct ApplicationCleanup {
         GLHandles& handles;
         GLFWwindow*& window;
+        Seis3D::Seis3D_State& sandbox3D;
         ~ApplicationCleanup() {
+            Seis3D::releaseSandbox3D(sandbox3D);
             g_nvml.Unload();
             cleanup(handles);
             if (ImGui::GetCurrentContext()) {
@@ -194,7 +197,7 @@ static int runApplication() {
             if (window) glfwDestroyWindow(window);
             glfwTerminate();
         }
-    } applicationCleanup{gl, window};
+    } applicationCleanup{gl, window, state3D};
 
     // -----------------------------------------------------------------------------
     // Stage 2: GLFW 与 OpenGL 窗口环境搭建
@@ -259,6 +262,7 @@ static int runApplication() {
     state.isIntroMode = true;
     glfwSwapInterval(state.vsyncEnabled ? 1 : 0);
     bool firstFramePresented = false;
+    AppScreen lastRenderedScreen = state.currentScreen;
 
     // =============================================================================
     // 主渲染循环
@@ -292,7 +296,16 @@ static int runApplication() {
         ProcessInput(window, config, state, gl);
 
         // 6. 场景渲染分发 (包含启动页与核心模拟页面)
-        RenderApp(state.currentScreen, state, info, winW, winH, gl, g_loader);
+        // Previous-frame draw commands have completed before deleting their textures.
+        // Release the old solver before the destination route can allocate any simulation fields.
+        if (state.currentScreen != lastRenderedScreen) {
+            if (lastRenderedScreen == AppScreen::SeisSim_GPU || lastRenderedScreen == AppScreen::SeisSim_3D)
+                glFinish(); // Synchronize only at mode transitions, not in the normal simulation loop.
+            if (lastRenderedScreen == AppScreen::SeisSim_GPU) releaseSeismicWorkspace2D(gl, state);
+            if (lastRenderedScreen == AppScreen::SeisSim_3D) Seis3D::releaseSandbox3D(state3D);
+        }
+        lastRenderedScreen = state.currentScreen;
+        RenderApp(state.currentScreen, state, info, winW, winH, gl, g_loader, state3D);
         state.isIntroMode = IsIntroScreen(state.currentScreen); // 同步页面标识
 
         // 7. GUI 指令集提交

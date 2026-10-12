@@ -1,4 +1,4 @@
-﻿# ==========================================
+# ==========================================
 # 1. 基础环境配置 (必须在 project 之前)
 # ==========================================
 cmake_minimum_required(VERSION 3.18) # 建议最低 3.18 以支持现代 CUDA 属性
@@ -69,6 +69,7 @@ set_target_properties(${TARGET_NAME} PROPERTIES
     CXX_STANDARD 20
     CXX_STANDARD_REQUIRED ON
     CUDA_STANDARD 17
+    CUDA_RUNTIME_LIBRARY Shared
     MSVC_DEBUG_INFORMATION_FORMAT Embedded
 )
 
@@ -164,7 +165,56 @@ target_link_libraries(${TARGET_NAME} PRIVATE
 source_group("Source Files\\CUDA" FILES ${CUDA_USER_SOURCES} ${CUDA_USER_HEADERS})
 source_group("Source Files\\ImGui" FILES ${IMGUIDocking_SRCS})
 
-# 无图形窗口的数值回归程序，直接调用生产 CUDA 求解器。
+# 三维求解与渲染拥有独立编译目标，不复用二维上下文或快速数学编译选项。
+add_library(Seis3D STATIC
+    "include/Common3D.h" "include/Seis3D_Sim.h"
+    "cuda/Cuda_Seis3D.cuh" "cuda/Cuda_Seis3D.cu" "src/Seis3D_Sim.cpp"
+    "src/Seis3D/Renderer3D.cpp" "src/Seis3D/Workspace3D.cpp"
+    "src/Seis3D/ModelIo3D.cpp" "src/Seis3D/Acquisition3D.cpp"
+    "src/Seis3D/Internal3D.h" "src/Seis3D/Visual3D.h")
+get_target_property(SEIS3D_SHARED_INCLUDE_DIRS ${TARGET_NAME} INCLUDE_DIRECTORIES)
+get_target_property(SEIS3D_SHARED_LINK_DIRS ${TARGET_NAME} LINK_DIRECTORIES)
+target_include_directories(Seis3D PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/cuda")
+target_include_directories(Seis3D PRIVATE ${SEIS3D_SHARED_INCLUDE_DIRS})
+target_link_directories(Seis3D PRIVATE ${SEIS3D_SHARED_LINK_DIRS})
+target_compile_definitions(Seis3D PRIVATE GLEW_STATIC)
+set_target_properties(Seis3D PROPERTIES CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON
+    CUDA_STANDARD 17 CUDA_RUNTIME_LIBRARY Shared MSVC_DEBUG_INFORMATION_FORMAT Embedded)
+if(MSVC)
+    target_compile_options(Seis3D PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/utf-8>
+        $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=/utf-8>)
+endif()
+target_link_libraries(Seis3D PRIVATE cudart.lib glew32s.lib opengl32.lib)
+target_link_libraries(${TARGET_NAME} PRIVATE Seis3D)
+source_group("Seis3D\\Workspace" FILES "src/Seis3D/Workspace3D.cpp" "src/Seis3D/Visual3D.h")
+source_group("Seis3D\\Rendering" FILES "src/Seis3D/Renderer3D.cpp")
+source_group("Seis3D\\Data IO" FILES "src/Seis3D/ModelIo3D.cpp" "src/Seis3D/Acquisition3D.cpp")
+file(GLOB SEIS3D_SHADER_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*")
+set_property(TARGET ${TARGET_NAME} APPEND PROPERTY LINK_DEPENDS ${SEIS3D_SHADER_FILES})
+add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different "${CMAKE_CURRENT_SOURCE_DIR}/shaders"
+        "$<TARGET_FILE_DIR:${TARGET_NAME}>/resource_Seis3D"
+    COMMENT "Deploying independent Seis3D shaders..." VERBATIM)
+
+# Optional focused graphics regression; runs without displaying an application window.
+option(SEIS3D_BUILD_WORKSPACE_CHECKS "Build CUDA/GL workspace regression" OFF)
+if(SEIS3D_BUILD_WORKSPACE_CHECKS)
+    add_executable(Seis3DWorkspaceRegression "tests/Seis3DWorkspaceRegression.cpp"
+        "Main_cpp/ResourcePaths.cpp" ${IMGUIDocking_SRCS})
+    target_include_directories(Seis3DWorkspaceRegression PRIVATE ${SEIS3D_SHARED_INCLUDE_DIRS} "${CMAKE_CURRENT_SOURCE_DIR}/src")
+    target_link_directories(Seis3DWorkspaceRegression PRIVATE ${SEIS3D_SHARED_LINK_DIRS})
+    target_compile_definitions(Seis3DWorkspaceRegression PRIVATE GLEW_STATIC)
+    set_target_properties(Seis3DWorkspaceRegression PROPERTIES CXX_STANDARD 20 MSVC_DEBUG_INFORMATION_FORMAT Embedded)
+    if(MSVC)
+        target_compile_options(Seis3DWorkspaceRegression PRIVATE /utf-8)
+    endif()
+    target_link_libraries(Seis3DWorkspaceRegression PRIVATE Seis3D glfw3.lib glew32s.lib opengl32.lib cudart.lib user32.lib gdi32.lib shell32.lib)
+    add_dependencies(Seis3DWorkspaceRegression ${TARGET_NAME})
+    add_test(NAME Seis3DWorkspaceRegression COMMAND Seis3DWorkspaceRegression)
+    set_tests_properties(Seis3DWorkspaceRegression PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 90)
+endif()
+
+# 无图形窗口的二维数值回归程序，直接调用生产 CUDA 求解器。
 if(SEISSIM_BUILD_SOLVER_TESTS)
     add_executable(SeisSimSolverRegression "tests/SolverRegression.cpp" ${CUDA_USER_SOURCES})
     get_target_property(SOLVER_TEST_INCLUDES ${TARGET_NAME} INCLUDE_DIRECTORIES)
