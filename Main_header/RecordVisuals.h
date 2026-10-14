@@ -7,6 +7,10 @@
 #include <cmath>
 
 namespace Seismic {
+// Reserve tick labels and the vertical title at the actual UI font size, including Chinese text.
+inline float recordColorbarWidth() {
+    return (std::max)(100.0f,ImGui::CalcTextSize("-1.00").x+ImGui::GetFontSize()*3);
+}
 struct SingleTracePlot {const std::vector<double>* times;const std::vector<double>* values;int lobe;};
 // Supply a true time/amplitude point, optionally restricted to one polarity for variable-area shading.
 inline ImPlotPoint singleTracePoint(int index,void* pointer) {

@@ -18,6 +18,7 @@
 #include "SeismicIO.h"
 #include "ResourcePaths.h"
 #include "AppWidgets.h"
+#include "AppShortcuts.h"
 #include "AppTheme.h"
 #include "AppInfo.h"
 #include "ShotExport2D.h"
@@ -196,6 +197,9 @@ void configureDocumentationWorkspace2D(int stage) {
     }
     dockPreset2D=stage==1?2:stage==2?0:1;resetDockLayout2D=true;
     if(stage==1) recordViewer2D.focusRequest=true;
-    if(stage==2) {selectExportTab2D=true;focusControls2D=true;}
+    if(stage==2) {
+        autoAcquisition2D.totalShots=3;autoAcquisition2D.startX=51;autoAcquisition2D.shotIntervalX=60;
+        selectExportTab2D=true;focusControls2D=true;
+    }
 }
 }

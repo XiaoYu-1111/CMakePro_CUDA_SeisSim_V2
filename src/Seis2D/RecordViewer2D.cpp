@@ -75,7 +75,8 @@ void drawRecordPlot2D(ViewerState2D& state) {
     ImPlot::PushStyleColor(ImPlotCol_AxisText,p.text);ImPlot::PushStyleColor(ImPlotCol_AxisGrid,AppUi::color(p.muted,.15f));
     const bool colorbar=state.viewMode==0&&state.showHeatmap&&ImGui::GetContentRegionAvail().x>320;
     const float height=std::max(120.0f,ImGui::GetContentRegionAvail().y);
-    const ImVec2 plotSize(std::max(100.0f,ImGui::GetContentRegionAvail().x-(colorbar?90:0)),height);
+    const float colorbarWidth=Seismic::recordColorbarWidth();
+    const ImVec2 plotSize(std::max(100.0f,ImGui::GetContentRegionAvail().x-(colorbar?colorbarWidth+ImGui::GetStyle().ItemSpacing.x:0)),height);
     Seismic::beginRecordNavigation(state.autoFit,state.fitRequest,plotSize);
     const auto palette=Seismic::recordColormap(state.palette);
     if(ImPlot::BeginPlot("Record###Seis2D.RecordPlot",plotSize,ImPlotFlags_NoTitle|ImPlotFlags_NoLegend)) {
@@ -121,7 +122,7 @@ void drawRecordPlot2D(ViewerState2D& state) {
         ImPlot::EndPlot();state.fitRequest=false;
     }
     if(colorbar) {ImGui::SameLine();ImPlot::ColormapScale(AppUi::text("Normalized amplitude"),-state.heatmapRange,state.heatmapRange,
-        ImVec2(80,height),"%.2f",ImPlotColormapScaleFlags_None,palette);}
+        ImVec2(colorbarWidth,height),"%.2f",ImPlotColormapScaleFlags_None,palette);}
     ImPlot::PopStyleColor(4);
 }
 }
@@ -144,7 +145,7 @@ void renderRecordViewer2D(ViewerState2D& state) {
     const bool visible=AppUi::Widgets::Begin("Seismic Data Analyzer###Seis2D.RecordViewer",&state.isOpen);
     if(visible) {
         try {
-            const bool compact=ImGui::IsWindowDocked()&&ImGui::GetWindowHeight()<600;
+            const bool compact=ImGui::IsWindowDocked()&&ImGui::GetWindowHeight()<42*ImGui::GetFontSize();
             if(compact&&AppUi::Widgets::Button("Record file / source")) ImGui::OpenPopup("Seis2D.RecordSource");
             const bool fileControls=compact?ImGui::BeginPopup("Seis2D.RecordSource"):
                 AppUi::Widgets::CollapsingHeader("Record file / source",ImGuiTreeNodeFlags_DefaultOpen);

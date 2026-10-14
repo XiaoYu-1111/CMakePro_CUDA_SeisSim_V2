@@ -138,7 +138,7 @@ void drawWorkspaceGuide(float scale) {
     ImGui::BeginChild("Workspace guide",ImVec2(0,(wide?64.0f:112.0f)*scale),ImGuiChildFlags_Borders);
     if(ImGui::BeginTable("Workspace guide columns",wide?2:1,ImGuiTableFlags_SizingStretchSame)) {
         ImGui::TableNextColumn();ImGui::PushFont(nullptr,14*scale);
-        AppUi::Widgets::TextColored(AppUi::functionColor(AppUi::FunctionRole::Model),"3D 起步建议");ImGui::SameLine();AppUi::Widgets::TextDisabled("96³ → 160³ → 300³");
+        AppUi::Widgets::TextColored(AppUi::functionColor(AppUi::FunctionRole::Model),"3D 起步建议");ImGui::SameLine();AppUi::Widgets::TextDisabled("300 × 50 × 300 / 200³ / 300³");
         ImGui::PushFont(nullptr,13*scale);AppUi::Widgets::TextDisabled("先使用小网格确认模型与震源；初始化前检查显存预算。");ImGui::PopFont();
         ImGui::TableNextColumn();AppUi::Widgets::TextColored(AppUi::functionColor(AppUi::FunctionRole::Display),"剖面操作");ImGui::SameLine();AppUi::Widgets::TextDisabled("滚轮缩放 · 中键平移 · 左键联动");
         ImGui::PushFont(nullptr,13*scale);AppUi::Widgets::TextDisabled("Reset view 恢复单剖面；Reset views 恢复全部视图。");ImGui::PopFont();
@@ -192,7 +192,8 @@ AppScreen drawHomeScreen(const GpuInfo& info,int width,int height) {
     AppUi::Widgets::TextColored(AppUi::functionColor(info.success?AppUi::FunctionRole::Simulation:AppUi::FunctionRole::Danger),info.success?"CUDA DEVICE READY":"CUDA DEVICE UNAVAILABLE");
     if(ImGui::BeginTable("DeviceSummaryColumns",2,ImGuiTableFlags_SizingStretchProp)) {
         ImGui::TableSetupColumn("Device",ImGuiTableColumnFlags_WidthStretch);
-        ImGui::TableSetupColumn("Details",ImGuiTableColumnFlags_WidthFixed,160*scale);
+        const float manualWidth=std::max(160*scale,ImGui::CalcTextSize(AppUi::label("Operating manual")).x+2*ImGui::GetStyle().FramePadding.x+12*scale);
+        ImGui::TableSetupColumn("Details",ImGuiTableColumnFlags_WidthFixed,manualWidth);
         ImGui::TableNextColumn();AppUi::Widgets::TextUnformatted(info.success?info.name:"未检测到可用 CUDA 设备");
         if(info.success) AppUi::Widgets::TextDisabled("%.1f GiB VRAM / SM %d.%d / %d multiprocessors",
             double(info.totalMem)/(1024.0*1024.0*1024.0),info.computeCapabilityMajor,info.computeCapabilityMinor,info.multiProcessorCount);

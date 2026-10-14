@@ -1,4 +1,5 @@
 #include "AppWidgets.h"
+#include "AppShortcuts.h"
 #include "Internal3D.h"
 #include "Visual3D.h"
 #include "imgui_internal.h"
@@ -39,9 +40,14 @@ bool functionButton3D(const char* label,AppUi::FunctionRole role,ImVec2 size=ImV
     return clicked;
 }
 
-// Preserve fold state unless the current panel explicitly requests all groups.
+// Seed the panel command with the window ID; BeginTabItem pushes a different widget ID scope.
+ImGuiID sectionCommandKey3D() {
+    return ImHashStr("Seis3D.SectionOverride",0,ImGui::GetCurrentWindow()->ID);
+}
+
+// Preserve each scoped header's fold state while reading the panel-wide command outside the tab scope.
 bool sectionHeader3D(const char* label,ImGuiTreeNodeFlags flags) {
-    const int command=ImGui::GetStateStorage()->GetInt(ImGui::GetID("Seis3D.SectionOverride"),0);
+    const int command=ImGui::GetStateStorage()->GetInt(sectionCommandKey3D(),0);
     if(command) ImGui::SetNextItemOpen(command==2,ImGuiCond_Always);
     return AppUi::Widgets::CollapsingHeader(label,flags);
 }
@@ -54,7 +60,7 @@ bool functionHeader3D(const char* label,AppUi::FunctionRole role,ImGuiTreeNodeFl
 
 // Apply expand/collapse only to the active panel during this frame, preserving every parameter.
 void drawSectionTools3D() {
-    auto* storage=ImGui::GetStateStorage();const auto key=ImGui::GetID("Seis3D.SectionOverride");
+    auto* storage=ImGui::GetStateStorage();const auto key=sectionCommandKey3D();
     storage->SetInt(key,0);
     if(AppUi::Widgets::SmallButton("Expand all")) storage->SetInt(key,2);
     ImGui::SameLine();if(AppUi::Widgets::SmallButton("Collapse all")) storage->SetInt(key,1);
@@ -365,9 +371,11 @@ void drawViewControls3D(Seis3D_State& s) {
     AppUi::Widgets::Combo(fieldLabel3D("Display").c_str(),&s.displayMode3D,"Model + wavefield\0Wavefield only\0Material only\0");
     int component=s.component3D;
     if(AppUi::Widgets::Combo(fieldLabel3D("Wave component").c_str(),&component,"Vz\0Vx\0Vy\0Velocity magnitude\0Pressure\0")) selectWaveComponent3D(s,component);
+    if(ImGui::IsItemHovered()) AppUi::Widgets::SetTooltip("W: next component | Shift+W: previous. Display gain is retained.");
     AppUi::Widgets::TextWrapped("Velocity components share one |V| reference. Pressure keeps its own Pa scale. Gains are retained.");
     if(s.component3D<3) AppUi::Widgets::TextWrapped("A signed component can be near zero on a symmetry plane. Use velocity magnitude to inspect all wavefronts.");
     AppUi::Widgets::Combo(fieldLabel3D("Wave palette").c_str(),&s.waveStyle3D,waveStyleNames3D);
+    if(ImGui::IsItemHovered()) AppUi::Widgets::SetTooltip("Q: next wave palette | Shift+Q: previous.");
     AppUi::Widgets::SliderFloat(fieldLabel3D("Display gain").c_str(),&s.gain3D,0.1f,20.0f,"%.2f",ImGuiSliderFlags_Logarithmic|ImGuiSliderFlags_AlwaysClamp);
     }
     if(functionHeader3D("AMPLITUDE REFERENCE",AppUi::FunctionRole::Display)) {
@@ -399,7 +407,8 @@ void drawViewControls3D(Seis3D_State& s) {
     if(functionHeader3D("GEOLOGICAL MATERIAL",AppUi::FunctionRole::Model)) {
     int material=s.materialComponent3D-5;
     if(AppUi::Widgets::Combo(fieldLabel3D("Property").c_str(),&material,"Vp (m/s)\0Vs (m/s)\0Density (kg/m3)\0")) {s.materialComponent3D=material+5;s.dirty3D=true;}
-    AppUi::Widgets::Combo(fieldLabel3D("Model palette").c_str(),&s.modelStyle3D,"Dark Titanium\0Geological Map\0Grayscale Velocity\0WaveStyle Synced\0Scientific White\0");
+    AppUi::Widgets::Combo(fieldLabel3D("Model palette").c_str(),&s.modelStyle3D,modelStyleNames3D);
+    if(ImGui::IsItemHovered()) AppUi::Widgets::SetTooltip("E: next model palette | Shift+E: previous.");
     AppUi::Widgets::SliderFloat(fieldLabel3D("Model backdrop brightness").c_str(),&s.materialBrightness3D,.2f,1,"%.2f",ImGuiSliderFlags_AlwaysClamp);
     AppUi::Widgets::Checkbox("Auto material range (visible data)",&s.materialRangeAuto3D);
     if(!s.materialRangeAuto3D) {
@@ -637,16 +646,67 @@ void buildDockLayout3D(Seis3D_State& s,ImGuiID dockId,ImVec2 size) {
     std::fill_n(s.panelsOpen3D,7,true);s.resetLayout3D=false;
 }
 
+// Use the same state transitions as the controls; display shortcuts never apply preset defaults.
+bool handleWorkspaceShortcuts3D(Seis3D_State& s) {
+    if(!AppUi::workspaceShortcutsAvailable(true)) return false;
+    const bool reverse=ImGui::GetIO().KeyShift;
+    if(ImGui::IsKeyPressed(ImGuiKey_Q,false))
+        s.waveStyle3D=AppUi::cycleDisplaySelection(s.waveStyle3D,waveStyleCount3D,reverse);
+    if(ImGui::IsKeyPressed(ImGuiKey_W,false))
+        selectWaveComponent3D(s,AppUi::cycleDisplaySelection(s.component3D,waveComponentCount3D,reverse));
+    if(ImGui::IsKeyPressed(ImGuiKey_E,false))
+        s.modelStyle3D=AppUi::cycleDisplaySelection(s.modelStyle3D,modelStyleCount3D,reverse);
+    if(reverse) return false;
+    if(ImGui::IsKeyPressed(ImGuiKey_Space,false)&&s.ready3D) performAction3D(s,[&]{toggleSimulation3D(s);});
+    if(ImGui::IsKeyPressed(ImGuiKey_N,false)&&s.ready3D) {s.running3D=false;s.singleStep3D=true;}
+    if(ImGui::IsKeyPressed(ImGuiKey_C,false)&&s.ready3D&&!s.recording3D&&!s.sequence3D)
+        performAction3D(s,[&]{restartSimulation3D(s,false);});
+    if(ImGui::IsKeyPressed(ImGuiKey_R,false)) {resetSliceViews3D(s);s.camera3D=VolumeCamera3D{};}
+    if(ImGui::IsKeyPressed(ImGuiKey_G,false)) s.showGrid3D=!s.showGrid3D;
+    if(ImGui::IsKeyPressed(ImGuiKey_B,false)) {s.showBoundary3D=!s.showBoundary3D;resetSliceViews3D(s);s.dirty3D=true;}
+    if(ImGui::IsKeyPressed(ImGuiKey_V,false)) {s.showVolume3D=!s.showVolume3D;s.dirty3D=true;}
+    return ImGui::IsKeyPressed(ImGuiKey_F1,false);
+}
+
+// Keep keyboard commands discoverable in both languages without adding permanent panel clutter.
+void drawShortcutHelp3D() {
+    const auto size=ImGui::GetMainViewport()->WorkSize;
+    ImGui::SetNextWindowSize(ImVec2((std::min)(650.0f,(std::max)(240.0f,size.x-24)),0),ImGuiCond_Appearing);
+    ImGui::SetNextWindowSizeConstraints(ImVec2(0,0),ImVec2((std::max)(240.0f,size.x-24),(std::max)(160.0f,size.y-24)));
+    if(!ImGui::BeginPopup("KeyboardShortcuts3D")) return;
+    AppUi::Widgets::SeparatorText("3D keyboard shortcuts");
+    const char* rows[][2]={
+        {"Q / Shift+Q","Next / previous wave palette"},
+        {"W / Shift+W","Next / previous wave component"},
+        {"E / Shift+E","Next / previous model palette"},
+        {"Space","Run / pause"},{"N","Advance one solver step"},
+        {"C","Reset wavefield and pause"},{"R","Fit all slices and reset camera"},
+        {"G","Show / hide physical grid"},{"B","Show / hide boundary layers"},
+        {"V","Enable / disable volume rendering"},{"F1","Open shortcut help"},
+        {"Tab","Return to Home"}};
+    if(ImGui::BeginTable("ShortcutTable3D",2,ImGuiTableFlags_RowBg|ImGuiTableFlags_BordersInnerH|ImGuiTableFlags_SizingStretchProp,
+        ImVec2((std::max)(200.0f,(std::min)(610.0f,size.x-64)),0))) {
+        ImGui::TableSetupColumn("Keys",ImGuiTableColumnFlags_WidthFixed,ImGui::GetFontSize()*9);
+        ImGui::TableSetupColumn("Action",ImGuiTableColumnFlags_WidthStretch,1);
+        for(const auto& row:rows) {
+            ImGui::TableNextRow();ImGui::TableNextColumn();ImGui::TextUnformatted(row[0]);
+            ImGui::TableNextColumn();AppUi::Widgets::TextWrapped("%s",row[1]);
+        }
+        ImGui::EndTable();
+    }
+    ImGui::PushTextWrapPos(ImGui::GetCursorPosX()+ImGui::GetFontSize()*34);
+    AppUi::Widgets::TextWrapped("Shortcuts are suspended while editing controls or using popups. Ctrl / Alt combinations are reserved. Color and component switches retain gains, opacity and raw data.");
+    ImGui::PopTextWrapPos();
+    if(AppUi::Widgets::Button("Close")) ImGui::CloseCurrentPopup();
+    ImGui::EndPopup();
+}
+
 // Compose an isolated, persistent dockspace with a fixed toolbar and compact physical status bar.
 bool renderScreen3D(Seis3D_State& s,int width,int height) {
     (void)width;(void)height;
     ImGui::PushFont(nullptr,ImGui::GetFontSize()*(std::clamp)(s.fontScale3D,.85f,1.25f));
     s.homeRequested3D=false;
-    if(!ImGui::GetIO().WantTextInput&&!ImGui::IsAnyItemActive()) {
-        if(ImGui::IsKeyPressed(ImGuiKey_Space,false)&&s.ready3D) performAction3D(s,[&]{toggleSimulation3D(s);});
-        if(ImGui::IsKeyPressed(ImGuiKey_C,false)&&s.ready3D&&!s.recording3D) performAction3D(s,[&]{restartSimulation3D(s,false);});
-        if(ImGui::IsKeyPressed(ImGuiKey_R,false)) {resetSliceViews3D(s);s.camera3D=VolumeCamera3D{};}
-    }
+    const bool shortcutHelpRequested=handleWorkspaceShortcuts3D(s);
     if(ImGui::GetTime()-s.memoryRefreshTime3D>1) {
         s.memoryRefreshTime3D=ImGui::GetTime();
         if(cudaMemGetInfo(&s.freeVram3D,&s.totalVram3D)!=cudaSuccess) s.freeVram3D=s.totalVram3D=0;
@@ -692,6 +752,9 @@ bool renderScreen3D(Seis3D_State& s,int width,int height) {
     }
     continueToolbar3D("Reset views");if(functionButton3D("Reset views",AppUi::FunctionRole::Display)) {resetSliceViews3D(s);s.camera3D=VolumeCamera3D{};}
     if(ImGui::IsItemHovered()) AppUi::Widgets::SetTooltip("Fit all three slices and reset the orbit camera (R). Keeps wavefield and slice positions.");
+    continueToolbar3D("Shortcuts (F1)");
+    if(functionButton3D("Shortcuts (F1)",AppUi::FunctionRole::Navigation)||shortcutHelpRequested) ImGui::OpenPopup("KeyboardShortcuts3D");
+    drawShortcutHelp3D();
     continueToolbar3D("PAUSED | 000 FPS | 000.00 ms/batch");
     AppUi::Widgets::TextColored(AppUi::functionColor(s.recording3D?AppUi::FunctionRole::Acquisition:s.running3D?AppUi::FunctionRole::Simulation:AppUi::FunctionRole::Warning),
         "%s",s.recording3D?"CAPTURING":s.running3D?"RUNNING":s.ready3D?"PAUSED":"SETUP");

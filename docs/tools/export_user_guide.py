@@ -9,6 +9,7 @@ from pathlib import Path
 
 from docx import Document
 from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT
+from docx.enum.section import WD_ORIENT, WD_SECTION_START
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
@@ -21,16 +22,18 @@ SOURCE = ROOT / "docs/user/Seis3D_User_Guide.md"
 DEFAULT_OUTPUT = WORKSPACE_ROOT / "out/docs/Seis3D_User_Guide.docx"
 CONTENT_WIDTH = 6.7
 INLINE_TOKEN = re.compile(r"(\*\*.*?\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))")
-IMAGE_WIDTHS = {
-    "home-paper.png": 6.7,
-    "workspace-overview.png": 6.7,
-    "toolbar.png": 6.7,
-    "simulation-controls.png": 2.65,
-    "inline-slice.png": 3.8,
-    "display-controls.png": 2.60,
-    "spatial-volume.png": 3.65,
-    "receiver-traces.png": 6.7,
-}
+
+def configure_page(section, illustrated: bool = False) -> None:
+    """Use A4 prose and A3 landscape original screenshots with consistent margins."""
+    section.orientation = WD_ORIENT.LANDSCAPE if illustrated else WD_ORIENT.PORTRAIT
+    section.page_width = Cm(42 if illustrated else 21)
+    section.page_height = Cm(29.7)
+    section.top_margin = Cm(1.5 if illustrated else 1.75)
+    section.bottom_margin = Cm(1.5 if illustrated else 1.75)
+    section.left_margin = Cm(1.5 if illustrated else 1.98)
+    section.right_margin = Cm(1.5 if illustrated else 1.98)
+    section.header_distance = Cm(0.65)
+    section.footer_distance = Cm(0.75)
 
 
 def set_font(font, size: float, bold: bool = False, color: str = "000000") -> None:
@@ -195,14 +198,7 @@ def add_table(document, lines: list[str], output: Path) -> None:
 def configure_document(document) -> None:
     """Apply the restrained Paper manual typography and page geometry."""
     section = document.sections[0]
-    section.page_width = Cm(21)
-    section.page_height = Cm(29.7)
-    section.top_margin = Cm(1.75)
-    section.bottom_margin = Cm(1.75)
-    section.left_margin = Cm(1.98)
-    section.right_margin = Cm(1.98)
-    section.header_distance = Cm(0.65)
-    section.footer_distance = Cm(0.75)
+    configure_page(section)
     normal = document.styles["Normal"]
     set_font(normal.font, 10.5)
     normal.paragraph_format.line_spacing = 1.18
@@ -251,6 +247,7 @@ def export_guide(output: Path) -> tuple[int, int]:
     list_ordered = None
     images = 0
     chapters = 0
+    illustrations: dict[Path, str] = {}
     while index < len(lines):
         line = lines[index].strip()
         if not line:
@@ -262,24 +259,32 @@ def export_guide(output: Path) -> tuple[int, int]:
             index += 1
             continue
         if line.startswith("# "):
-            document.add_paragraph(line[2:], style="Title")
+            document.add_paragraph("SeisWave Lab · Seis3D", style="Title")
+            document.add_paragraph("三维地震波模拟使用说明", style="Heading 1")
         elif line.startswith("## "):
             paragraph = document.add_paragraph(line[3:], style="Heading 1")
             paragraph.paragraph_format.page_break_before = page_break
             page_break = False
             chapters += 1
             list_number = None
+        elif line.startswith("### "):
+            document.add_paragraph(line[4:], style="Heading 2")
+            list_number = None
         elif line.startswith("!["):
             match = re.fullmatch(r"!\[([^\]]*)\]\(([^)]+)\)", line)
             if not match:
                 raise ValueError(f"Unsupported image syntax: {line}")
             path = (SOURCE.parent / match[2]).resolve()
-            paragraph = document.add_paragraph()
-            paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            paragraph.paragraph_format.space_after = Pt(4)
-            paragraph.paragraph_format.keep_with_next = True
-            picture = paragraph.add_run().add_picture(str(path), width=Inches(IMAGE_WIDTHS.get(path.name, CONTENT_WIDTH)))
-            picture._inline.docPr.set("descr", match[1])
+            caption_text = match[1]
+            next_index = index + 1
+            while next_index < len(lines) and not lines[next_index].strip():
+                next_index += 1
+            if next_index < len(lines) and re.match(r"^图\d+\u3000", lines[next_index].strip()):
+                caption_text = lines[next_index].strip()
+                index = next_index
+            caption = document.add_paragraph(style="Caption")
+            add_inline(caption, f"截图{path.name[:2]}（完整窗口见附录）：{caption_text}", output)
+            illustrations.setdefault(path, caption_text)
             images += 1
             list_number = None
         elif line.startswith("|"):
@@ -311,9 +316,22 @@ def export_guide(output: Path) -> tuple[int, int]:
             add_inline(paragraph, line, output)
             list_number = None
         index += 1
+    document.add_paragraph("附录：完整窗口截图", style="Heading 1")
+    document.add_paragraph("截图按软件流程排列，每幅独占A3横向页。全部嵌入原始PNG，不裁切、不重采样、保持宽高比例；正文中的截图编号对应文件名前两位。")
+    for path, caption_text in sorted(illustrations.items()):
+        configure_page(document.add_section(WD_SECTION_START.NEW_PAGE), illustrated=True)
+        paragraph = document.add_paragraph()
+        paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        paragraph.paragraph_format.space_after = Pt(4)
+        paragraph.paragraph_format.keep_with_next = True
+        picture = paragraph.add_run().add_picture(str(path), width=Cm(39))
+        picture._inline.docPr.set("descr", caption_text)
+        caption = document.add_paragraph(style="Caption")
+        caption.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        add_inline(caption, f"截图{path.name[:2]}　{caption_text}", output)
     output.parent.mkdir(parents=True, exist_ok=True)
     document.save(output)
-    return chapters, images
+    return chapters, len(illustrations)
 
 
 def main() -> None:

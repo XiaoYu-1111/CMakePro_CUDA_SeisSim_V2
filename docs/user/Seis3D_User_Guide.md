@@ -1,36 +1,36 @@
-# SeisWave Lab · Seis3D 三维地震波模拟使用说明
+# SeisWave Lab Seis3D 三维地震波模拟使用说明
 
-适用软件 SeisWave Lab v2.0.0　三维模块 Seis3D　更新日期 2026 年 10 月 14 日
+适用软件 SeisWave Lab v2.0.0　三维模块 Seis3D　更新日期 2026 年 10 月 15 日
 
 本文说明如何建立三维弹性介质模型、运行波场、查看正交剖面与体视图，以及采集和导出三分量地震记录。示例统一使用 Paper Sand 界面与 Paper scientific 显示预设，模型采用浅色分层，波场采用蓝红配色。
 
 二维沙盒的新查看器、模型到采集流程和实际截图见 [二维模拟与地震记录指南](Seis2D_User_Guide.md)。二维与三维现在共用无状态滑窗 RMS AGC 处理函数，计算上下文、原始记录和显示设置仍独立；本指南的三维控件位置保持不变。
 
-当前版本提供九种模型预设、三种边界模式、实际 CPML 显示和可调大字号，并增加功能颜色、十套界面主题及大模型体视图透明度补偿。下文局部实图保留此前 Paper 会话；新版整体界面见第 2 节，以操作文字和程序标签为准。
+当前版本提供九种模型预设、三种边界模式、实际 CPML 显示和可调大字号，并增加功能颜色、十套界面主题及大模型体视图透明度补偿。本文图片已全部替换为当前版本的完整窗口 PNG，原始分辨率 2560×1494，不裁切、不拉伸、不生成局部放大图。
 
-本轮增加中英文切换和紧凑参数分组。英文标签与中文标签对应同一功能；本文保留英文操作名称，便于对照两种语言和此前截图。
+本轮截图覆盖模型、时步、震源、接收布设、采集、记录分析和文件导入导出，并展示六种波场色带。英文标签与中文标签对应同一功能；本文保留英文操作名称，便于对照中文实际截图。
 
-当前初始设置为 **Vz + Geological layers（地质分层）+ Coolwarm**，历史峰值保持关闭；默认物理网格 **300×50×300**，每炮 **1000 样点**、采样步数间隔 2；接收排列 **X 向每排 50 道、Y 向 3 排，共 150 道**，接收总上限 **300 道**。排列按网格自动居中，默认 X=27+5i（i=0…49）、Y=1/24/47、Z=0。已有截图和视频保留演示时的 96³、10×10 排列，当前默认值以本段为准。修改视觉预设仍保留已调增益；重置显示参数会采用当前预设的默认值，并关闭历史峰值保持。
+当前初始设置为 **Vz + Geological layers（地质分层）+ Coolwarm**，历史峰值保持关闭；默认物理网格 **300×50×300**，每炮 **1000 样点**、采样步数间隔 2；接收排列 **X 向每排 50 道、Y 向 3 排，共 150 道**，接收总上限 **300 道**。默认网格中的排列为 X=27+5i（i=0…49）、Y=1/24/47、Z=0。修改视觉预设保留已调增益；重置显示参数会采用当前预设的默认值，并关闭历史峰值保持。
+
+**本次截图参数：** 200³ 双层模型、10 m 间距、20 Hz、0.5 ms 手动步长、50×3 接收排列。中文界面采用 Paper Sand，波场采用 Paper scientific 配色与 1.8 倍显示增益。六种色带比较使用同一暂停时刻：第480步、0.240 s；深度切片移到 Z=70 格（700 m），避免 Vz 位于震源对称面而接近零。各剖面均为100%适配，文字倍率1.0。记录分析使用软件自身的 Receiver focus 布局，图片未做外部放大。全部33张原图见[完整窗口截图集](Seis3D_Screenshot_Gallery.md)。
 
 模型设置到采集、AGC 对比和 SEG-Y 导出的真实界面录像及中文字幕见[三维实操视频教程](Seis3D_Video_Tutorial.md)。
 
 ## 1 首页与模式选择
 
-![图1 Paper Sand 首页](../assets/seis3d/home-paper.png)
+![图1 Paper Sand 首页](../assets/seis3d/full/01-home.png)
 
 图1　Paper Sand 首页实际截图。右侧卡片进入三维空间探索沙盒。
 
 首页显示当前 CUDA 设备、显存容量和二维与三维两个独立入口。选择 **进入三维工作区** 打开 Seis3D；选择二维卡片则进入原二维模拟流程。
 
-设备摘要右侧入口现为 **Operating manual / 操作手册**。手册分为快速开始、模型与边界、震源与采集、波场与地震记录、导入与导出、鼠标操作与排查，以及关于 SeisWave Lab 七章，支持中英文切换、滚动阅读及直接进入三维沙盒。“关于”页显示软件名称、版本号、Seis3D 模块名称、技术栈与许可证信息。发布版程序为外层 `out/bin/RelWithDebInfo/SeisWaveLab.exe`；此前截图和视频保留旧窗口标题。
+设备摘要右侧入口为 **Operating manual / 操作手册**。手册包含快速开始、模型与边界、震源与采集、波场与地震记录、导入与导出、鼠标操作与排查、二维模拟与记录，以及关于 SeisWave Lab，共八章。支持中英文切换、滚动阅读及直接进入沙盒。“关于”页显示名称、版本号、Seis3D、技术栈与许可证。发布程序位于外层 `out/bin/RelWithDebInfo/SeisWaveLab.exe`。
+
+![内置操作手册](../assets/seis3d/full/30-operating-manual.png)
 
 主题菜单位于首页右上角。选择 **Paper Sand** 后，界面采用暖白底色、深灰文字和青绿色控件。进入三维后，在 **Display / materials → Visual preset** 中选择 **Paper scientific**，模型与波场会使用配套的浅色画布。
 
 界面现有十套主题，新增 **Arctic Lab**（冷白蓝灰）与 **Warm Ivory**（暖白铜色），均适合浅色科研界面。主题只改变界面；模型与波场配色仍在显示设置中独立选择。
-
-![Arctic Lab 首页](../assets/seis3d/home-arctic-lab.png)
-
-![Warm Ivory 首页](../assets/seis3d/home-warm-ivory.png)
 
 本指南依次介绍工作区、快速运行、参数与震源、剖面交互、显示设置、体视图、采集导出、模型与计算边界，以及常见问题。
 
@@ -42,17 +42,15 @@
 
 语言即时生效，偏好保存在程序旁的 `ui_language.ini`，重新启动后读取。切换保留三维停靠位置、分组折叠状态、已调显示增益、模拟进度和采集数据。文件名、物理符号、SI 单位和标准色带名称保持原有标识；部分历史页面说明及底层诊断仍保留原文。
 
-![新版英文首页](../assets/seis3d/home-bilingual-en.png)
-
-![新版中文首页](../assets/seis3d/home-bilingual-zh.png)
+![英文首页完整窗口](../assets/seis3d/full/29-home-english.png)
 
 <!-- pagebreak -->
 
 ## 2 三维工作区总览
 
-![图2 三维四视图](../assets/seis3d/workspace-overview.png)
+![图2 三维四视图](../assets/seis3d/full/08-wavefield.png)
 
-图2　96³ 双层模型的实际运行界面。示例时刻约 0.1453 s，计算到第 160 步，采集预览已有 80 个样本。
+图2　200³ 双层模型，模拟时间0.240 s、第480步，Live监视已有60个计算批次预览点。三剖面均为100%适配，源位于[100,100,50]。
 
 | 区域 | 显示内容 | 常用操作 |
 | --- | --- | --- |
@@ -68,17 +66,17 @@
 
 三维字号由约 18 像素提高到约 21 像素，标尺字号同时增大。**Workspace → Text size** 或显示面板的 **Workspace text size** 可在 0.85–1.25 倍之间调整。重新应用布局预设时，参数列宽依据字号计算；已有停靠布局保持不变。参数按网格、边界、模型、时间稳定性折叠分组，顶部工具栏在窄窗口自动换行。
 
-### 紧凑操作面板
+### 参数分组与折叠
 
 模拟和显示面板顶部提供 **Expand all / Collapse all（展开全部 / 折叠全部）**，作用于当前显示的面板或控制标签。点击分组标题可单独展开；切换语言保留当前折叠状态。折叠只改变界面，不恢复参数默认值。
 
 模拟参数中的网格、边界、材料、稳定性和显存明细默认收起；**RUN / ITERATION（运行与迭代）** 默认展开。初始化/重建按钮、网格摘要、当前边界和参数错误提示持续可见。模型的次级材料与几何参数为内部折叠组。
 
-![中文紧凑模拟面板](../assets/seis3d/workspace-compact-zh.png)
+![网格与模型参数完整窗口](../assets/seis3d/full/02-model.png)
 
 显示面板默认展开 **WAVEFIELD / GAIN（波场分量与增益）**。幅值参考、弱波显示、地质材质、网格边界叠加、体绘制性能、视图操作和色带分别收起，按需展开。**Visual preset（视觉预设）** 与 **Reset display parameters（统一重置显示参数）** 保持独立；切换预设仍只改变配色。
 
-![中文紧凑显示面板](../assets/seis3d/display-compact-zh.png)
+![分量与显示参数完整窗口](../assets/seis3d/full/09-style-coolwarm.png)
 
 采集页将文件导入、接收排列、世界坐标/CMP、记录采样和多测线放炮分组。采集按钮、采集进度、停止采集及已有记录导出操作保留在分组之外，避免折叠后找不到停止按钮。首次编辑参数时，先展开对应标题，或点击展开全部。
 
@@ -94,7 +92,7 @@
 | 边界与暂停提示 | 琥珀色 |
 | 重置、停止和错误 | 红色 |
 
-![新版功能颜色与浅色体视图](../assets/seis3d/workspace-function-colors.png)
+![体绘制参数完整窗口](../assets/seis3d/full/16-volume-settings.png)
 
 <!-- pagebreak -->
 
@@ -120,18 +118,20 @@
 1. 在首页进入三维工作区，打开 **Simulation** 标签。
 2. 展开 **GRID / RESOLUTION** 与 **MODEL / MATERIAL**，保留 300 / 50 / 300 和 **Two layers**；在边界组确认 12 格 CPML，保留 10 m 间距。
 3. 点击 **Initialize 3D**。已有会话时按钮显示 **Rebuild 3D session**。检查底部没有错误提示。
-4. 打开 **Display / materials**，初始为 **Geological layers + Coolwarm + Vz**。界面主题可选 **Paper Sand**；若要复现旧图，切换 **Paper scientific** 并按图调整参数。
+4. 打开 **Display / materials**，初始为 **Geological layers + Coolwarm + Vz**。界面主题可选 **Paper Sand**；若要复现本文演示，切换 **Paper scientific** 并按图调整参数。
 5. 点击 **Run**。程序发射震源，并在底部生成真实接收点的实时波形；也可点击 Step 单步推进。
 6. 点击 Pause 暂停观察，使用剖面滑块、滚轮和中键探索波场。
 7. 需要正式道集时点击 **Fire + capture**。普通 Run 的实时预览与正式采集分别保存。
 
-![图3 顶部控制栏](../assets/seis3d/toolbar.png)
+![图3 运行与顶部控制栏完整窗口](../assets/seis3d/full/08-wavefield.png)
 
 图3　顶部运行与采集控制。达到停止步数后，Run 会变为 Replay，用于重新发射震源。
 
-初始化会根据模型最大 Vp 自动同步安全时步。该双层示例的时步为 0.908 ms；具体值以当前模型的状态显示为准。说明书截图使用每帧 8 步，普通默认值为每帧 2 步。
+自动模式会根据最大 Vp 同步安全步长，该双层模型上限约0.908 ms；截图演示手动选择0.5 ms。截图计算阶段使用每帧8步，正式记录完成后恢复为2步；软件普通默认值仍为每帧2步。
 
 ### 3.1 手动设置整齐的时间步长
+
+![安全时步与预算完整窗口](../assets/seis3d/full/03-stability.png)
 
 在 **Simulation → TIME / STABILITY → Solver time step** 选择 **Manual (ms)**，输入如 **0.5 ms**，再点击 **Rebuild 3D session**。提供 0.25、0.5、1 ms 快捷值；所有输入仍须满足当前模型的 CFL 安全上限，1 ms 对默认双层模型并不安全。默认继续使用 **Automatic CFL**，不会自动改为 0.5 ms。
 
@@ -153,9 +153,9 @@
 
 ## 4 模型参数与震源
 
-![图4 计算参数](../assets/seis3d/simulation-controls.png)
+![图4 计算参数完整窗口](../assets/seis3d/full/02-model.png)
 
-图4　Simulation 参数区局部截图。正式采集中，模型与震源相关参数锁定，控件显示为禁用状态。
+图4　Simulation 参数区与全部视图同屏展示，200³网格和双层物性清楚可见。正式采集中模型与震源参数锁定。
 
 **Simulation** 设置网格、间距、CPML、自由表面和材料。Vp 与 Vs 的单位为 m/s，密度单位为 kg/m³；Layer / sphere material 可设置第二层或球形异常体的物性。模型参数变更后需要重新初始化会话。
 
@@ -177,6 +177,8 @@
 
 这些是教学与算法探索用合成模型。背景物性在主输入区设置，第二介质或底部端点在 **Secondary / bottom material** 中设置。几何参数位于 **Model geometry (domain fractions)**，数值表示相对物理模型尺寸的比例。
 
+![断层模型完整窗口](../assets/seis3d/full/28-model-fault.png)
+
 ### 4.2 边界模式
 
 在 **BOUNDARY CONDITIONS → Boundary mode** 中选择：
@@ -191,7 +193,21 @@
 
 CPML 厚度在吸收模式下可调；反射模式保留该设置供切回吸收时使用，但不参与反射计算。修改模式或厚度后需要重建会话，顶部与参数区的 Live boundary 显示当前真正运行的边界。
 
+![自由顶面与五面吸收设置](../assets/seis3d/full/31-boundary-settings.png)
+
+![六面全吸收设置](../assets/seis3d/full/32-all-absorbing.png)
+
+![六面滑移反射设置](../assets/seis3d/full/33-all-reflecting.png)
+
+这三张完整窗口展示实际初始化后的边界模式与范围，不作为吸收反射误差的定量比较。
+
+
+
+![边界层可视化：剖面显示物理区外的CPML，独立于物理边界设置](../assets/seis3d/full/17-boundary-visible.png)
+
 ### 4.3 震源
+
+![震源设置完整窗口](../assets/seis3d/full/04-source.png)
 
 **Source** 设置震源格点 XYZ、机制和幅值。爆炸源的幅值单位为 Pa/s，定向体力源为 N/m³；体力源可设置方向并使用 Normalize direction 归一化。Center slices on source 将三个剖面移到震源处，Reset wavefield + fire 从新波场开始发射。
 
@@ -211,7 +227,7 @@ CPML 厚度在吸收模式下可调；反射模式保留该设置供切回吸收
 
 ## 5 正交剖面与坐标拾取
 
-![图5 Inline 剖面](../assets/seis3d/inline-slice.png)
+![图5 三剖面完整窗口](../assets/seis3d/full/15-component-magnitude.png)
 
 图5　浅色双层材料上的速度幅值波场。标尺单位为米，交叉线指示联动的剖面位置。
 
@@ -235,17 +251,17 @@ CPML 厚度在吸收模式下可调；反射模式保留该设置供切回吸收
 
 关闭此开关后，视图裁切回物理模型；不会关闭 CPML 计算，也不会改变网格、时步或接收记录。切换显示时重置剖面视图，随后仍支持滚轮缩放和平移。CPML 区域的标尺允许负坐标，悬停显示边界提示，不允许在吸收区布设源检或联动到域外格点。Boundary tint opacity 仅控制边界颜色透明度。
 
-本例 96 个节点、10 m 间距，节点中心的坐标范围为 0 至 950 m。差分保护层与模型外部 CPML 填充层不属于导出模型的物理节点。
+本次截图每轴200个物理节点、10 m间距，节点中心坐标为0至1990 m。深度切片位置为700 m。差分保护层与模型外部CPML不属于导出模型的物理节点。
 
 <!-- pagebreak -->
 
 ## 6 显示样式与模型材质
 
-![图6 浅色显示设置](../assets/seis3d/display-controls.png)
+![图6 浅色显示设置完整窗口](../assets/seis3d/full/09-style-coolwarm.png)
 
-图6　Paper Sand 与 Paper scientific 配套设置。局部截图展示分量、色带、增益及材料选项。
+图6　Paper Sand与Paper scientific配套设置，完整窗口展示分量、色带、增益、材料选项及实际波场。
 
-推荐组合为 **Paper Sand + Paper scientific**。该预设使用 Scientific White 浅色材料、Coolwarm 蓝红色带和浅色体视图背景，显示速度幅值。Display gain 为 1.8，Wave opacity 为 1.0，Weak wave visibility 为 0.50，材料背景亮度为 1.0。
+推荐组合为 **Paper Sand + Paper scientific**。该预设的完整重置值使用Scientific White浅色材料、Coolwarm色带和浅色体视图背景，分量为速度幅值；本次演示在重置后选回Vz，便于对照正负极性。Display gain 为 1.8，Wave opacity 为 1.0，Weak wave visibility 为 0.50，材料背景亮度为 1.0。
 
 **Visual preset 切换现在只改变波场和模型色带**，保留当前分量、组合模式、波场/体视图增益、自动或手动尺度、透明度、阈值、材料范围、体视图配方及其他已调参数；顶部 Workspace 菜单中的同名选项行为一致。需要预设的完整默认效果时，点击下方红色 **Reset display parameters**，按当前选中的预设统一恢复显示参数。上述 Paper 参数为点击重置后的默认值。此操作不改变物理模型、运行步数或采集数据；显示边界层会被关闭，如此前开启则剖面重新适配物理区。字体、主题和轨道相机保持当前选择。
 
@@ -261,9 +277,36 @@ Weak wave visibility 数值越小，弱波越明显；Wave cutoff 过滤低幅�
 
 <!-- pagebreak -->
 
+### 同一波场的六种色带
+
+以下完整窗口使用相同物理场、Vz分量、1.8倍显示增益与材料背景，均暂停于第480步（0.240s）。这里只改变波场色带，采集数据不随颜色变化。发散色带适合辨认正负极性；顺序色带用于观察强弱分布时应结合图例。
+
+
+![Coolwarm：蓝红发散配色](../assets/seis3d/full/09-style-coolwarm.png)
+
+
+
+![Seismic Bipolar：红白蓝极性](../assets/seis3d/full/10-style-bipolar.png)
+
+
+
+![Viridis：紫绿黄渐变](../assets/seis3d/full/11-style-viridis.png)
+
+
+
+![Turbo：多色高对比渐变](../assets/seis3d/full/12-style-turbo.png)
+
+
+
+![Inferno：紫红黄渐变](../assets/seis3d/full/13-style-inferno.png)
+
+
+
+![CUDA Green：绿色科技风格](../assets/seis3d/full/14-style-cuda.png)
+
 ## 7 体视图与停靠布局
 
-![图7 浅色体视图](../assets/seis3d/spatial-volume.png)
+![图7 体视图与参数完整窗口](../assets/seis3d/full/16-volume-settings.png)
 
 图7　浅色背景上的半透明三维波场。青灰色包围盒表示物理模型范围。
 
@@ -293,19 +336,39 @@ Auxiliary volume raymarch 可关闭体绘制，Cloud opacity 与 Cloud cutoff �
 
 ## 8 接收采集与 SEG Y 导出
 
-![图8 接收点三分量波形](../assets/seis3d/receiver-traces.png)
+![图8 单道三分量完整窗口](../assets/seis3d/full/23-single-trace.png)
 
-图8　实际采集中的 Vx、Vy、Vz 曲线。预览可切换接收点，横轴为秒，纵轴为 m/s。
+图8　同一接收点的Vx、Vy、Vz曲线。图中已开启AGC，横轴为秒，纵轴为AGC显示振幅；关闭AGC后才按m/s物理振幅显示。
 
 1. 初始化模型后，打开 **Acquisition** 标签。
-2. 初始为 **100×1** 的 X 向单排，位于 Y 中线。也可选择 **10 × 10 / 100** 创建二维地表排列。总道数等于 X 点数乘以 Y 点数，上限为 100。
+2. 初始为 **50×3** 的地表面阵，共150道；可用50×6达到300道上限，也可选择10×10、单排X/Y测线。总道数等于X点数乘Y排数。
 3. 设置接收点原点、XY 间距及深度 Z；地表接收可使用 Z 为 0。
 4. 需要自动适配模型范围时点击 **Fit spread to model**，再点击 **Deploy mesh** 应用。
 5. 设置 Samples per shot、Sample stride。通过 **Browse export folder** 选择文件夹，通过 **Shot file prefix** 或 **Choose export name / location** 选择文件名前缀和位置。
 6. 点击 **Capture current source** 或顶部 **Fire + capture**，等待当前炮采集完成。
 7. 点击 **Export captured 3-C SEG-Y** 导出三分量道集。
 
+
+
+![地表接收阵列：50道乘3排，共150道](../assets/seis3d/full/06-receivers.png)
+
+
+
+![记录采样与输出路径：1000样点，步距2，实际间隔1ms](../assets/seis3d/full/07-acquisition-settings.png)
+
+
+
+![正在采集：第960步，480个正式样本，等待1000点完成](../assets/seis3d/full/18-capture-progress.png)
+
+
+
+![采集完成：全部150道，1000样点，显示原始Vz记录](../assets/seis3d/full/19-record-all.png)
+
 ### 导出位置与文件命名
+
+
+
+![三分量SEG-Y与几何CSV导出完成](../assets/seis3d/full/24-export.png)
 
 默认前缀为 `shot`，第一炮生成 `shot_0001_vx.sgy`、`shot_0001_vy.sgy`、`shot_0001_vz.sgy` 和 `shot_0001_geometry.csv`。选择名称对话框用于设置这组文件的共同前缀，程序追加炮号及分量后缀，支持中文文件夹与中文前缀。
 
@@ -332,9 +395,9 @@ Auxiliary volume raymarch 可关闭体绘制，Cloud opacity 与 Cloud cutoff �
 
 图内滚轮缩放两轴；时间轴或地震道轴上滚轮只缩放该轴；左键拖动平移。手动操作时自动退出 Auto fit，视图保持到 Reset View 或显式重新开启自动适配。单道时间轴也支持此操作。Navigation 显示手势提示，Reset viewer display 显式恢复显示默认值并保留记录；单道图使用配色和极性填充，密度层用于多道图。
 
-![导入单炮 Vx 记录并显示固定 X 的一排](../assets/seis3d/imported-shot.png)
+![导入单炮Vz记录并显示中间X排](../assets/seis3d/full/25-import.png)
 
-此图来自实际 CUDA 采集记录导出后重新导入的集成检查，采用 Arctic Lab 浅色主题，100 道 × 64 样本；图中显示固定 X 的 10 道 Vx 波形。导入不要求初始化 GPU 模型，不覆盖本次采集结果，也不重置波场增益或运行状态。文件无效时保留此前成功导入的记录，并在底部提示原因。
+此图来自本次200³模型的真实采集记录导出后重新导入：Paper Sand主题，文件包含150道×1000样点；固定Y的中间第2排显示50道Vz。导入不要求初始化 GPU 模型，不覆盖本次采集结果，也不重置波场增益或运行状态。文件无效时保留此前成功导入的记录，并在底部提示原因。
 
 当前支持大端 SEG-Y rev0/rev1 的 IBM/IEEE 32 位浮点与 32/16/8 位有符号整数样本。每个文件必须为单炮、单分量、统一采样间隔与样本数；上限为 4096 道、每道 32767 样本和 256 MiB CPU 样本缓冲。保留道号、坐标比例及每道起始延迟；米/英尺坐标统一为米，角度坐标显示文件单位，不进行投影转换。rev2、小端、变长道和多炮混合文件会明确拒绝。字段依据见 [SEG-Y rev1 标准](https://seg.org/wp-content/uploads/2025/11/seg_y_rev1.pdf)。
 
@@ -347,9 +410,9 @@ Auxiliary volume raymarch 可关闭体绘制，Cloud opacity 与 Cloud cutoff �
 5. 选择 Vx、Vy、Vz 或 Velocity magnitude。横轴显示原始接收道号，纵轴为向下递增的时间。波形按所选行的空间顺序排列。
 6. **Trace options / 波形选项** 可调整独立 Trace gain、自动增益补偿、正振幅填充和自动适配。默认使用所选道的共同峰值归一化；勾选 Normalize each trace 后每道独立归一化，不能再直接比较相对振幅。关闭 Auto fit traces 后可使用 ImPlot 的缩放和平移；Fit traces now 恢复适配。
 
-![Paper 风格的一排十道记录](../assets/seis3d/receiver-row-paper.png)
+![中间一排50道完整窗口](../assets/seis3d/full/20-record-row.png)
 
-本图来自真实主程序的 96³ 双层模型，100 道 × 256 样本采集；选择第 5 排的 R41–R50，显示 Vz。图中峰值为所选道的实际速度量级；Trace gain 只影响道集预览，波场的 Display gain / Volume gain 不改变记录样本。界面最大值统计和道集峰值分别来自波场抽取与时间记录，二者不必相等。
+本图来自200³双层模型的真实150道×1000样点采集；选择中间第2排的R51–R100，显示Vz。完整记录间隔1 ms、首末时间0.75～999.75 ms。Trace gain只影响预览，Display gain和Volume gain不改变记录；波场统计峰值与时间记录峰值不必相等。
 
 多道和单道预览最多保留每道 2048 个点，长记录按区间保留极值和起止点，减少窄到达被跳点遗漏。完整原始记录仍用于 SEG-Y 导出。正式道集使用采集时冻结的坐标与时间信息；后来编辑或部署另一种排列不会改变已有道集的选行。Live 始终使用当前已部署的接收点，环形数据按时间顺序显示。
 
@@ -365,6 +428,18 @@ Auxiliary volume raymarch 可关闭体绘制，Cloud opacity 与 Cloud cutoff �
 | Noise floor | 峰值的 0.01% | 低于门限时不放大，接近门限逐渐放大；背景噪声太明显时提高此值。可调 0–2% |
 | Reset AGC parameters | — | 只恢复上述 AGC 参数，保留开启状态、波形增益及其他显示设置 |
 
+
+
+![AGC控件：120ms窗口、强度1、最大50倍及噪声门限](../assets/seis3d/full/26-agc-options.png)
+
+
+
+![同一炮中间50道：开启AGC后观察较弱到达](../assets/seis3d/full/21-record-agc.png)
+
+
+
+![同一炮中间50道：Coolwarm密度图](../assets/seis3d/full/22-record-density.png)
+
 每道或每个分量依据自身完整时间序列的全局 RMS 与局部 RMS 计算补偿，增益限于 1 到设定的最大倍数，并通过噪声门限平滑抑制静默区放大。补偿在最多 2048 点的显示抽稀之前执行。**AGC 只改变预览的相对振幅**：开启时单道纵轴标为“AGC 显示振幅”，多道状态同时报告原始峰值和补偿后的显示峰值。比较真实道间振幅、进行定量分析或导出 SEG-Y 时应关闭 AGC；导出始终使用未处理的采集样本。Trace gain 仅控制可见高度，多道逐道归一化属于另一项独立显示设置。
 
 建议先完成采集，在 **X row (fixed Y)** 或 **Y row (fixed X)** 中选一排，再开启 AGC；先用 120 ms、强度 0.5–1、最大 20–50× 观察晚到弱信号。若波形呈现连续噪声带，增大 Noise floor 或缩短最大放大量。单道三分量图也使用同一组 AGC 参数；切换单道和多道时不会重置。
@@ -377,14 +452,19 @@ Auxiliary volume raymarch 可关闭体绘制，Cloud opacity 与 Cloud cutoff �
 
 ## 9 模型文件与计算边界
 
+
+
+![模型导入路径与导出路径分别设置](../assets/seis3d/full/05-model-io.png)
+
 **Model I/O** 使用 `.s3dm` 三维模型。文件保存物理 XYZ 网格的 Vp、Vs、密度，X 方向连续；CPML 和差分填充区由程序重建。导入时逐单元检查材料并求最大 Vp，然后计算安全时步与显存预算。导出模型时使用新文件名。
 
 **Model path + Browse model file** 选择待导入模型，再点击校验导入。**Model export path + Choose model output** 独立选择导出文件夹与 `.s3dm` 文件名，再点击导出；更改导出位置不会改变导入路径。浏览或选择位置本身不触发模型重建或写文件。
 
 | 物理网格 | 代码估算的总显存预算 | 适用起点 |
 | --- | --- | --- |
-| 96³ | 0.140 GiB | 熟悉交互与采集 |
-| 160³ | 0.443 GiB | 中等规模探索 |
+| 300×50×300 | 0.554 GiB | 当前默认网格 |
+| 500×20×500 | 0.873 GiB | 薄横向模型 |
+| 200³ | 0.771 GiB | 本次截图与流程示例 |
 | 300³ | 1.987 GiB | 较大三维模型 |
 | 300 × 300 × 400 | 2.516 GiB | 达到物理节点总量上限 |
 
@@ -398,11 +478,15 @@ Auxiliary volume raymarch 可关闭体绘制，Cloud opacity 与 Cloud cutoff �
 
 当前已有显示、采集、交互和资源释放的集成检查。用于定量地震研究前，仍需完成 P/S 到时、收敛性、自由表面、CPML 反射和长期稳定性验证。详细实现和文件格式见三维实现说明。
 
-本次补充了 96³ 均匀介质与浅震源双层模型的六面吸收对照，未复现顶面独立漏吸收；旧版仅以物理区逐帧最大值映射显示整个 CPML，会使极弱残留饱和。检查条件、真实量级和适用范围见 [体绘制与六面吸收检查](../reviews/SEIS3D_VOLUME_BOUNDARY_REVIEW.md)。
+历史六面吸收审查使用96³均匀介质与浅震源双层模型，检查条件、真实量级和适用范围见[体绘制与六面吸收检查](../reviews/SEIS3D_VOLUME_BOUNDARY_REVIEW.md)。本轮图片用于操作展示，不将模式初始化截图写成新的反射误差测试结果。
 
 <!-- pagebreak -->
 
+
+
 ## 10 常见问题与文档位置
+
+![F1快捷键帮助完整窗口](../assets/seis3d/full/27-shortcuts.png)
 
 | 现象 | 检查与处理 |
 | --- | --- |
@@ -417,9 +501,21 @@ Auxiliary volume raymarch 可关闭体绘制，Cloud opacity 与 Cloud cutoff �
 | 快捷键 | 操作 |
 | --- | --- |
 | Space | 运行或暂停 |
+| Q / Shift+Q | 下一个／上一个波场色带，循环全部 14 种 |
+| W / Shift+W | 下一个／上一个波场分量：Vz、Vx、Vy、速度模、压力 |
+| E / Shift+E | 下一个／上一个模型色带，循环全部 5 种 |
+| N | 推进一个求解步并暂停连续运行，可逐步推进正式采集 |
 | C | 重置波场并暂停 |
 | R | 恢复三剖面与轨道相机 |
+| G | 显示／隐藏物理网格 |
+| B | 显示／隐藏边界层或反射墙，调整视图适配范围 |
+| V | 开启／关闭辅助体绘制 |
+| F1 | 打开快捷键帮助，也可点击顶部 Shortcuts (F1) |
 | Tab | 返回首页并执行模式资源释放 |
+
+Q/W/E 与二维工作区保持相同顺序。切换色带不会应用视觉预设默认值；分量切换调用控件同一逻辑，保持增益、透明度和同单位的幅值参考，压力使用独立的 Pa 参考。边界显示只改变可见范围，体绘制开关只改变显示，均不更改求解边界或原始接收数据。
+
+文本输入、拖动/编辑控件和打开弹窗时，工作区快捷键暂停；按住 Ctrl、Alt 或系统修饰键时也不触发，例如 Ctrl+C 仍用于复制。除 Q/W/E 的反向切换外，其他工作区快捷键不接受 Shift 修饰。按住按键不会连续轮转。正式采集或多炮序列中 C 被禁用，以避免清空正在记录的波场；显示项仍可调整。
 
 本指南的 Markdown 位于 `docs/user`，实际截图位于 `docs/assets/seis3d`，可编辑 Word 位于外层 `out/docs`。运行程序和资源统一位于外层 `out/bin`。
 
@@ -428,4 +524,4 @@ Auxiliary volume raymarch 可关闭体绘制，Cloud opacity 与 Cloud cutoff �
 - [三维实现和格式说明](../development/SEIS3D_IMPLEMENTATION.md)
 - [二维稳定性历史审查](../reviews/NUMERICAL_STABILITY_REVIEW.md)
 
-本说明书的首页、工作区及显示设置截图均来自同一次 Paper Sand 实际程序截图会话。局部图只做裁切。图中速度幅值、材料分层和接收波形均为程序计算结果。
+本说明书采用当前版本的完整窗口原始PNG，位于docs/assets/seis3d/full；全部33张图片、分辨率、时间步和样式条件见[完整窗口截图集](Seis3D_Screenshot_Gallery.md)与capture-manifest.json。图中波场、物性和记录来自真实CUDA计算，不裁切、不拉伸、不重新着色。此前视频保留录制时的设置，当前截图以本次参数为准。

@@ -1,6 +1,6 @@
 # SeisWave Lab 文档导航
 
-文档整理日期为 2026 年 10 月 14 日。本目录位于 Git 仓库内部，文档、截图和导出工具可与源码一起提交。按使用模式阅读二维或三维图文说明，再按需要查看构建、算法实现和历史审查。
+文档整理日期为 2026 年 10 月 15 日。本目录位于 Git 仓库内部，文档、截图和导出工具可与源码一起提交。按使用模式阅读二维或三维图文说明，再按需要查看构建、算法实现和历史审查。
 
 | 分类 | 文档 | 内容 |
 | --- | --- | --- |
@@ -25,7 +25,7 @@
 
 `user` 放操作文档，`showcase` 放项目展示文章，`publication` 放论文准备与实验计划，`build` 放构建说明，`development` 放实现说明，`reviews` 放审查记录，`history` 放旧版资料。截图按模式集中在 `assets/seis2d`、`assets/seis3d`，文档工具位于 `tools`。构建与产物约定见 [构建说明](build/BUILDING.md)。
 
-本次说明书统一使用 **Paper Sand** 界面主题和 **Paper scientific** 显示预设。截图来自实际程序，局部图仅裁切，不重新绘制波场或修改物理数据。首页和工作区的原始截图均保留在截图目录中。
+本次三维说明书采用Paper Sand浅色主题，原生2560×1494完整窗口，无裁切、拉伸或外部重着色。33张图片覆盖完整流程和六种波场色带，见[完整窗口截图集](user/Seis3D_Screenshot_Gallery.md)。图片与元数据位于assets/seis3d/full。
 
 ## 更新说明书
 
@@ -33,8 +33,12 @@
 
 更新 `user/Seis3D_User_Guide.md` 和对应截图后，使用具备 `python-docx`、Pillow 的 Python 运行 `tools/export_user_guide.py`。导出文件写入外层 `out/docs`，排版预览和中间文件写入 `out/docs-work`。
 
-截图可从发布程序的 `--capture-seis3d-paper` 入口重新生成。该入口输出首页、四视图和显示参数页面的 PNG，不保存用户布局或主题偏好。随后从 Git 仓库根目录执行 `python docs/tools/prepare_paper_screenshots.py` 更新截图副本与局部图，再执行 `python docs/tools/export_user_guide.py` 导出 Word。工具根据自身位置定位仓库和外层 `out`。具体操作见 [构建说明](build/BUILDING.md)。
+当前三维截图入口为 `--capture-seis3d-workflow`，临时使用中文Paper Sand与独立演示会话，不保存用户偏好。实际运行200³模型、50×3接收网格，输出33张完整窗口PNG、采集清单和真实模型／SEG-Y数据，写入外层 `out/screenshots/seis3d-full`。
 
-`--capture-seis3d-paper` 临时使用英文；`--capture-seis3d-chinese` 使用中文，并输出 `seis3d-chinese-*.png`。两种截图入口均不保存语言偏好。新版双语与折叠面板截图另以 `home-bilingual-*`、`workspace-compact-zh.png`、`display-compact-zh.png` 命名，保留旧截图供历史对照。本轮更新 Markdown 与截图，Word 需按上述步骤重新导出。
+运行 `python docs/tools/prepare_paper_screenshots.py` 原样复制图片并生成截图集；脚本检查分辨率、暂停时刻和文件摘要，不做图像变换。再运行 `python docs/tools/export_user_guide.py` 导出Word。Word正文为A4，截图为独立A3横向页，嵌入原始PNG并保持比例。导出后须用LibreOffice及 `render_docx.py` 渲染，逐页检查分页、文字和图注。排版预览位于外层out/docs-work。
 
-历史文档保留当时的结论和测试条件；三维当前实现以使用指南和实现说明为准。
+较早的 `--capture-seis3d-paper`、`--capture-seis3d-chinese` 及旧局部截图作为历史资料保留，当前三维指南和博客均使用full目录中的原生截图。
+
+本轮同时更新二维8张2560×1494完整截图及[二维指南](user/Seis2D_User_Guide.md)，包含波场、原始与AGC记录、单道、分量、停靠对照与导出。截图入口为 `--capture-seis2d-workflow`，独立于历史回归入口。
+
+运行 `python docs/tools/package_showcase.py` 可从维护中的博客文章及当前原图重新生成外层 `out/blog/Seis3D/CUDA_Seis3D.md` 和 `out/blog/Seis3D_GitHub_Pages.zip`，保留站点根路径与全部41张完整图片，不打包历史裁切图。Word正文连续排版，截图按编号集中在A3横向附录中。

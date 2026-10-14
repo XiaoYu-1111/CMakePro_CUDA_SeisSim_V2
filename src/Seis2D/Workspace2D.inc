@@ -1140,6 +1140,7 @@ inline void renderSeisHud(SimState& state, int winW, int winH, float barHeight, 
                         "S-Wave (Curl)"
                     };
                     AppUi::Widgets::Combo("Show Component", &showComponent2D, components, IM_ARRAYSIZE(components));
+                    if(ImGui::IsItemHovered()) AppUi::Widgets::SetTooltip("W: next component | Shift+W: previous. Display gain is retained.");
 
                     ImGui::Spacing();
 
@@ -1159,6 +1160,7 @@ inline void renderSeisHud(SimState& state, int winW, int winH, float barHeight, 
                         "12_Terrain Map"          
                     };
                     AppUi::Widgets::Combo("Visual Style", &waveStyle2D, style_types, IM_ARRAYSIZE(style_types));
+                    if(ImGui::IsItemHovered()) AppUi::Widgets::SetTooltip("Q: next wave palette | Shift+Q: previous.");
                     ImGui::Spacing();
 
                     const char* model_styles[] = {
@@ -1169,6 +1171,7 @@ inline void renderSeisHud(SimState& state, int winW, int winH, float barHeight, 
                         "Scientific White"
                     };
                     AppUi::Widgets::Combo("Geological Background", &modelStyle2D, model_styles, IM_ARRAYSIZE(model_styles));
+                    if(ImGui::IsItemHovered()) AppUi::Widgets::SetTooltip("E: next model palette | Shift+E: previous.");
                     ImGui::Spacing();
 
                     AppUi::Widgets::Checkbox("Show Background Grid & Dots", &showGrid2D);

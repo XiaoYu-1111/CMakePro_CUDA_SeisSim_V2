@@ -1,0 +1,66 @@
+[
+  {
+    "image": "wavefield-paper.png",
+    "width": 2560,
+    "height": 1494,
+    "cropped": false,
+    "resampled": false,
+    "sha256": "a0ce7f92f37e7f1713f2a0168e0844927505a3b86a73a160e08539ecf002cf44"
+  },
+  {
+    "image": "record-raw.png",
+    "width": 2560,
+    "height": 1494,
+    "cropped": false,
+    "resampled": false,
+    "sha256": "134988dd730086c7d932d8cd9a8660b132ac847ea52c27cf829aa3c08afea93d"
+  },
+  {
+    "image": "record-agc.png",
+    "width": 2560,
+    "height": 1494,
+    "cropped": false,
+    "resampled": false,
+    "sha256": "4ba04fcea4a62f726470526f6b39c369bbce2fe81693609980e4cb6e1c3cd7cf"
+  },
+  {
+    "image": "single-vz.png",
+    "width": 2560,
+    "height": 1494,
+    "cropped": false,
+    "resampled": false,
+    "sha256": "0cab07c80123f1808e7242766c11946b0a60d17ed9fce1c272689b4b6f99ddc6"
+  },
+  {
+    "image": "section-vx.png",
+    "width": 2560,
+    "height": 1494,
+    "cropped": false,
+    "resampled": false,
+    "sha256": "d287c11fe2507128acc885f298d9652172ee079bef17caf8f7b6c3335ad722e7"
+  },
+  {
+    "image": "docking-analysis.png",
+    "width": 2560,
+    "height": 1494,
+    "cropped": false,
+    "resampled": false,
+    "sha256": "12af182e9ac703094eb4d33047deba0ff6f552a06f6d39e2439023eeb402eacf"
+  },
+  {
+    "image": "docking-record-focus.png",
+    "width": 2560,
+    "height": 1494,
+    "cropped": false,
+    "resampled": false,
+    "sha256": "463b95784931041232a0dc744d858f8c669ed1ecfb1e4a8eedd35890baee027b"
+  },
+  {
+    "image": "export-package.png",
+    "width": 2560,
+    "height": 1494,
+    "cropped": false,
+    "resampled": false,
+    "sha256": "8ef504745f3c592aa66fb83c793b10def79f1d7efd21432a87fdbb7f8eca1e18"
+  }
+]

@@ -1,38 +1,45 @@
-"""Copy actual application captures and crop manual figures without recoloring data."""
-
+"""Copy native full-window captures without cropping, resampling or recoloring."""
 from pathlib import Path
+import csv
+import hashlib
+import json
 import shutil
 from PIL import Image
 
+TITLES = ["中文首页", "模型与网格", "安全时步", "震源设置", "模型文件", "接收排列", "采集参数",
+    "运行波场", "Coolwarm", "Seismic Bipolar", "Viridis", "Turbo", "Inferno", "CUDA Green",
+    "速度模", "体绘制参数", "边界层显示", "采集中", "全部150道", "中间50道", "AGC对比",
+    "密度图", "单道三分量", "导出记录", "单炮导入", "AGC控件", "快捷键帮助", "断层模型",
+    "英文首页", "内置操作手册", "自由顶面", "六面吸收", "六面反射"]
+
 
 def prepare_screenshots() -> None:
-    """Keep full captures and reproducible close-ups in the documentation asset tree."""
+    """Publish identical PNG bytes and retain the actual physical/rendering conditions."""
     root = Path(__file__).resolve().parents[2]
-    source = root.parent / "out/bin/RelWithDebInfo"
-    output = root / "docs/assets/seis3d"
+    source = root.parent / "out/screenshots/seis3d-full"
+    output = root / "docs/assets/seis3d/full"
     output.mkdir(parents=True, exist_ok=True)
-    full_captures = {
-        "home-paper.png": "seis3d-paper-home.png",
-        "workspace-overview.png": "seis3d-paper-guide.png",
-        "display-overview.png": "seis3d-paper-display.png",
-        "receiver-row-paper.png": "seis3d-paper-receiver-row.png",
-    }
-    for name, original in full_captures.items():
-        shutil.copy2(source / original, output / name)
-    crops = {
-        "simulation-controls.png": ("workspace-overview.png", (10, 76, 559, 1054)),
-        "inline-slice.png": ("workspace-overview.png", (874, 177, 1265, 543)),
-        "spatial-volume.png": ("workspace-overview.png", (1850, 636, 2253, 1042)),
-        "toolbar.png": ("workspace-overview.png", (9, 9, 1240, 69)),
-        "receiver-traces.png": ("display-overview.png", (574, 1057, 2546, 1397)),
-        "display-controls.png": ("display-overview.png", (10, 108, 557, 1125)),
-    }
-    for name, (original, bounds) in crops.items():
-        with Image.open(output / original) as image:
+    with (source / "capture-manifest.csv").open(encoding="utf-8") as stream:
+        rows = list(csv.DictReader(stream))
+    if len(rows) != len(TITLES):
+        raise ValueError("The complete 33-frame workflow has not finished")
+    gallery = ["# Seis3D 完整窗口截图集", "", "更新于 2026-10-15。所有截图来自 SeisWave Lab v2.0.0 实际运行，原始分辨率为 2560×1494，不裁切、不重采样、不重新着色。文字倍率为1.0，剖面均为100%适配。", "",
+        "本次展示使用200³双层模型、10 m间距、20 Hz Ricker震源、0.5 ms手动安全步长与50×3接收排列。软件默认网格仍为300×50×300，默认步长仍为自动模式。色带比较统一暂停在第480步（0.240 s）；Vz深度切片移到Z=70，避免位于震源对称面。记录分析使用软件自身的Receiver focus布局，图片没有做外部放大。", "",
+        "正式采集为150道、每道1000样点、间隔1 ms，首末采样时间为0.75～999.75 ms。模型、SEG-Y和几何文件保存在外层out/screenshots的独立会话目录。边界模式图片展示实际初始化设置，不作为边界反射性能测试。", ""]
+    for index, (row, title) in enumerate(zip(rows, TITLES), 1):
+        image_path = source / row["image"]
+        with Image.open(image_path) as image:
             if image.size != (2560, 1494):
-                raise ValueError(f"Unexpected capture dimensions for {original}: {image.size}")
-            image.crop(bounds).save(output / name)
-    print(f"Prepared {len(full_captures)} full captures and {len(crops)} cropped figures")
+                raise ValueError(f"Unexpected native capture size: {image_path}: {image.size}")
+        if 9 <= index <= 14 and int(row["step"]) != 480:
+            raise ValueError("Palette comparisons must use one paused wavefield")
+        shutil.copy2(image_path, output / image_path.name)
+        row.update(title=title, sha256=hashlib.sha256(image_path.read_bytes()).hexdigest(), cropped=False, resampled=False)
+        gallery.extend([f"## {index:02d} {title}", "", f"![{title}](../assets/seis3d/full/{image_path.name})", "",
+            f"图{index}　{title}。完整程序窗口，2560×1494。", ""])
+    (output / "capture-manifest.json").write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
+    (root / "docs/user/Seis3D_Screenshot_Gallery.md").write_text("\n".join(gallery), encoding="utf-8")
+    print(f"Copied {len(rows)} native full-window PNGs without image transforms")
 
 
 if __name__ == "__main__":

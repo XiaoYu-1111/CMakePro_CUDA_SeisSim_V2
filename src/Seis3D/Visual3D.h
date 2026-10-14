@@ -6,6 +6,8 @@
 
 namespace Seis3D::Detail3D {
 inline constexpr const char* waveStyleNames3D=Seismic::wavePaletteNames;
+inline constexpr int waveStyleCount3D=14, waveComponentCount3D=5, modelStyleCount3D=5;
+inline constexpr const char* modelStyleNames3D="Dark Titanium\0Geological Map\0Grayscale Velocity\0WaveStyle Synced\0Scientific White\0";
 using Palette3D=Seismic::WavePalette;
 // The wavefield and record viewers use one stateless palette definition.
 inline const Palette3D& wavePalette3D(int style) {return Seismic::wavePalette(style);}

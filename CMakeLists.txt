@@ -21,7 +21,19 @@ endif()
 # [关键修改] 显式声明支持 CUDA 语言
 project(CMakePro_CUDA_SeisSim_V1 VERSION 2.0.0 LANGUAGES CXX C CUDA)
 include("${CMAKE_CURRENT_LIST_DIR}/cmake/MsvcDependencies.cmake")
-find_package(CUDAToolkit REQUIRED)
+# Use the native SDK finder; CUDA language detection alone does not create CUDA:: library targets.
+find_package(CUDAToolkit REQUIRED MODULE)
+if(NOT TARGET CUDA::cudart OR NOT TARGET CUDA::cuda_driver)
+    # Some locally edited toolchains intercept find_package without forwarding it.
+    # Recover through the installed CMake module, without modifying the user's shared toolchain.
+    message(WARNING "The toolchain did not create the CUDA library targets. Loading CMake's native FindCUDAToolkit module directly.")
+    set(CUDAToolkit_FIND_REQUIRED TRUE)
+    include("${CMAKE_ROOT}/Modules/FindCUDAToolkit.cmake")
+    unset(CUDAToolkit_FIND_REQUIRED)
+endif()
+if(NOT TARGET CUDA::cudart OR NOT TARGET CUDA::cuda_driver)
+    message(FATAL_ERROR "CUDA Toolkit discovery did not provide CUDA::cudart / CUDA::cuda_driver. Check CUDAToolkit_ROOT and the selected toolchain.")
+endif()
 option(SEISSIM_BUILD_SOLVER_TESTS "Build 2D record and CUDA solver regression checks" OFF)
 enable_testing()
 
@@ -62,7 +74,7 @@ file(GLOB CUDA_USER_SOURCES "CUDA_Kernels/Cuda_Check.cu")
 file(GLOB CUDA_USER_HEADERS "CUDA_Kernels/Cuda_Check.cuh")
 
 # 项目主源文件
-set(PROJECT_SRCS "Main_cpp/CMakePro_cuda.cpp")
+set(PROJECT_SRCS "Main_cpp/CMakePro_cuda.cpp" "Main_cpp/DocumentationCapture3D.h")
 
 # STB Image (仅头文件)
 set(STB_SRCS "stb_image/stb_image_write.h")
@@ -76,7 +88,7 @@ add_executable(${TARGET_NAME}
     ${PROJECT_SRCS} 
     ${CUDA_USER_SOURCES}
     ${CUDA_USER_HEADERS}
-    "Main_header/Common.h"
+    "Main_header/Common.h" "Main_header/AppShortcuts.h"
     "Main_header/ResourcePaths.h"
     "Main_cpp/ResourcePaths.cpp"
     "Main_cpp/SeismicIO.cpp"

@@ -102,26 +102,12 @@ inline void handleSeismicInteractions(SimState& state, int winW, int winH, float
         resetViewportRequested2D = false;
     }
 
-    if (!io.WantCaptureKeyboard && ImGui::IsKeyPressed(ImGuiKey_Q, false)) {
-        
-        showComponent2D = (showComponent2D + 1) % 7;
-    }
-
-    if (!io.WantCaptureKeyboard && ImGui::IsKeyPressed(ImGuiKey_W, false)) {
-        
-        waveStyle2D = (waveStyle2D + 1) % 13;
-    }
-    if (!io.WantCaptureKeyboard && ImGui::IsKeyPressed(ImGuiKey_E, false)) {
-        
-        modelStyle2D = (modelStyle2D + 1) % 5;
-    }
-
-    if (!io.WantCaptureKeyboard) {
-        if (ImGui::IsKeyPressed(ImGuiKey_1)) state.brushType = TOOL_NONE;   
-        if (ImGui::IsKeyPressed(ImGuiKey_2)) state.brushType = TOOL_HIGH;   
-        if (ImGui::IsKeyPressed(ImGuiKey_3)) state.brushType = TOOL_LOW;    
-        if (ImGui::IsKeyPressed(ImGuiKey_4)) state.brushType = TOOL_WALL;   
-        if (ImGui::IsKeyPressed(ImGuiKey_5)) state.brushType = TOOL_ERASER; 
+    // Match the 3D Q/W/E order, preserving all amplitude and model parameters.
+    if (AppUi::workspaceShortcutsAvailable(true)) {
+        if (ImGui::IsKeyPressed(ImGuiKey_Q,false)) waveStyle2D=AppUi::cycleDisplaySelection(waveStyle2D,13,io.KeyShift);
+        if (ImGui::IsKeyPressed(ImGuiKey_W,false)) showComponent2D=AppUi::cycleDisplaySelection(showComponent2D,7,io.KeyShift);
+        if (ImGui::IsKeyPressed(ImGuiKey_E,false)) modelStyle2D=AppUi::cycleDisplaySelection(modelStyle2D,5,io.KeyShift);
+        if (!io.KeyShift&&ImGui::IsKeyPressed(ImGuiKey_G,false)) showGrid2D=!showGrid2D;
     }
 
     float  winAspect = (float)winW / (float)winH;

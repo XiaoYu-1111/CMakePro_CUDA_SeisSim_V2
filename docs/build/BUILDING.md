@@ -29,6 +29,14 @@ GLFW/GLEW/GLM 是外部 SDK，默认兼容已有 LIB_ROOT/OpenGL 布局，也可
 
 推荐使用“打开文件夹”打开外层项目目录，并选择 `x64-Debug` 或 `x64-Release`。
 
+### VS 重新生成时报 `CUDA::cudart` 不存在
+
+CUDA 编译器识别成功不代表 `CUDA::cudart`、`CUDA::cuda_driver` 导入库目标已创建。它们由 `find_package(CUDAToolkit REQUIRED MODULE)` 创建。VS 使用 CMakeSettings 时可能自动加载已集成的 vcpkg 工具链；若本机工具链截获 `find_package` 后没有转发原生查找，CMake 会走到生成阶段才报告目标不存在。
+
+本机曾出现的具体原因是 `vcpkg.cmake` 中通用 `else()` 分支的 `_find_package(...)` 被注释。项目现在在 CUDA 目标缺失时直接调用当前 CMake 自带的 `FindCUDAToolkit.cmake`，并检查两项必要链接目标，兼容外层和独立入口。此修复不改动共享 vcpkg 安装。若需要在其他项目正常使用 vcpkg，应另行恢复本机工具链的转发逻辑。
+
+重新执行 **生成 CMake 缓存** 即可加载修复，无须删除源码或整个 out。旧 vcpkg 脚本的 `CMake < 3.10` 弃用提示为警告，不是 CUDA 链接目标缺失的直接原因。项目的回退提示也会说明工具链仍未执行 CUDA 查找。
+
 如果直接打开内部 `CMakePro_CUDA_SeisSim_V2` 目录，内部新增的 `CMakeSettings.json` 也会把产物放到外层 `out`。配置修改后，等待 VS 完成 CMake 重新配置；若仍显示旧路径，可关闭并重新打开项目文件夹，再选择构建目标 `CMakePro_CUDA_SeisSim_V2` 对应的 `SeisWaveLab.exe` 启动。
 
 软件名称为 SeisWave Lab，三维模块为 Seis3D。当前版本 `2.0.0` 由内层 `CMakeLists.txt` 的 `project(... VERSION ...)` 统一配置，生成的 `AppInfo.h` 和 Windows 文件版本资源位于外层构建目录。程序窗口、主页、“关于”页与 EXE 文件属性使用同一版本信息。工程文件夹与构建目标无需改名。
@@ -110,19 +118,30 @@ cmake --build out/build/x64-Release --clean-first --parallel 2
 
 六面 CPML 数值对照由默认关闭的 `SEIS3D_BUILD_BOUNDARY_CHECKS` 选项提供，目标为 `Seis3DBoundaryRegression`。尺寸、晚期残留、吸收层色阶和长轴体采样的检查条件、结果及构建方式见 [体绘制与六面吸收检查](../reviews/SEIS3D_VOLUME_BOUNDARY_REVIEW.md)。主程序运行时 Windows 会阻止覆盖其 EXE；编译同一输出配置前应保存计算结果并关闭该程序。
 
-## Paper 风格实际截图
+## 完整窗口三维流程截图
 
-从 `out/bin/RelWithDebInfo` 执行：
+从外层 `out/bin/RelWithDebInfo` 运行当前发布程序：
 
 ```powershell
-.\SeisWaveLab.exe --capture-seis3d-paper
+.\SeisWaveLab.exe --capture-seis3d-workflow
 ```
 
-截图入口临时应用 Paper Sand 界面与 Paper scientific 显示预设，显式恢复该预设默认参数，使用浅色分层模型、Coolwarm 蓝红波场和浅色体视图。它运行实际 96³ CUDA 模型与 100 道采集，在程序旁输出 `seis3d-paper-home.png`、`seis3d-paper-guide.png`、`seis3d-paper-display.png` 和 `seis3d-paper-receiver-row.png`（Receiver focus 布局，第 5 排十道 Vz）。此过程不保存用户主题偏好或停靠布局。
+截图入口临时使用中文Paper Sand、独立200³双层模型、10m间距、20Hz、0.5ms时步及50×3接收阵列，不保存主题、语言或布局。输出33张原生2560×1494完整窗口PNG至外层out/screenshots/seis3d-full，并保存capture-manifest.csv与真实模型、三分量SEG-Y和几何CSV。六套色带仅改变配色，均暂停于第480步（0.240s）；正式采集1000点，记录间隔1ms。Receiver focus采用实际停靠布局，图片无外部裁切或放大。
 
-本指南的截图副本和局部裁切位于 Git 仓库内的 `docs/assets/seis3d`。更新 Markdown 后，可从 Git 仓库根目录执行 `python docs/tools/export_user_guide.py` 生成 Word，产物位于外层 `out/docs`。Python 环境需要 `python-docx` 与 Pillow；重新导出后应检查分页和截图清晰度。
+从内部Git仓库根目录运行：
 
-英文实际截图使用 `--capture-seis3d-paper`；中文使用 `--capture-seis3d-chinese`，输出 `seis3d-chinese-home.png`、`seis3d-chinese-guide.png`、`seis3d-chinese-display.png`、`seis3d-chinese-receiver-row.png`。两种入口均临时指定语言，不覆盖 `ui_language.ini`。语言资源随 `AppUi` 编译进程序，新增词条修改 `Main_cpp/AppTranslations.inc`，正常增量编译即可。
+```powershell
+python docs/tools/prepare_paper_screenshots.py
+python docs/tools/export_user_guide.py
+```
+
+复制脚本只校验并原样复制PNG到docs/assets/seis3d/full，生成截图集和包含文件摘要的capture-manifest.json；Word正文A4、完整截图A3横向，位于外层out/docs。需要python-docx、Pillow，排版检查需LibreOffice与Poppler。使用documents技能的render_docx.py渲染后逐页检查，预览写入外层out/docs-work。旧paper/chinese入口及旧裁切图片保留作历史对照。
+
+## 二维完整窗口截图
+
+当前文档截图使用 `--capture-seis2d-workflow`，只进行实际CUDA采集和截图；最大化隐藏窗口，当前机器输出8张2560×1494完整PNG。随后运行 `python docs/tools/prepare_seis2d_screenshots.py` 原样复制至docs/assets/seis2d并生成摘要清单。当前二维指南采用这些新图。
+
+历史回归入口与检查命令如下，按需要单独运行。
 
 ## 二维记录回归与实际截图
 

@@ -256,7 +256,8 @@ void drawMultiTrace3D(Seis3D_State& s,bool captured,ReceiverSelection3D selectio
     if(rawPeak<1e-15&&ImGui::GetContentRegionAvail().y>140) AppUi::Widgets::TextDisabled("No arrival yet on the selected receivers.");
     const bool colorbar=s.traceShowHeatmap3D&&ImGui::GetContentRegionAvail().x>320;
     const float height=(std::max)(60.0f,ImGui::GetContentRegionAvail().y);
-    const ImVec2 plotSize((std::max)(100.0f,ImGui::GetContentRegionAvail().x-(colorbar?90:0)),height);
+    const float colorbarWidth=Seismic::recordColorbarWidth();
+    const ImVec2 plotSize((std::max)(100.0f,ImGui::GetContentRegionAvail().x-(colorbar?colorbarWidth+ImGui::GetStyle().ItemSpacing.x:0)),height);
     Seismic::beginRecordNavigation(s.traceAutoFit3D,fit,plotSize);
     const auto palette=Seismic::recordColormap(s.tracePalette3D);
     ImPlot::PushStyleColor(ImPlotCol_PlotBg,p.panel);ImPlot::PushStyleColor(ImPlotCol_PlotBorder,p.border);
@@ -295,7 +296,7 @@ void drawMultiTrace3D(Seis3D_State& s,bool captured,ReceiverSelection3D selectio
         ImPlot::EndPlot();
     }
     if(colorbar) {ImGui::SameLine();ImPlot::ColormapScale(AppUi::text("Normalized amplitude"),-s.traceHeatmapRange3D,s.traceHeatmapRange3D,
-        ImVec2(80,height),"%.2f",ImPlotColormapScaleFlags_None,palette);}
+        ImVec2(colorbarWidth,height),"%.2f",ImPlotColormapScaleFlags_None,palette);}
     ImPlot::PopStyleColor(2);
 }
 } // namespace

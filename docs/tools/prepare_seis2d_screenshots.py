@@ -1,6 +1,9 @@
 """Copy genuine 2D application captures into the tracked documentation folder."""
 from pathlib import Path
 import shutil
+import hashlib
+import json
+from PIL import Image
 
 
 def prepare_screenshots() -> None:
@@ -24,8 +27,14 @@ def prepare_screenshots() -> None:
         if not path.is_file():
             raise FileNotFoundError(f"Run SeisWaveLab.exe --capture-seis2d-paper first: {path}")
     output.mkdir(parents=True, exist_ok=True)
+    manifest = []
     for name, original in captures.items():
+        with Image.open(source / original) as image:
+            width, height = image.size
         shutil.copy2(source / original, output / name)
+        manifest.append(dict(image=name, width=width, height=height, cropped=False,
+            resampled=False, sha256=hashlib.sha256((source / original).read_bytes()).hexdigest()))
+    (output / "capture-manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"Copied {len(captures)} original 2D captures to {output}")
 
 

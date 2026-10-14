@@ -1,4 +1,5 @@
 #include "AppWidgets.h"
+#include "AppShortcuts.h"
 // CMakePro_gui_intro.h: 标准系统包含文件的包含文件
 // 或项目特定的包含文件。
 
@@ -1683,6 +1684,8 @@ void cleanup(GLHandles& gl) {
 
 //处理键盘操作
 void ProcessInput(GLFWwindow* window, SimConfig& cfg, SimState& state, GLHandles& gl) {
+    (void)window;(void)cfg;(void)gl;
+    if(!AppUi::workspaceShortcutsAvailable()) return;
     // 三维快捷键由三维状态机自己处理，不能修改二维全局画笔或运行状态。
     if (state.currentScreen == AppScreen::SeisSim_3D) {
         if (!ImGui::GetIO().WantTextInput && ImGui::IsKeyPressed(ImGuiKey_Tab, false))
@@ -1717,20 +1720,11 @@ void ProcessInput(GLFWwindow* window, SimConfig& cfg, SimState& state, GLHandles
         }
     }
 
-    // --- 空格键切换运行状态 ---
-    static bool spaceWasPressed = false;
-    bool spaceIsPressed = (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS);
-
-    if (spaceIsPressed && !spaceWasPressed) {
-        state.running = !state.running;
-    }
-    spaceWasPressed = spaceIsPressed;
-
-
-    // --- 【键盘 1-5 键一键热切换画笔工具模式】 ---
-    if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) state.brushType = TOOL_NONE;   // 1键：默认震源
-    if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) state.brushType = TOOL_HIGH;   // 2键：高速体
-    if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS) state.brushType = TOOL_LOW;    // 3键：低速体
-    if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS) state.brushType = TOOL_WALL;   // 4键：自定义刷
-    if (glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS) state.brushType = TOOL_ERASER; // 5键：橡皮擦
+    // Edge-triggered events cannot fire later when a key held during editing regains workspace focus.
+    if(ImGui::IsKeyPressed(ImGuiKey_Space,false)) state.running=!state.running;
+    if(ImGui::IsKeyPressed(ImGuiKey_1,false)) state.brushType=TOOL_NONE;
+    if(ImGui::IsKeyPressed(ImGuiKey_2,false)) state.brushType=TOOL_HIGH;
+    if(ImGui::IsKeyPressed(ImGuiKey_3,false)) state.brushType=TOOL_LOW;
+    if(ImGui::IsKeyPressed(ImGuiKey_4,false)) state.brushType=TOOL_WALL;
+    if(ImGui::IsKeyPressed(ImGuiKey_5,false)) state.brushType=TOOL_ERASER;
 }

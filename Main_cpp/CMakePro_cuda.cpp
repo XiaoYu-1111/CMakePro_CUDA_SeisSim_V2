@@ -155,7 +155,9 @@ static void saveApplicationScreenshot(GLFWwindow* window,const char* filename) {
 }
 
 // Run normal interaction or an isolated screenshot session without saving user layout preferences.
-static int runApplication(bool displayCheck3D=false,bool paperCapture3D=false,bool chineseCapture3D=false,bool capture2D=false) {
+#include "DocumentationCapture3D.h"
+
+static int runApplication(bool displayCheck3D=false,bool paperCapture3D=false,bool chineseCapture3D=false,bool capture2D=false,bool workflowCapture3D=false,bool checkCapture2D=false) {
     // 启动前确认必要着色器可读，避免将空源码交给 OpenGL 并继续初始化。
     const std::string vsSrc = loadShaderFromFile(resolveResourcePath("shader/vs_code.vert"));
     const std::string fsSrc = loadShaderFromFile(resolveResourcePath("shader/fs_code.frag"));
@@ -238,7 +240,7 @@ static int runApplication(bool displayCheck3D=false,bool paperCapture3D=false,bo
         return -1;
     }
 
-    if(!capture2D) glfwMaximizeWindow(window);
+    if(!capture2D||!checkCapture2D) glfwMaximizeWindow(window);
     glfwGetWindowSize(window, &config.winWidth, &config.winHeight);
     glfwMakeContextCurrent(window);
     glfwSetWindowUserPointer(window, &gl); // 将 GL 句柄绑定到窗口以便后续回调
@@ -273,7 +275,10 @@ static int runApplication(bool displayCheck3D=false,bool paperCapture3D=false,bo
 
     // 可选演示资源在进入对应页面时才分配，主程序仅初始化地震工作区所需资源。
     Init_Imgui(window);
+    Seis3D::Documentation3D::WorkflowCapture3D documentation3D;
+    if(workflowCapture3D) {documentation3D.initialize3D(state3D);state.currentScreen=AppScreen::Intro0;}
     if(capture2D) {
+        if(!checkCapture2D) ImGui::ClearIniSettings();
         ImGui::GetIO().IniFilename=nullptr;
         AppUi::setTheme(AppUi::ThemeId::PaperSand,false);AppUi::setLanguage(AppUi::Language::Chinese,false);
         Seis2D::setInterfaceAccent2D(AppUi::palette().accent);
@@ -333,8 +338,9 @@ static int runApplication(bool displayCheck3D=false,bool paperCapture3D=false,bo
         // 4. GUI 准备新帧数据
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
-        if(capture2D) ImGui::GetIO().AddMousePosEvent(-100,-100);
+        if(capture2D||workflowCapture3D) ImGui::GetIO().AddMousePosEvent(-100,-100);
         ImGui::NewFrame();
+        if(workflowCapture3D) documentation3D.beforeFrame3D(state3D,state);
 
         // 5. 事件响应与输入控制处理
         ProcessInput(window, config, state, gl);
@@ -359,6 +365,7 @@ static int runApplication(bool displayCheck3D=false,bool paperCapture3D=false,bo
         // 7. GUI 指令集提交
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        if(workflowCapture3D&&documentation3D.afterFrame3D(window,state3D)) return 0;
         if(capture2D) {
             ++documentationFrames2D;
             if(documentationFrames2D==28) saveApplicationScreenshot(window,"seis2d-wavefield-paper.png");
@@ -376,7 +383,10 @@ static int runApplication(bool displayCheck3D=false,bool paperCapture3D=false,bo
             if(documentationFrames2D==88) saveApplicationScreenshot(window,"seis2d-docking-record-focus.png");
             if(documentationFrames2D==90) Seis2D::configureDocumentationWorkspace2D(2);
             if(documentationFrames2D==96) saveApplicationScreenshot(window,"seis2d-export-package.png");
-            if(documentationFrames2D>=100) {Seis2D::checkRecordingTimeline2D(state,gl);glfwSetWindowShouldClose(window,GLFW_TRUE);}
+            if(documentationFrames2D>=100) {
+                if(checkCapture2D) Seis2D::checkRecordingTimeline2D(state,gl);
+                glfwSetWindowShouldClose(window,GLFW_TRUE);
+            }
         }
         if(displayCheck3D) {
             if(state3D.messageIsError3D) throw std::runtime_error(state3D.message3D);
@@ -450,8 +460,10 @@ int main(int argc,char** argv) {
         const bool chineseCapture3D=argc==2&&std::string(argv[1])=="--capture-seis3d-chinese";
         const bool paperCapture3D=chineseCapture3D||(argc==2&&std::string(argv[1])=="--capture-seis3d-paper");
         const bool displayCheck3D=paperCapture3D||(argc==2&&std::string(argv[1])=="--check-seis3d-display");
-        const bool capture2D=argc==2&&std::string(argv[1])=="--capture-seis2d-paper";
-        return runApplication(displayCheck3D,paperCapture3D,chineseCapture3D,capture2D);
+        const bool checkCapture2D=argc==2&&std::string(argv[1])=="--capture-seis2d-paper";
+        const bool capture2D=checkCapture2D||(argc==2&&std::string(argv[1])=="--capture-seis2d-workflow");
+        const bool workflowCapture3D=argc==2&&std::string(argv[1])=="--capture-seis3d-workflow";
+        return runApplication(displayCheck3D,paperCapture3D,chineseCapture3D,capture2D,workflowCapture3D,checkCapture2D);
     }
     catch (const std::exception& error) {
         std::cerr << "Application stopped safely: " << error.what() << std::endl;

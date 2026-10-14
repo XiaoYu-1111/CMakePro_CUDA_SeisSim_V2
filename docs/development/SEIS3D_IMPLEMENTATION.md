@@ -39,6 +39,8 @@ CMakePro_CUDA_SeisSim_V2/
 
 `sectionHeader3D` 统一三维折叠组，`drawSectionTools3D` 为当前面板设置仅本帧有效的展开/收起指令。详细参数默认关闭，常用运行与波场增益默认展开，采集停止按钮与重要错误提示保持可见。语言切换保留折叠状态，展开/收起不触发参数赋值或显示重置。检查和实际截图见 [双语界面与折叠面板检查](../reviews/SEIS3D_BILINGUAL_COMPACT_UI_REVIEW.md)。
 
+批量指令的键由 `sectionCommandKey3D` 使用当前窗口固定 ID 计算，不能使用受标签页 ID 栈影响的 `ImGui::GetID`。工具按钮位于 TabBar 外，`BeginTabItem` 会压入新的 ID；之前两处状态键因此不同，导致模拟控制页的展开/折叠失效。现在按钮与分组共享同一个窗口级指令键，各分组自身的 ID 仍保留标签页作用域；点击只在本帧作用于当前显示的标签页，下一帧恢复独立控制。显示面板使用另一窗口的指令，不互相影响。
+
 ### 界面主题
 
 首页右上角提供十套主题：**CUDA Green / Ocean Blue / Graphite / Scientific Light / Midnight Violet / Teal Studio / Amber Lab / Paper Sand / Arctic Lab / Warm Ivory**。其中 Scientific Light、Paper Sand、Arctic Lab 与 Warm Ivory 为浅色主题。三维也可通过 `Workspace > Interface theme` 或 `Display / materials` 切换。主题改变界面背景、文字、控件和停靠标签的颜色，波场和材料配色仍由显示设置独立控制。新增主题追加到原有索引之后，兼容已保存的主题偏好。
@@ -61,6 +63,10 @@ CMakePro_CUDA_SeisSim_V2/
 剖面缩放使用现有完整分辨率纹理的 UV 窗口，不申请额外三维显存。物理网格、交叉线、震源/接收点和物性坐标拾取共用视图变换；放大后仍按原始格点拾取。缩放和平移被约束在模型范围内；到达边缘时中心会被限制。重新初始化或导入模型会恢复全部相机。
 
 三维按需分配资源，首次进入不自动申请大体积显存。离开模拟页面后，在下一帧绘制前释放该模式的 GPU/GL 资源，避免销毁仍被上一帧 ImGui 指令引用的纹理。目标模式分配之前完成释放。
+
+### 工作区快捷键
+
+应用层无状态 `AppShortcuts.h` 统一屏蔽文本输入、活动控件、弹窗和 Ctrl/Alt/Super 修饰组合，避免 Ctrl+C 清空波场或编辑时误触发。命令使用 ImGui 按下事件且关闭按住重复，不再通过 GLFW 持续按键状态处理二维运行和画笔。二维与三维统一 Q 波场色带、W 分量、E 模型色带；Shift 反向循环。三维 `handleWorkspaceShortcuts3D` 使用已有 `selectWaveComponent3D` 保存同单位的参考和独立压力尺度，色带只改选择索引，不调用视觉预设/显示参数重置。G 网格、B 边界显示、V 体绘制与面板控件使用同样的显示状态；B 同步恢复视图适配，V 同步使抽取缓存失效。N 设置一个求解步，支持暂停时逐步推进采集。C 在采集或多炮序列期间禁用。F1 和顶部 Shortcuts 按钮打开本地双语帮助弹窗；外层路由仍单独处理 Tab 冷切换。完整键位见[使用指南](../user/Seis3D_User_Guide.md)。
 
 ### 可停靠工作区与显示样式
 

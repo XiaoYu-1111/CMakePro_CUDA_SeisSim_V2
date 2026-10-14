@@ -120,7 +120,8 @@ void toggleSimulation3D(Seis3D_State& s) {
 void advanceSimulation3D(Seis3D_State& s) {
     if(!s.ready3D||(!s.running3D&&!s.singleStep3D)) return;
     requireCuda3D(cudaEventRecord(s.gpu3D.startEvent3D,s.gpu3D.stream3D),"start 3D timer");
-    const int batch=s.singleStep3D?1:(std::clamp)(s.stepsPerFrame3D,1,8); s.singleStep3D=false;
+    const bool singleStep=s.singleStep3D;
+    const int batch=singleStep?1:(std::clamp)(s.stepsPerFrame3D,1,8); s.singleStep3D=false;
     for(int i=0;i<batch;++i) {
         const Source3D& source=s.recording3D?s.gather3D.source3D:s.source3D;
         runStep3D(s.gpu3D,s.context3D,source,s.step3D); ++s.step3D;
@@ -143,6 +144,8 @@ void advanceSimulation3D(Seis3D_State& s) {
         }
         if(!s.recording3D&&s.step3D>=std::uint64_t((std::clamp)(s.maximumSteps3D,1,1000000))) { s.running3D=false; break; }
     }
+    // Finishing one shot may prepare the next; manual stepping must still leave continuous runs paused.
+    if(singleStep) s.running3D=false;
     if(!s.recording3D) appendLiveTrace3D(s);
     requireCuda3D(cudaEventRecord(s.gpu3D.stopEvent3D,s.gpu3D.stream3D),"stop 3D timer");
     requireCuda3D(cudaEventSynchronize(s.gpu3D.stopEvent3D),"finish 3D compute batch");
