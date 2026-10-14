@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 // =============================================================================
 // 1. 系统与第三方依赖库 (External Headers)
@@ -40,6 +40,7 @@ enum class AppScreen {
     HamStation,
     SeisSim_GPU,    // CUDA 地震波场模拟屏
     SeisSim_3D,     // 独立三维弹性波沙盒
+    UserManual,     // 双语言操作手册
     Count
 };
 
@@ -300,40 +301,7 @@ struct ViewportInfo {
 };
 
 // 实时地震记录波道图分析控制参数
-struct AnalysisState {
-    bool  isOpen = false;
-    int   numChannels = 0;                         // 检波器总道数 (nTraces)
-    int   numSamples = 0;                         // 每道的采样点数 (nSamples)
-    float globalMaxAmp = 0.0f;                      // 全局最大绝对振幅
-    float samplingInterval = 0.001f;                    // 采样时间增量 dt (秒)
-
-    std::vector<std::vector<float>> traces;             // 剖面道数据 [channel][sample]
-    std::vector<float>              heatmapData;        // 用于一维展平的背景矩阵数据
-
-    bool  showWiggle = true;                         // 是否绘制变振幅 Wiggle 细线
-    bool  showHeatmap = true;                         // 是否绘制 Heatmap 背景
-    int   colormapIndex = 0;                            // 图谱索引 (0: RdBu, 1: PiYG, 2: Spectral)
-    ImVec4 colorLine = ImVec4(0.0f, 0.0f, 0.0f, 1.0f); // Wiggle 波形线颜色
-    float displayGain = 1.0f;                         // 道图显示增益系数
-    float heatmapMin = -1.0f;
-    float heatmapMax = 1.0f;
-    bool  fitRequest = false;                        // 请求自动缩放贴合显示区域
-};
-
-// 道图绘图上下文，用于通过 ImGui/ImPlot 渲染 Wiggle 细波形线
-struct PlotContext {
-    const std::vector<float>* traceData;
-    float offsetX;
-    float gain;
-    float dt;
-    bool  useTime;
-    int   startSample;
-    int   step;
-};
-
-// =============================================================================
-// 【回放核心】：回放状态机枚举
-// =============================================================================
+// Replay state remains shared by the 2D simulation lifecycle.
 enum ReplayState {
     REPLAY_IDLE = 0,
     REPLAY_RECORDING,

@@ -21,6 +21,7 @@ void checkLaunch3D() { checkCuda3D(cudaGetLastError(), "kernel launch"); }
 
 // Allocate and clear one stream-owned float buffer; caller owns rollback on failure.
 void allocateFloats3D(float*& pointer, std::size_t count, cudaStream_t stream) {
+    if (count == 0) return;
     checkCuda3D(cudaMalloc(&pointer, count * sizeof(float)), "allocate field");
     checkCuda3D(cudaMemsetAsync(pointer, 0, count * sizeof(float), stream), "clear field");
 }
@@ -34,6 +35,7 @@ bool validMaterial3D(float vp, float vs, float rho) {
 
 // Compute the number of slab cells for one direction, including cross-axis corner cells.
 std::size_t slabCount3D(const SimulationContext3D& c, int axis) {
+    if (c.reflecting3D) return 0;
     if (axis == 0) return std::size_t(2 * c.pml3D) * c.gy3D * c.gz3D;
     if (axis == 1) return std::size_t(2 * c.pml3D) * c.gx3D * c.gz3D;
     return std::size_t((c.freeSurface3D ? 1 : 2) * c.pml3D) * c.gx3D * c.gy3D;
@@ -89,6 +91,7 @@ __device__ __forceinline__ float derivative3D(const float* field, std::size_t i,
 // Apply one derivative's CPML recurrence in its direction's compact slab allocation.
 __device__ __forceinline__ float applyCpml3D(const GPUSimData3D& g, const SimulationContext3D& c,
     int x, int y, int z, int axis, int slot, bool half, float derivative) {
+    if (c.reflecting3D) return derivative;
     const int n = axis == 0 ? c.gx3D : axis == 1 ? c.gy3D : c.gz3D;
     const int coordinate = axis == 0 ? x : axis == 1 ? y : z;
     const bool topFree = axis == 2 && c.freeSurface3D;
@@ -111,19 +114,74 @@ __device__ __forceinline__ float applyCpml3D(const GPUSimData3D& g, const Simula
 __global__ void generateMaterialsKernel3D(GPUSimData3D g, SimulationContext3D c) {
     const std::size_t i = std::size_t(blockIdx.x) * blockDim.x + threadIdx.x;
     if (i >= c.cells3D) return;
-    const int x = int(i % c.gx3D) - c.ox3D;
-    const int y = int((i / c.gx3D) % c.gy3D) - c.oy3D;
-    const int z = int(i / (std::size_t(c.gx3D) * c.gy3D)) - c.oz3D;
+    // Extend the nearest physical material into padding, including dipping and graded models.
+    const int x = max(0,min(c.nx3D-1,int(i % c.gx3D) - c.ox3D));
+    const int y = max(0,min(c.ny3D-1,int((i / c.gx3D) % c.gy3D) - c.oy3D));
+    const int z = max(0,min(c.nz3D-1,int(i / (std::size_t(c.gx3D) * c.gy3D)) - c.oz3D));
     const float dx = (x - c.nx3D * 0.5f) / c.nx3D;
     const float dy = (y - c.ny3D * 0.5f) / c.ny3D;
     const float dz = (z - c.nz3D * 0.55f) / c.nz3D;
-    const bool lower = (c.modelKind3D == ModelKind3D::TwoLayer && z >= c.nz3D / 2)
-        || (c.modelKind3D == ModelKind3D::Sphere && dx * dx + dy * dy + dz * dz < 0.035f);
-    const float vp = lower ? c.layerVp3D : c.vp3D, vs = lower ? c.layerVs3D : c.vs3D;
-    const float rho = lower ? c.layerDensity3D : c.density3D;
+    const float depth = float(z)/float(c.nz3D-1), horizontal = float(x)/float(c.nx3D-1)-0.5f;
+    float blend = 0;
+    switch (c.modelKind3D) {
+    case ModelKind3D::TwoLayer: blend = depth >= c.interfaceDepth3D; break;
+    case ModelKind3D::Sphere: blend = dx*dx+dy*dy+dz*dz < c.anomalyRadius3D*c.anomalyRadius3D; break;
+    case ModelKind3D::ThreeLayer: blend = depth < 1.0f/3 ? 0 : depth < 2.0f/3 ? 0.5f : 1; break;
+    case ModelKind3D::DippingLayer: blend = depth >= c.interfaceDepth3D+c.layerDip3D*horizontal; break;
+    case ModelKind3D::LowVelocityLayer: blend = fabsf(depth-c.interfaceDepth3D) <= 0.5f*c.layerThickness3D; break;
+    case ModelKind3D::Fault: blend = depth >= c.interfaceDepth3D+c.layerDip3D*horizontal
+        +(horizontal>0 ? c.faultThrow3D : 0); break;
+    case ModelKind3D::Gradient: blend = depth; break;
+    case ModelKind3D::SaltDome: {
+        const float vertical = (depth-0.78f)/0.52f;
+        blend = (dx*dx+dy*dy)/(c.anomalyRadius3D*c.anomalyRadius3D)+vertical*vertical < 1;
+        break;
+    }
+    default: break;
+    }
+    const float vp = c.vp3D+blend*(c.layerVp3D-c.vp3D), vs = c.vs3D+blend*(c.layerVs3D-c.vs3D);
+    const float rho = c.density3D+blend*(c.layerDensity3D-c.density3D);
     g.inverseDensity3D[i] = 1.0f / rho;
     g.mu3D[i] = rho * vs * vs;
     g.lambda3D[i] = rho * (vp * vp - 2.0f * vs * vs);
+}
+
+// Mirror one pair of cell-face slip walls with stagger-aware parity. Axis launches are ordered
+// on the same stream, so edges/corners inherit the product of the independent face reflections.
+// Normal velocity is odd, tangential velocity even; normal stress is even, shear traction odd.
+__global__ void reflectingGhostKernel3D(GPUSimData3D g, SimulationContext3D c, int axis, bool velocities) {
+    const int lengths[3] = {c.gx3D,c.gy3D,c.gz3D};
+    const int uAxis = (axis+1)%3, vAxis = (axis+2)%3;
+    const int u = int(blockIdx.x*blockDim.x+threadIdx.x);
+    const int v = int(blockIdx.y*blockDim.y+threadIdx.y);
+    if (u >= lengths[uAxis] || v >= lengths[vAxis]) return;
+    const int high = lengths[axis]-stencilRadius3D-1;
+    int p[3]{}; p[uAxis]=u; p[vAxis]=v;
+    for (int field=velocities?0:3; field<(velocities?3:9); ++field) {
+        const bool half = field<3 ? field==axis : field==6 ? axis!=2 : field==7 ? axis!=0 : field==8 ? axis!=1 : false;
+        const bool odd = half; // Half-grid fields are exactly vn and sigma_nt for this face.
+        for (int side=0; side<2; ++side) for (int depth=1; depth<=stencilRadius3D; ++depth) {
+            p[axis] = side ? high+depth : stencilRadius3D-depth;
+            const auto destination = index3D(c,p[0],p[1],p[2]);
+            if (half && !side && depth==1) {g.field3D[field][destination]=0; continue;}
+            p[axis] = side ? high+1-depth-int(half) : stencilRadius3D+depth-1-int(half);
+            const float value = g.field3D[field][index3D(c,p[0],p[1],p[2])];
+            g.field3D[field][destination] = odd ? -value : value;
+        }
+        if (half) { // The upper half-grid face is an active velocity/shear node.
+            p[axis]=high; g.field3D[field][index3D(c,p[0],p[1],p[2])]=0;
+        }
+    }
+}
+
+// Complete six reflecting faces before the next interior update; no damping or CPML memories.
+void applyReflectingWalls3D(GPUSimData3D& g,const SimulationContext3D& c,bool velocities) {
+    const int lengths[3]={c.gx3D,c.gy3D,c.gz3D};
+    const dim3 block(16,16);
+    for(int axis=0;axis<3;++axis) {
+        const dim3 grid((lengths[(axis+1)%3]+15)/16,(lengths[(axis+2)%3]+15)/16);
+        reflectingGhostKernel3D<<<grid,block,0,g.stream3D>>>(g,c,axis,velocities); checkLaunch3D();
+    }
 }
 
 // Extend an imported physical domain into CPML and ghost cells without changing physical cells.
@@ -275,7 +333,7 @@ __global__ void sourceKernel3D(GPUSimData3D g, SimulationContext3D c, Source3D s
 
 // Collocate face velocities at the cell center and return the selected physical scalar.
 __device__ float sampleScalar3D(const GPUSimData3D& g, const SimulationContext3D& c,
-    int x, int y, int z, int component) {
+    int x, int y, int z, int component,float* velocityMagnitude=nullptr) {
     const auto i = index3D(c, x+c.ox3D, y+c.oy3D, z+c.oz3D);
     if (component == 5) return sqrtf((g.lambda3D[i]+2*g.mu3D[i])*g.inverseDensity3D[i]);
     if (component == 6) return sqrtf(g.mu3D[i]*g.inverseDensity3D[i]);
@@ -283,53 +341,79 @@ __device__ float sampleScalar3D(const GPUSimData3D& g, const SimulationContext3D
     const float vx = 0.5f*(g.field3D[0][i]+g.field3D[0][i-1]);
     const float vy = 0.5f*(g.field3D[1][i]+g.field3D[1][i-c.gx3D]);
     const float vz = 0.5f*(g.field3D[2][i]+g.field3D[2][i-std::size_t(c.gx3D)*c.gy3D]);
+    const float magnitude=sqrtf(vx*vx+vy*vy+vz*vz);
+    if(velocityMagnitude) *velocityMagnitude=magnitude;
     if (component == 0) return vz;
     if (component == 1) return vx;
     if (component == 2) return vy;
-    if (component == 3) return sqrtf(vx*vx+vy*vy+vz*vz);
+    if (component == 3) return magnitude;
     if (component == 4) return -(g.field3D[3][i]+g.field3D[4][i]+g.field3D[5][i])/3;
     return 0;
 }
 
+// Resample only the bounded display volume at cell centers; solver fields and slice data stay intact.
+__device__ float resampleScalar3D(const GPUSimData3D& g,const SimulationContext3D& c,
+    float x,float y,float z,int component,float* velocityMagnitude=nullptr) {
+    const int ix=int(floorf(x)),iy=int(floorf(y)),iz=int(floorf(z));
+    const float fraction[3]={x-ix,y-iy,z-iz};float result=0;
+    for(int dz=0;dz<2;++dz) for(int dy=0;dy<2;++dy) for(int dx=0;dx<2;++dx) {
+        const float weight=(dx?fraction[0]:1-fraction[0])*(dy?fraction[1]:1-fraction[1])*(dz?fraction[2]:1-fraction[2]);
+        if(weight>0) {
+            float magnitude=0;result+=weight*sampleScalar3D(g,c,ix+dx,iy+dy,iz+dz,component,velocityMagnitude?&magnitude:nullptr);
+            if(velocityMagnitude) *velocityMagnitude+=weight*magnitude;
+        }
+    }
+    return result;
+}
+
 // Extract a packed slice or the auxiliary volume, retaining a physical-unit common color maximum.
 __global__ void extractKernel3D(GPUSimData3D g, SimulationContext3D c, float* output,
-    ViewLayout3D layout, int sx, int sy, int sz, int component, int materialComponent, bool volume) {
+    ViewLayout3D layout, int sx, int sy, int sz, int component, int materialComponent, bool volume, bool includeBoundary) {
     const std::size_t i = std::size_t(blockIdx.x) * blockDim.x + threadIdx.x;
     const std::size_t limit = volume ? layout.totalSamples3D : layout.volumeOffset3D;
     if (i >= limit) return;
-    int x, y, z;
-    if (i < layout.sliceOffset3D[1]) { x = int(i % c.nx3D); y = sy; z = int(i / c.nx3D); }
+    int x, y, z;float fx=0,fy=0,fz=0;
+    const int nx=layout.domainSize3D[0],ny=layout.domainSize3D[1],nz=layout.domainSize3D[2];
+    const int ox=layout.domainOrigin3D[0],oy=layout.domainOrigin3D[1],oz=layout.domainOrigin3D[2];
+    if (i < layout.sliceOffset3D[1]) { x = int(i % nx)+ox; y = sy; z = int(i / nx)+oz; }
     else if (i < layout.sliceOffset3D[2]) {
-        const auto j = i-layout.sliceOffset3D[1]; x = sx; y = int(j % c.ny3D); z = int(j/c.ny3D);
+        const auto j = i-layout.sliceOffset3D[1]; x = sx; y = int(j % ny)+oy; z = int(j/ny)+oz;
     } else if (i < layout.volumeOffset3D) {
-        const auto j = i-layout.sliceOffset3D[2]; x = int(j % c.nx3D); y = int(j/c.nx3D); z = sz;
+        const auto j = i-layout.sliceOffset3D[2]; x = int(j % nx)+ox; y = int(j/nx)+oy; z = sz;
     } else {
         const auto j = i-layout.volumeOffset3D;
-        x = int((j % layout.volumeX3D) * (c.nx3D-1) / (layout.volumeX3D-1));
-        y = int(((j/layout.volumeX3D) % layout.volumeY3D) * (c.ny3D-1) / (layout.volumeY3D-1));
-        z = int((j/(std::size_t(layout.volumeX3D)*layout.volumeY3D)) * (c.nz3D-1) / (layout.volumeZ3D-1));
+        fx=(float(j%layout.volumeX3D)+.5f)*float(nx)/layout.volumeX3D-.5f+ox;
+        fy=(float((j/layout.volumeX3D)%layout.volumeY3D)+.5f)*float(ny)/layout.volumeY3D-.5f+oy;
+        fz=(float(j/(std::size_t(layout.volumeX3D)*layout.volumeY3D))+.5f)*float(nz)/layout.volumeZ3D-.5f+oz;
+        x=int(floorf(fx));y=int(floorf(fy));z=int(floorf(fz));
     }
-    const float value = sampleScalar3D(g,c,x,y,z,component);
-    const float material = sampleScalar3D(g,c,x,y,z,materialComponent);
+    const bool volumeSample=i>=layout.volumeOffset3D;
+    float magnitude=0;
+    const float value = volumeSample?resampleScalar3D(g,c,fx,fy,fz,component,&magnitude):sampleScalar3D(g,c,x,y,z,component,&magnitude);
+    const float material = volumeSample?resampleScalar3D(g,c,fx,fy,fz,materialComponent):sampleScalar3D(g,c,x,y,z,materialComponent);
     output[2*i] = isfinite(value) ? value : 0;
     output[2*i+1] = isfinite(material) ? material : 0;
-    if (!isfinite(value) || !isfinite(material) || material < 0) atomicExch(g.viewStatistics3D+1, 1u);
+    if (!isfinite(value) || !isfinite(material) || !isfinite(magnitude) || material < 0) atomicExch(g.viewStatistics3D+1, 1u);
     // Reduce within each active warp before atomics, including the final partially populated warp.
-    float waveMax=isfinite(value)?fabsf(value):0;
-    float materialMin=isfinite(material)?material:3.402823466e38f;
-    float materialMax=isfinite(material)?material:0;
+    const bool physical=x>=0&&x<c.nx3D&&y>=0&&y<c.ny3D&&z>=0&&z<c.nz3D;
+    float waveMax=(physical||includeBoundary)&&isfinite(value)?fabsf(value):0;
+    float velocityMax=(physical||includeBoundary)&&isfinite(magnitude)?magnitude:0;
+    float materialMin=physical&&isfinite(material)?material:3.402823466e38f;
+    float materialMax=physical&&isfinite(material)?material:0;
     const unsigned mask=__activemask();
     const int lane=threadIdx.x&31, active=__popc(mask);
     for(int offset=16;offset>0;offset/=2) {
         const float nextWave=__shfl_down_sync(mask,waveMax,offset);
+        const float nextVelocity=__shfl_down_sync(mask,velocityMax,offset);
         const float nextMin=__shfl_down_sync(mask,materialMin,offset);
         const float nextMax=__shfl_down_sync(mask,materialMax,offset);
-        if(lane+offset<active) {waveMax=fmaxf(waveMax,nextWave);materialMin=fminf(materialMin,nextMin);materialMax=fmaxf(materialMax,nextMax);}
+        if(lane+offset<active) {waveMax=fmaxf(waveMax,nextWave);velocityMax=fmaxf(velocityMax,nextVelocity);materialMin=fminf(materialMin,nextMin);materialMax=fmaxf(materialMax,nextMax);}
     }
     if(lane==0) {
         atomicMax(g.viewStatistics3D,__float_as_uint(waveMax));
         atomicMin(g.viewStatistics3D+2,__float_as_uint(materialMin));
         atomicMax(g.viewStatistics3D+3,__float_as_uint(materialMax));
+        atomicMax(g.viewStatistics3D+4,__float_as_uint(velocityMax));
     }
 }
 
@@ -347,8 +431,20 @@ __global__ void receiverKernel3D(GPUSimData3D g, SimulationContext3D c) {
 
 // Validate dimensions, SI material values and the 3-D staggered CFL bound before any allocation.
 void validateContext3D(SimulationContext3D& c) {
-    if (c.nx3D < 16 || c.ny3D < 16 || c.nz3D < 16 || c.nx3D > 512 || c.ny3D > 512 || c.nz3D > 512)
-        throw std::invalid_argument("Seis3D: physical dimensions must be 16..512.");
+    if (c.reflecting3D) c.freeSurface3D=false;
+    if (int(c.modelKind3D)<0 || int(c.modelKind3D)>int(ModelKind3D::SaltDome)
+        || !std::isfinite(c.interfaceDepth3D) || c.interfaceDepth3D<.1f || c.interfaceDepth3D>.9f
+        || !std::isfinite(c.layerDip3D) || std::abs(c.layerDip3D)>.6f
+        || !std::isfinite(c.layerThickness3D) || c.layerThickness3D<.03f || c.layerThickness3D>.5f
+        || !std::isfinite(c.faultThrow3D) || std::abs(c.faultThrow3D)>.4f
+        || !std::isfinite(c.anomalyRadius3D) || c.anomalyRadius3D<.05f || c.anomalyRadius3D>.4f)
+        throw std::invalid_argument("Seis3D: invalid procedural model geometry.");
+    if (c.nx3D < 16 || c.ny3D < 16 || c.nz3D < 16)
+        throw std::invalid_argument("Seis3D: every physical dimension must be at least 16.");
+    // Divide before multiplying so malformed imported dimensions cannot overflow the node count.
+    if (std::size_t(c.nx3D)>maxPhysicalNodes3D/std::size_t(c.ny3D)
+        || std::size_t(c.nx3D)*c.ny3D>maxPhysicalNodes3D/std::size_t(c.nz3D))
+        throw std::invalid_argument("Seis3D: physical node count exceeds 300 x 300 x 400 (36,000,000).");
     if (c.pml3D < 8 || c.pml3D > 40 || !std::isfinite(c.spacing3D) || c.spacing3D <= 0
         || !std::isfinite(c.frequency3D) || c.frequency3D <= 0 || c.frequency3D > 10000
         || !std::isfinite(c.cfl3D) || c.cfl3D <= 0 || c.cfl3D > 0.9f)
@@ -359,9 +455,10 @@ void validateContext3D(SimulationContext3D& c) {
         c.maxVp3D = c.modelKind3D == ModelKind3D::Uniform ? c.vp3D : (std::max)(c.vp3D,c.layerVp3D);
     if (!std::isfinite(c.maxVp3D) || c.maxVp3D <= 0 || c.maxVp3D > 30000)
         throw std::invalid_argument("Seis3D: invalid model maximum Vp.");
-    c.ox3D = c.oy3D = c.pml3D+4; c.oz3D = c.freeSurface3D ? 4 : c.pml3D+4;
-    c.gx3D = c.nx3D+2*c.pml3D+8; c.gy3D = c.ny3D+2*c.pml3D+8;
-    c.gz3D = c.nz3D+(c.freeSurface3D ? 1 : 2)*c.pml3D+8;
+    const int pml=activePml3D(c);
+    c.ox3D = c.oy3D = pml+4; c.oz3D = c.freeSurface3D ? 4 : pml+4;
+    c.gx3D = c.nx3D+2*pml+8; c.gy3D = c.ny3D+2*pml+8;
+    c.gz3D = c.nz3D+(c.freeSurface3D ? 1 : 2)*pml+8;
     c.cells3D = std::size_t(c.gx3D)*c.gy3D*c.gz3D;
     constexpr double sumWeights = 1225.0/1024 + 245.0/3072 + 49.0/5120 + 5.0/7168;
     const double safeDt = c.cfl3D*c.spacing3D/(std::sqrt(3.0)*c.maxVp3D*sumWeights);
@@ -369,19 +466,36 @@ void validateContext3D(SimulationContext3D& c) {
     const auto microseconds = std::floor(safeDt*1.0e6);
     if (microseconds < 1 || microseconds > 65535)
         throw std::invalid_argument("Seis3D: safe dt is outside the implemented 1..65535 microsecond range.");
-    c.dt3D = float(microseconds*1.0e-6);
+    c.safeDt3D = float(microseconds*1.0e-6);
+    c.dt3D = c.safeDt3D;
+    if (c.manualTimeStep3D) {
+        const double requestedUs = double(c.requestedDtMs3D)*1000;
+        const double roundedUs = std::round(requestedUs);
+        if (!std::isfinite(requestedUs) || roundedUs < 1 || roundedUs > 65535)
+            throw std::invalid_argument("Seis3D: manual dt must be between 0.001 and 65.535 ms.");
+        // Allow float input roundoff, but reject fractional-us intervals that SEG-Y cannot represent.
+        if (std::abs(requestedUs-roundedUs) > 0.05)
+            throw std::invalid_argument("Seis3D: manual dt must use whole microseconds (0.001 ms increments).");
+        if (roundedUs > microseconds)
+            throw std::invalid_argument("Seis3D: manual dt exceeds the model CFL ceiling; reduce dt or select Automatic CFL.");
+        c.dt3D = float(roundedUs*1.0e-6);
+    }
 }
 
-// Pack the three physical slices and a volume limited to 128 nodes on each axis.
+// Cache the full active domain, including CPML but excluding ghosts, so visibility needs no allocation.
 ViewLayout3D makeViewLayout3D(const SimulationContext3D& c) {
     ViewLayout3D l;
-    l.sliceWidth3D[0]=c.nx3D; l.sliceHeight3D[0]=c.nz3D;
-    l.sliceWidth3D[1]=c.ny3D; l.sliceHeight3D[1]=c.nz3D;
-    l.sliceWidth3D[2]=c.nx3D; l.sliceHeight3D[2]=c.ny3D;
-    l.sliceOffset3D[1]=std::size_t(c.nx3D)*c.nz3D;
-    l.sliceOffset3D[2]=l.sliceOffset3D[1]+std::size_t(c.ny3D)*c.nz3D;
-    l.volumeOffset3D=l.sliceOffset3D[2]+std::size_t(c.nx3D)*c.ny3D;
-    l.volumeX3D=(std::min)(128,c.nx3D); l.volumeY3D=(std::min)(128,c.ny3D); l.volumeZ3D=(std::min)(128,c.nz3D);
+    const int pml=activePml3D(c);
+    const int nx=c.nx3D+2*pml,ny=c.ny3D+2*pml,nz=c.nz3D+(c.freeSurface3D?1:2)*pml;
+    l.domainSize3D[0]=nx;l.domainSize3D[1]=ny;l.domainSize3D[2]=nz;
+    l.domainOrigin3D[0]=-pml;l.domainOrigin3D[1]=-pml;l.domainOrigin3D[2]=c.freeSurface3D?0:-pml;
+    l.sliceWidth3D[0]=nx; l.sliceHeight3D[0]=nz;
+    l.sliceWidth3D[1]=ny; l.sliceHeight3D[1]=nz;
+    l.sliceWidth3D[2]=nx; l.sliceHeight3D[2]=ny;
+    l.sliceOffset3D[1]=std::size_t(nx)*nz;
+    l.sliceOffset3D[2]=l.sliceOffset3D[1]+std::size_t(ny)*nz;
+    l.volumeOffset3D=l.sliceOffset3D[2]+std::size_t(nx)*ny;
+    l.volumeX3D=(std::min)(maxVolumeAxis3D,nx); l.volumeY3D=(std::min)(maxVolumeAxis3D,ny); l.volumeZ3D=(std::min)(maxVolumeAxis3D,nz);
     l.totalSamples3D=l.volumeOffset3D+std::size_t(l.volumeX3D)*l.volumeY3D*l.volumeZ3D;
     return l;
 }
@@ -393,7 +507,8 @@ MemoryBudget3D estimateMemory3D(const SimulationContext3D& context) {
     b.fieldBytes3D=c.cells3D*12*sizeof(float);
     for (int a=0;a<3;++a) b.cpmlBytes3D+=slabCount3D(c,a)*6*sizeof(float);
     const auto l=makeViewLayout3D(c);
-    b.viewBytes3D=l.totalSamples3D*4*sizeof(float)+l.volumeOffset3D*4;
+    b.viewBytes3D=l.totalSamples3D*4*sizeof(float)+l.volumeOffset3D*4
+        +std::size_t(maxVolumeOutput3D)*maxVolumeOutput3D*4;
     b.totalBytes3D=b.fieldBytes3D+b.cpmlBytes3D+b.viewBytes3D
         +std::size_t(c.gx3D+c.gy3D+c.gz3D)*6*sizeof(float)
         +maxReceivers3D*(sizeof(Receiver3D)+3*sizeof(float))+2*1024*1024;
@@ -404,6 +519,12 @@ MemoryBudget3D estimateMemory3D(const SimulationContext3D& context) {
 void initializeGpu3D(GPUSimData3D& g, const SimulationContext3D& c) {
     if (g.stream3D) throw std::logic_error("Seis3D: release the previous session before initializing.");
     const auto budget=estimateMemory3D(c);
+    int device=0;cudaDeviceProp properties{};
+    checkCuda3D(cudaGetDevice(&device),"query current device");
+    checkCuda3D(cudaGetDeviceProperties(&properties,device),"query grid launch limits");
+    const int launchSize[3]={(c.gx3D-8+31)/32,(c.gy3D-8+3)/4,(c.gz3D-8+1)/2};
+    for(int axis=0;axis<3;++axis) if(launchSize[axis]>properties.maxGridSize[axis])
+        throw std::invalid_argument("Seis3D: a padded dimension exceeds this CUDA device's launch limit.");
     std::size_t freeBytes=0,totalBytes=0;
     checkCuda3D(cudaMemGetInfo(&freeBytes,&totalBytes),"query VRAM");
     const std::size_t reserve=(std::max)(std::size_t(512)*1024*1024,totalBytes/5);
@@ -416,7 +537,7 @@ void initializeGpu3D(GPUSimData3D& g, const SimulationContext3D& c) {
         for (auto& field:g.field3D) allocateFloats3D(field,c.cells3D,g.stream3D);
         allocateFloats3D(g.inverseDensity3D,c.cells3D,g.stream3D);
         allocateFloats3D(g.lambda3D,c.cells3D,g.stream3D); allocateFloats3D(g.mu3D,c.cells3D,g.stream3D);
-        for (int a=0;a<3;++a) {
+        for (int a=0;a<3 && !c.reflecting3D;++a) {
             g.slabCells3D[a]=slabCount3D(c,a);
             allocateFloats3D(g.cpml3D[a],g.slabCells3D[a]*6,g.stream3D);
             const auto coefficients=makeCoefficients3D(c,a);
@@ -425,8 +546,8 @@ void initializeGpu3D(GPUSimData3D& g, const SimulationContext3D& c) {
                 cudaMemcpyHostToDevice,g.stream3D),"upload CPML coefficients");
             checkCuda3D(cudaStreamSynchronize(g.stream3D),"finish coefficient upload");
         }
-        checkCuda3D(cudaMalloc(&g.viewStatistics3D,4*sizeof(unsigned int)),"allocate statistics");
-        checkCuda3D(cudaMemsetAsync(g.viewStatistics3D,0,4*sizeof(unsigned int),g.stream3D),"clear statistics");
+        checkCuda3D(cudaMalloc(&g.viewStatistics3D,5*sizeof(unsigned int)),"allocate statistics");
+        checkCuda3D(cudaMemsetAsync(g.viewStatistics3D,0,5*sizeof(unsigned int),g.stream3D),"clear statistics");
         generateMaterialsKernel3D<<<unsigned((c.cells3D+255)/256),256,0,g.stream3D>>>(g,c); checkLaunch3D();
         checkCuda3D(cudaStreamSynchronize(g.stream3D),"initialize model");
         g.allocatedBytes3D=budget.fieldBytes3D+budget.cpmlBytes3D;
@@ -450,8 +571,31 @@ void releaseGpu3D(GPUSimData3D& g) noexcept {
 // Clear fields and memory variables, leaving the model and observation geometry intact.
 void resetGpu3D(GPUSimData3D& g, const SimulationContext3D& c) {
     for (auto p:g.field3D) checkCuda3D(cudaMemsetAsync(p,0,c.cells3D*sizeof(float),g.stream3D),"reset wavefield");
-    for (int a=0;a<3;++a) checkCuda3D(cudaMemsetAsync(g.cpml3D[a],0,g.slabCells3D[a]*6*sizeof(float),g.stream3D),"reset CPML");
-    checkCuda3D(cudaMemsetAsync(g.viewStatistics3D,0,4*sizeof(unsigned int),g.stream3D),"reset diagnostics");
+    for (int a=0;a<3;++a) if(g.slabCells3D[a])
+        checkCuda3D(cudaMemsetAsync(g.cpml3D[a],0,g.slabCells3D[a]*6*sizeof(float),g.stream3D),"reset CPML");
+    checkCuda3D(cudaMemsetAsync(g.viewStatistics3D,0,5*sizeof(unsigned int),g.stream3D),"reset diagnostics");
+}
+
+// Prepare all profiles before committing new frequency-dependent coefficients to the existing stream.
+void refreshCpmlCoefficients3D(GPUSimData3D& g,const SimulationContext3D& c) {
+    if(!g.stream3D) throw std::logic_error("Seis3D: simulation not initialized.");
+    if(c.reflecting3D) return;
+    std::array<std::vector<float>,3> profiles;
+    for(int axis=0;axis<3;++axis) profiles[axis]=makeCoefficients3D(c,axis);
+    float* replacement[3]{};
+    try {
+        for(int axis=0;axis<3;++axis) {
+            allocateFloats3D(replacement[axis],profiles[axis].size(),g.stream3D);
+            checkCuda3D(cudaMemcpyAsync(replacement[axis],profiles[axis].data(),profiles[axis].size()*sizeof(float),
+                cudaMemcpyHostToDevice,g.stream3D),"refresh CPML coefficients");
+        }
+        checkCuda3D(cudaStreamSynchronize(g.stream3D),"finish CPML refresh");
+    } catch(...) {
+        cudaStreamSynchronize(g.stream3D);
+        for(auto pointer:replacement) cudaFree(pointer);
+        throw;
+    }
+    for(int axis=0;axis<3;++axis) {std::swap(g.coefficients3D[axis],replacement[axis]);cudaFree(replacement[axis]);}
 }
 
 // Enqueue second-order leapfrog updates and stagger-aware planar free-surface ghost maps.
@@ -464,36 +608,41 @@ void runStep3D(GPUSimData3D& g, const SimulationContext3D& c, const Source3D& so
     const dim3 block(32,4,2), grid((c.gx3D-8+31)/32,(c.gy3D-8+3)/4,(c.gz3D-8+1)/2);
     const dim3 surfaceBlock(16,16), surfaceGrid((c.gx3D-8+15)/16,(c.gy3D-8+15)/16);
     if (c.freeSurface3D) { stressGhostKernel3D<<<surfaceGrid,surfaceBlock,0,g.stream3D>>>(g,c); checkLaunch3D(); }
+    if (c.reflecting3D) applyReflectingWalls3D(g,c,false);
     velocityKernel3D<<<grid,block,0,g.stream3D>>>(g,c); checkLaunch3D();
     if (source.kind3D==SourceKind3D::Force) {
         sourceKernel3D<<<1,32,0,g.stream3D>>>(g,c,source,double(step)*c.dt3D); checkLaunch3D();
     }
     if (c.freeSurface3D) { velocityGhostKernel3D<<<surfaceGrid,surfaceBlock,0,g.stream3D>>>(g,c); checkLaunch3D(); }
+    if (c.reflecting3D) applyReflectingWalls3D(g,c,true);
     stressKernel3D<<<grid,block,0,g.stream3D>>>(g,c); checkLaunch3D();
     if (source.kind3D==SourceKind3D::Explosion) {
         sourceKernel3D<<<1,32,0,g.stream3D>>>(g,c,source,(double(step)+0.5)*c.dt3D); checkLaunch3D();
     }
     if (c.freeSurface3D) { stressGhostKernel3D<<<surfaceGrid,surfaceBlock,0,g.stream3D>>>(g,c); checkLaunch3D(); }
+    if (c.reflecting3D) applyReflectingWalls3D(g,c,false);
 }
 
 // Extract into a caller-mapped CUDA/GL buffer and return its maximum after stream completion.
 void extractViews3D(GPUSimData3D& g, const SimulationContext3D& c, float* out,
-    const ViewLayout3D& layout, const int slices[3], int component, int materialComponent, bool volume, float& maximum, float materialRange[2]) {
+    const ViewLayout3D& layout, const int slices[3], int component, int materialComponent, bool volume, float& maximum, float materialRange[2], bool includeBoundary,float* velocityMaximum) {
     if (!out || materialComponent<5 || materialComponent>7 || component<0 || component>7 || slices[0]<0 || slices[0]>=c.nx3D
         || slices[1]<0 || slices[1]>=c.ny3D || slices[2]<0 || slices[2]>=c.nz3D)
         throw std::invalid_argument("Seis3D: invalid view parameters.");
     checkCuda3D(cudaMemsetAsync(g.viewStatistics3D,0,sizeof(unsigned int),g.stream3D),"reset view maximum");
+    checkCuda3D(cudaMemsetAsync(g.viewStatistics3D+4,0,sizeof(unsigned int),g.stream3D),"reset common velocity maximum");
     const unsigned int rangeInitial[2]={0x7f7fffffu,0u};
     checkCuda3D(cudaMemcpyAsync(g.viewStatistics3D+2,rangeInitial,sizeof(rangeInitial),cudaMemcpyHostToDevice,g.stream3D),"reset material range");
     const auto count=volume ? layout.totalSamples3D : layout.volumeOffset3D;
-    extractKernel3D<<<unsigned((count+255)/256),256,0,g.stream3D>>>(g,c,out,layout,slices[0],slices[1],slices[2],component,materialComponent,volume);
+    extractKernel3D<<<unsigned((count+255)/256),256,0,g.stream3D>>>(g,c,out,layout,slices[0],slices[1],slices[2],component,materialComponent,volume,includeBoundary);
     checkLaunch3D();
-    unsigned int stats[4]{};
+    unsigned int stats[5]{};
     checkCuda3D(cudaMemcpyAsync(stats,g.viewStatistics3D,sizeof(stats),cudaMemcpyDeviceToHost,g.stream3D),"read diagnostics");
     checkCuda3D(cudaStreamSynchronize(g.stream3D),"finish view extraction");
     if (stats[1]) throw std::runtime_error("Seis3D: non-finite wavefield detected; session stopped.");
     std::memcpy(&maximum,stats,sizeof(float));
     std::memcpy(materialRange,stats+2,2*sizeof(float));
+    if(velocityMaximum) std::memcpy(velocityMaximum,stats+4,sizeof(float));
 }
 
 // Validate and atomically replace receiver buffers, including the pinned transfer allocation.

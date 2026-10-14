@@ -2,25 +2,26 @@
 out vec4 FragColor;
 in vec2 TexCoords;
 
-uniform sampler2D seisTexture;   // µØÕğ²¨³¡ÑÕÉ«ÎÆÀí (CUDAÁã¿½±´Ğ´Èë)
-uniform sampler2D modelTexture;  // ÀëÆÁµØÖÊÎïĞÔÎÆÀí (R: Vp, G: Vs, B: Rho)
-uniform bool useModelTexture;    // ÊÇ·ñÆôÓÃ·Ç¾ùÔÈËÙ¶ÈÄ£ĞÍÎÆÀí
-uniform float uniformVp;         // ¾ùÔÈ½éÖÊÏÂµÄ×İ²¨ËÙ¶È (ÓÉ C++ ÊµÊ±»¬¿é´«Èë)
-uniform float uniformRho;        // ¾ùÔÈ½éÖÊÏÂµÄÃÜ¶È (ÓÉ C++ ÊµÊ±»¬¿é´«Èë)
+uniform sampler2D seisTexture;   // åœ°éœ‡æ³¢åœºé¢œè‰²çº¹ç† (CUDAé›¶æ‹·è´å†™å…¥)
+uniform sampler2D modelTexture;  // ç¦»å±åœ°è´¨ç‰©æ€§çº¹ç† (R: Vp, G: Vs, B: Rho)
+uniform bool useModelTexture;    // æ˜¯å¦å¯ç”¨éå‡åŒ€é€Ÿåº¦æ¨¡å‹çº¹ç†
+uniform float uniformVp;         // å‡åŒ€ä»‹è´¨ä¸‹çš„çºµæ³¢é€Ÿåº¦ (ç”± C++ å®æ—¶æ»‘å—ä¼ å…¥)
+uniform float uniformRho;        // å‡åŒ€ä»‹è´¨ä¸‹çš„å¯†åº¦ (ç”± C++ å®æ—¶æ»‘å—ä¼ å…¥)
 
 uniform vec2 simSize;   
 uniform float viewZoom;
 uniform float totalTime;
-uniform float npml;              // PML ±ß½ç¸ñÊı
-uniform int waveStyle;           // 0: Magma, 1~12 ¶ÔÓ¦±ê×¼¿ÆÑ§É«Æ×
-uniform int modelStyle;          // ±³¾°µØÖÊÍ¼·ç¸ñ: 0: ¾­µäîÑ½ğ, 1: ¿ÆÑ§µØÖÊÍ¼, 2: »Ò¶ÈVp, 3: ¸úËæ²¨³¡·ç¸ñ
+uniform float npml;              // PML è¾¹ç•Œæ ¼æ•°
+uniform int waveStyle;           // 0: Magma, 1~12 å¯¹åº”æ ‡å‡†ç§‘å­¦è‰²è°±
+uniform int modelStyle;          // èƒŒæ™¯åœ°è´¨å›¾é£æ ¼: 0: ç»å…¸é’›é‡‘, 1: ç§‘å­¦åœ°è´¨å›¾, 2: ç°åº¦Vp, 3: è·Ÿéšæ³¢åœºé£æ ¼
 uniform bool showGrid;
+uniform bool lightCanvas2D;
 
-uniform float gridSpacing;       // Íø¸ñ»ù´¡¼ä¸ô (Èç 50.0£¬¶ÔÓ¦ UI µÄ 50m »®·Ö)
-uniform float gridOpacity;       // Íø¸ñÕûÌå²»Í¸Ã÷¶ÈÏµÊı (0.0 ~ 1.0 µ÷½ÚÁÁ¶È)
+uniform float gridSpacing;       // ç½‘æ ¼åŸºç¡€é—´éš” (å¦‚ 50.0ï¼Œå¯¹åº” UI çš„ 50m åˆ’åˆ†)
+uniform float gridOpacity;       // ç½‘æ ¼æ•´ä½“ä¸é€æ˜åº¦ç³»æ•° (0.0 ~ 1.0 è°ƒèŠ‚äº®åº¦)
 
 // =============================================================================
-// ¡¾µÚÒ»¼¶£ºÁãÒÀÀµµ×²ã¼¸ºÎÓë²îÖµ¸¨Öúº¯Êı¡¿
+// ã€ç¬¬ä¸€çº§ï¼šé›¶ä¾èµ–åº•å±‚å‡ ä½•ä¸å·®å€¼è¾…åŠ©å‡½æ•°ã€‘
 // =============================================================================
 float getGridLine(float pos, float spacing, float pixelWidth) {
     float coord = pos / spacing;
@@ -29,14 +30,14 @@ float getGridLine(float pos, float spacing, float pixelWidth) {
     return 1.0 - smoothstep(pixelWidth, pixelWidth + 1.0, dist / df);
 }
 
-// ÎŞ·ÖÖ§ 2D ¾ØĞÎ SDF ¾àÀëº¯Êı (ÎŞÍâ²¿ÒÀÀµ£¬ÓÅÏÈÖÃ¶¥)
+// æ— åˆ†æ”¯ 2D çŸ©å½¢ SDF è·ç¦»å‡½æ•° (æ— å¤–éƒ¨ä¾èµ–ï¼Œä¼˜å…ˆç½®é¡¶)
 float sdBox(vec2 p, vec2 b) {
     vec2 d = abs(p) - b;
     return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
 }
 
 // =============================================================================
-// ¡¾µÚ¶ş¼¶£º12 Ì×±ê×¼µÄ¿ÆÑ§É«Æ×µ¥Ïò¶¨Òå¡¿
+// ã€ç¬¬äºŒçº§ï¼š12 å¥—æ ‡å‡†çš„ç§‘å­¦è‰²è°±å•å‘å®šä¹‰ã€‘
 // =============================================================================
 vec3 getJet(float t) {
     vec3 c0 = vec3(0.0, 0.0, 0.5), c1 = vec3(0.0, 0.5, 1.0), c2 = vec3(0.5, 1.0, 0.5), c3 = vec3(1.0, 0.75, 0.0), c4 = vec3(0.5, 0.0, 0.0);
@@ -56,7 +57,7 @@ vec3 getTerrain(float t) {
 }
 
 vec3 getSeismic(float t) {
-    vec3 c0 = vec3(0.000, 0.000, 0.706), c1 = vec3(0.88, 0.88, 0.88), c2 = vec3(0.706, 0.000, 0.000); // ¸üÎÈ¶¨µÄ phase center
+    vec3 c0 = vec3(0.000, 0.000, 0.706), c1 = vec3(0.88, 0.88, 0.88), c2 = vec3(0.706, 0.000, 0.000); // æ›´ç¨³å®šçš„ phase center
     if (t < 0.5) return mix(c0, c1, t * 2.0);
     return mix(c1, c2, (t - 0.5) * 2.0);
 }
@@ -90,7 +91,7 @@ vec3 getCoolwarm(float t) {
 }
 
 vec3 getViridis(float t) {
-    vec3 c0 = vec3(0.267, 0.004, 0.329), c1 = vec3(0.282, 0.137, 0.455), c2 = vec3(0.251, 0.404, 0.541), c3 = vec3(0.208, 0.718, 0.475), c4 = vec3(0.561, 0.843, 0.267), c5 = vec3(0.85, 0.88, 0.18); // Ñ¹¸ßÁÁ
+    vec3 c0 = vec3(0.267, 0.004, 0.329), c1 = vec3(0.282, 0.137, 0.455), c2 = vec3(0.251, 0.404, 0.541), c3 = vec3(0.208, 0.718, 0.475), c4 = vec3(0.561, 0.843, 0.267), c5 = vec3(0.85, 0.88, 0.18); // å‹é«˜äº®
     if (t < 0.2) return mix(c0, c1, t * 5.0);
     if (t < 0.4) return mix(c1, c2, (t - 0.2) * 5.0);
     if (t < 0.6) return mix(c2, c3, (t - 0.4) * 5.0);
@@ -108,8 +109,8 @@ vec3 getPlasma(float t) {
 
 vec3 getTurbo(float t) {
     vec3 c0 = vec3(0.190, 0.071, 0.232), c1 = vec3(0.276, 0.421, 0.891), c2 = vec3(0.158, 0.735, 0.923); // deep purple, blue, cyan
-    vec3 c3 = vec3(0.120, 0.780, 0.520); // green (½µµÍÁÁ¶È)
-    vec3 c4 = vec3(0.580, 0.820, 0.180); // yellow-green (½µµÍ»ÆÇø¹ıÆØ)
+    vec3 c3 = vec3(0.120, 0.780, 0.520); // green (é™ä½äº®åº¦)
+    vec3 c4 = vec3(0.580, 0.820, 0.180); // yellow-green (é™ä½é»„åŒºè¿‡æ›)
     vec3 c5 = vec3(0.930, 0.720, 0.180), c6 = vec3(0.980, 0.420, 0.120), c7 = vec3(0.480, 0.015, 0.015); // orange, red-orange, deep red
     if (t < 0.10) return mix(c0, c1, t * 10.0);
     if (t < 0.20) return mix(c1, c2, (t - 0.10) * 10.0);
@@ -141,7 +142,7 @@ vec3 getPuOr(float t) {
 }
 
 // =============================================================================
-// ¡¾ ºËĞÄÖØ¹¹£º¸ß¶È¸´ÓÃµÄÈ«¾Ö 13 Ì×±ê×¼¿ÆÑ§É«Æ×Ó³Éäº¯Êı¿â ¡¿ [1.2.7]
+// ã€ æ ¸å¿ƒé‡æ„ï¼šé«˜åº¦å¤ç”¨çš„å…¨å±€ 13 å¥—æ ‡å‡†ç§‘å­¦è‰²è°±æ˜ å°„å‡½æ•°åº“ ã€‘ [1.2.7]
 // =============================================================================
 vec3 getColormap(int style, float t, vec3 midCol) {
     // Diverging Scientific Wavefield Maps
@@ -154,7 +155,7 @@ vec3 getColormap(int style, float t, vec3 midCol) {
     if (style == 5) return getPlasma(t);
     if (style == 6) return getViridis(t);
     if (style == 7) return getTurbo(t);
-    if (style == 8) { // Magma Glow (¾­µäÈÛÑÒ·¢¹â)
+    if (style == 8) { // Magma Glow (ç»å…¸ç†”å²©å‘å…‰)
         vec3 c0 = midCol, c1 = vec3(0.25, 0.05, 0.35), c2 = vec3(0.70, 0.15, 0.40), c3 = vec3(0.95, 0.50, 0.15), c4 = vec3(1.0, 1.0, 1.0);
         if (t < 0.25) return mix(c0, c1, t * 4.0);
         if (t < 0.5) return mix(c1, c2, (t - 0.25) * 4.0);
@@ -171,20 +172,20 @@ vec3 getColormap(int style, float t, vec3 midCol) {
 }
 
 // =============================================================================
-// ¡¾µÚÈı¼¶£ºÎïĞÔÈ¡ÖµÓëµØ²ã½âÎöº¯Êı¡¿
+// ã€ç¬¬ä¸‰çº§ï¼šç‰©æ€§å–å€¼ä¸åœ°å±‚è§£æå‡½æ•°ã€‘
 // =============================================================================
 float calcVp(vec2 uv) {
-    if (useModelTexture) return texture(modelTexture, uv).r * 6000.0; // Ó³ÉäÖÁ 0~6000 m/s
+    if (useModelTexture) return texture(modelTexture, uv).r * 6000.0; // æ˜ å°„è‡³ 0~6000 m/s
     return uniformVp;
 }
 
 float calcRHO(vec2 uv) {
-    if (useModelTexture) return texture(modelTexture, uv).b * 3000.0; // Ó³ÉäÖÁ 0~3000 kg/m3
+    if (useModelTexture) return texture(modelTexture, uv).b * 3000.0; // æ˜ å°„è‡³ 0~3000 kg/m3
     return uniformRho;
 }
 
 // =============================================================================
-// ¡¾ ºËĞÄÖØ¹¹£º¸ß¶È¼¯³ÉµÄµØÖÊ±³¾°Éú³Éº¯Êı ¡¿
+// ã€ æ ¸å¿ƒé‡æ„ï¼šé«˜åº¦é›†æˆçš„åœ°è´¨èƒŒæ™¯ç”Ÿæˆå‡½æ•° ã€‘
 // =============================================================================
 vec3 getGeologicalBackground(vec2 uv, vec2 cellPos) {
     // Velocity -> normalized scalar
@@ -225,12 +226,12 @@ vec3 getGeologicalBackground(vec2 uv, vec2 cellPos) {
     // Style 3: Sync With Active Wave Colormap
     else if (modelStyle == 3) {
         bgCol = getColormap(waveStyle, t, vec3(0.015, 0.018, 0.022));
-        // Background desaturation ±ÜÃâ±³¾°ºÍ²¨³¡¾ºÕù
+        // Background desaturation é¿å…èƒŒæ™¯å’Œæ³¢åœºç«äº‰
         bgCol = mix(vec3(dot(bgCol, vec3(0.299, 0.587, 0.114))), bgCol, 0.55);
         // Dark scientific attenuation
         bgCol *= 0.38;
     }
-    // Style 4: Pure White Scientific Background (Soft scientific white, ±ÜÃâ´¿ 1.0 °×µ¼ÖÂ´ÌÑÛ)
+    // Style 4: Pure White Scientific Background (Soft scientific white, é¿å…çº¯ 1.0 ç™½å¯¼è‡´åˆºçœ¼)
     else if (modelStyle == 4) {
         bgCol = mix(vec3(0.965), vec3(0.90), t * 0.35);
         // Very soft structural variation
@@ -244,32 +245,32 @@ vec3 getGeologicalBackground(vec2 uv, vec2 cellPos) {
         }
     }
 
-// PML Darkening (PML ÎüÊÕ²ãÇ³°×Ğ±ÎÆÓë×ÔÊÊÓ¦±ä°µäÖÈ¾)
+// PML Darkening (PML å¸æ”¶å±‚æµ…ç™½æ–œçº¹ä¸è‡ªé€‚åº”å˜æš—æ¸²æŸ“)
 if (npml > 0.0) {
     float distToEdge = min(min(cellPos.x, simSize.x - cellPos.x), min(cellPos.y, simSize.y - cellPos.y));
     if (distToEdge < npml) {
-        // 1. Ğ±ÎÆÖÜÆÚºÍÃÜ¶È¼ÆËã (0.15 ¾ö¶¨ÃÜ¶È)
+        // 1. æ–œçº¹å‘¨æœŸå’Œå¯†åº¦è®¡ç®— (0.15 å†³å®šå¯†åº¦)
         float stripe = step(0.5, fract((cellPos.x + cellPos.y) * 0.15));
         float fade = smoothstep(0.0, npml, npml - distToEdge);
 
-        if (modelStyle == 4) { // ¿ÆÑ§°×±³¾°ÏÂ
-            // °×±³¾°ÏÂ±£³Ö¾­µäµÄµ­»ÒÉ«ÌõÎÆ
+        if (modelStyle == 4) { // ç§‘å­¦ç™½èƒŒæ™¯ä¸‹
+            // ç™½èƒŒæ™¯ä¸‹ä¿æŒç»å…¸çš„æ·¡ç°è‰²æ¡çº¹
             bgCol = mix(bgCol, vec3(0.75, 0.78, 0.82), fade * (0.50 + 0.25 * stripe));
         } 
-        else { // îÑ½ğ»Ò/¸úËæ²¨³¡µÈÉîÉ«±³¾°ÏÂ
-            // A. µ×É«Æ½»¬±ä°µ£ºPML ÇøÓòÔ½ÍùÍâ±ßÔµ×ß£¬µØÖÊ±³¾°µ×É«Ô½°µ£¨È·±£×î±ßÔµÉîåä£©
-            float base_darken = 0.45; // »ù´¡±ä°µ³Ì¶È (0.0 ~ 1.0)
+        else { // é’›é‡‘ç°/è·Ÿéšæ³¢åœºç­‰æ·±è‰²èƒŒæ™¯ä¸‹
+            // A. åº•è‰²å¹³æ»‘å˜æš—ï¼šPML åŒºåŸŸè¶Šå¾€å¤–è¾¹ç¼˜èµ°ï¼Œåœ°è´¨èƒŒæ™¯åº•è‰²è¶Šæš—ï¼ˆç¡®ä¿æœ€è¾¹ç¼˜æ·±é‚ƒï¼‰
+            float base_darken = 0.45; // åŸºç¡€å˜æš—ç¨‹åº¦ (0.0 ~ 1.0)
             bgCol = mix(bgCol, bgCol * 0.05, fade * base_darken);
 
-            // B. ¡¾ºËĞÄĞÂÔö¡¿£º½«Ğ±ÌõÎÆ£¨stripe == 1.0£©»ìºÏÎª¸ßÑÅµÄÇ³°×É«/µ­»ÒÉ« (Light White)
+            // B. ã€æ ¸å¿ƒæ–°å¢ã€‘ï¼šå°†æ–œæ¡çº¹ï¼ˆstripe == 1.0ï¼‰æ··åˆä¸ºé«˜é›…çš„æµ…ç™½è‰²/æ·¡ç°è‰² (Light White)
             if (stripe > 0.5) {
                 // -------------------------------------------------------------
-                // Äú¿ÉÒÔÍ¨¹ıµ÷½ÚÒÔÏÂÁ½¸ö²ÎÊı£¬ÇáËÉÎ¢µ÷Ç³°×Ğ±ÌõÎÆµÄÁÁ¶ÈºÍÇ¿Èõ£º
+                // æ‚¨å¯ä»¥é€šè¿‡è°ƒèŠ‚ä»¥ä¸‹ä¸¤ä¸ªå‚æ•°ï¼Œè½»æ¾å¾®è°ƒæµ…ç™½æ–œæ¡çº¹çš„äº®åº¦å’Œå¼ºå¼±ï¼š
                 // -------------------------------------------------------------
-                vec3  stripe_color = vec3(0.52, 0.54, 0.58); // Ç³°×ÌõÎÆ»ù´¡ÑÕÉ« (0.52 ´ú±íÈáºÍ°×£¬ÖµÔ½´óÔ½½Ó½ü´¿°×)
-                float stripe_alpha = 0.28;                   // Ğ±ÌõÎÆ»ù´¡²»Í¸Ã÷¶È (Ô­Îª°µÉ«£¬ÕâÀïÓÃ 0.28 ¼´¿É³ÊÏÖ¼«Æä¸ßÑÅµÄµ­°×Ó«¹â¸Ğ)
+                vec3  stripe_color = vec3(0.52, 0.54, 0.58); // æµ…ç™½æ¡çº¹åŸºç¡€é¢œè‰² (0.52 ä»£è¡¨æŸ”å’Œç™½ï¼Œå€¼è¶Šå¤§è¶Šæ¥è¿‘çº¯ç™½)
+                float stripe_alpha = 0.28;                   // æ–œæ¡çº¹åŸºç¡€ä¸é€æ˜åº¦ (åŸä¸ºæš—è‰²ï¼Œè¿™é‡Œç”¨ 0.28 å³å¯å‘ˆç°æå…¶é«˜é›…çš„æ·¡ç™½è§å…‰æ„Ÿ)
 
-                // Ëæ×Å fade ´ÓÄÚ±ßÔµÏò×îÍâ²àÆ½»¬µ­Èë
+                // éšç€ fade ä»å†…è¾¹ç¼˜å‘æœ€å¤–ä¾§å¹³æ»‘æ·¡å…¥
                 bgCol = mix(bgCol, stripe_color, fade * stripe_alpha);
             }
         }
@@ -279,31 +280,31 @@ if (npml > 0.0) {
 }
 
 // =============================================================================
-// ¡¾µÚËÄ¼¶£ºÖ÷äÖÈ¾ main() º¯Êı£¬ÍêÈ«¸´ÓÃ²¢¾«¼ò£¬ÊµÏÖ¼«ÖÂĞÔÄÜ¡¿
+// ã€ç¬¬å››çº§ï¼šä¸»æ¸²æŸ“ main() å‡½æ•°ï¼Œå®Œå…¨å¤ç”¨å¹¶ç²¾ç®€ï¼Œå®ç°æè‡´æ€§èƒ½ã€‘
 // =============================================================================
 void main() {
-    // 1. ´¹Ö±·­×ªÎÆÀí×ø±ê Y (µØ±í¾Ó¶¥¶ÔÆë)
+    // 1. å‚ç›´ç¿»è½¬çº¹ç†åæ ‡ Y (åœ°è¡¨å±…é¡¶å¯¹é½)
     vec2 flippedTexCoords = vec2(TexCoords.x, 1.0 - TexCoords.y);
 
-    // 2. ²ÉÑùµØÕğ²¨³¡ÑÕÉ«
+    // 2. é‡‡æ ·åœ°éœ‡æ³¢åœºé¢œè‰²
     vec4 texColor = texture(seisTexture, flippedTexCoords);
 
-    // 3. ½«ÎÆÀí×ø±êÓ³Éäµ½Êµ¼ÊÍø¸ñµ¥Î»
+    // 3. å°†çº¹ç†åæ ‡æ˜ å°„åˆ°å®é™…ç½‘æ ¼å•ä½
     vec2 cellPos = flippedTexCoords * simSize;
 
-    // 4. ¼ÆËã×ÔÊÊÓ¦µØÖÊ±³¾°µ×É«
+    // 4. è®¡ç®—è‡ªé€‚åº”åœ°è´¨èƒŒæ™¯åº•è‰²
     vec3 baseBG = getGeologicalBackground(flippedTexCoords, cellPos);
 
-    // 5. ÄæÏòÎïÀíÖØ¹¹£º½â¹¹Õñ·ùÖµ v
+    // 5. é€†å‘ç‰©ç†é‡æ„ï¼šè§£æ„æŒ¯å¹…å€¼ v
     float v = (texColor.r > texColor.b) ? (1.0 - texColor.g) : -(1.0 - texColor.g);
 
-    // Æ«µ¼ÊıÖØ¹¹ 3D °¼Í¹±íÃæ·¨Ïß (½öÓÃÓÚ±£Áô×ÅÉ«£¬³¹µ×ÉáÆú¸ßÄÜºÄ specular ¹âÕÕ)
+    // åå¯¼æ•°é‡æ„ 3D å‡¹å‡¸è¡¨é¢æ³•çº¿ (ä»…ç”¨äºä¿ç•™ç€è‰²ï¼Œå½»åº•èˆå¼ƒé«˜èƒ½è€— specular å…‰ç…§)
     float dx = dFdx(v) * 12.0, dy = dFdy(v) * 12.0;
     vec3 normal = normalize(vec3(-dx, -dy, 1.0));
     float gradLen = length(vec2(dx, dy));
 
     // =============================================================================
-    // 6. ¶àÖØäÖÈ¾·ç¸ñ¼ÆËã (ÖØ¹¹£ºÍ³Ò»µÄË«¼«ĞÔ¶Ô³ÆÓ³Éä)
+    // 6. å¤šé‡æ¸²æŸ“é£æ ¼è®¡ç®— (é‡æ„ï¼šç»Ÿä¸€çš„åŒææ€§å¯¹ç§°æ˜ å°„)
     // =============================================================================
     vec3 waveColor;
     float waveIntensity;
@@ -313,40 +314,40 @@ void main() {
         float signedV = tanh(v * 2.5);
         float t = clamp(signedV * 0.5 + 0.5, 0.0, 1.0);
         waveColor = getColormap(waveStyle, t, baseBG);
-        waveIntensity = pow(smoothstep(0.001, 0.035, abs(v)), 0.75); // Diverging: ±£ÁôµÍÕñ·ùÏàÎ»Á¬ĞøĞÔ
+        waveIntensity = pow(smoothstep(0.001, 0.035, abs(v)), 0.75); // Diverging: ä¿ç•™ä½æŒ¯å¹…ç›¸ä½è¿ç»­æ€§
     } else { // Energy Rendering
         float energy = tanh(abs(v) * 2.5);
         waveColor = getColormap(waveStyle, energy, baseBG);
-        waveIntensity = pow(smoothstep(0.01, 0.12, abs(v)), 0.95); // Sequential: ¸üÇ¿µ÷Ö÷ÄÜÁ¿
+        waveIntensity = pow(smoothstep(0.01, 0.12, abs(v)), 0.95); // Sequential: æ›´å¼ºè°ƒä¸»èƒ½é‡
     }
 
-    if (isDiverging) { // Diverging Signed Wavefield (Ô­Âß¼­±£Áô)
+    if (isDiverging) { // Diverging Signed Wavefield (åŸé€»è¾‘ä¿ç•™)
         float signedV = tanh(v * 2.5);
         float t = clamp(signedV * 0.5 + 0.5, 0.0, 1.0);
         waveColor = getColormap(waveStyle, t, baseBG);
         waveIntensity = smoothstep(0.01, 0.1, abs(v));
-    } else { // Sequential Energy Colormaps (Ô­Âß¼­±£Áô)
+    } else { // Sequential Energy Colormaps (åŸé€»è¾‘ä¿ç•™)
         float energy = tanh(abs(v) * 2.5);
         waveColor = getColormap(waveStyle, energy, baseBG);
         waveIntensity = smoothstep(0.01, 0.1, abs(v));
     }
 
-    // ×îÖÕ»ìºÏ£ºÎŞ²¨³¡ÇøÓòÍêÈ«±£Áô¸ß±£ÕæµØ²ãµØÖÊÍ¼£¬ÓĞ²¨³¡ÇøÓòµş¼Ó±ê×¼²¨Æ×
+    // æœ€ç»ˆæ··åˆï¼šæ— æ³¢åœºåŒºåŸŸå®Œå…¨ä¿ç•™é«˜ä¿çœŸåœ°å±‚åœ°è´¨å›¾ï¼Œæœ‰æ³¢åœºåŒºåŸŸå åŠ æ ‡å‡†æ³¢è°±
     vec3 finalColor = mix(baseBG, waveColor, waveIntensity);
     float pxToGridUnits = max(fwidth(cellPos.x), fwidth(cellPos.y));
 
-    // 7. ¡¾ÎïÀíË«ÖØÍø¸ñ»æÖÆ¡¿
+    // 7. ã€ç‰©ç†åŒé‡ç½‘æ ¼ç»˜åˆ¶ã€‘
     // Adaptive Scientific Grid Rendering
     // =============================================================================
-    // ¡¾ÖØ¹¹ºóµÄÍø¸ñ×ÔÊÊÓ¦»æÖÆÂß¼­¡¿
+    // ã€é‡æ„åçš„ç½‘æ ¼è‡ªé€‚åº”ç»˜åˆ¶é€»è¾‘ã€‘
     // =============================================================================
     if (showGrid) {
-        // »ùÓÚ´«ÈëµÄ gridSpacing ½øĞĞ LOD Ëõ·Å¼ÆËã
+        // åŸºäºä¼ å…¥çš„ gridSpacing è¿›è¡Œ LOD ç¼©æ”¾è®¡ç®—
         float baseSpacing = max(5.0, gridSpacing);
         float lod = pow(2.0, floor(log2(max(pxToGridUnits * (50.0 / baseSpacing), 1e-5))));
         
         float mainInterval = baseSpacing * max(1.0, lod);
-        float subInterval = mainInterval * 0.2; // Ï¸·ÖÍø¸ñ×ÔÊÊÓ¦Îª 5 µÈ·Ö£¬²»ÔÙËÀËøÔÚ 1.0
+        float subInterval = mainInterval * 0.2; // ç»†åˆ†ç½‘æ ¼è‡ªé€‚åº”ä¸º 5 ç­‰åˆ†ï¼Œä¸å†æ­»é”åœ¨ 1.0
 
         // Colors
         vec3 subGridCol = vec3(0.72), mainGridCol = vec3(1.0), dotCol = vec3(0.5, 0.95, 0.5);
@@ -374,13 +375,18 @@ void main() {
         float opacityDot = 0.16 * gridOpacity * (1.0 - smoothstep(4.0, 15.0, pxToGridUnits));
 
         // Additive Blend
-        finalColor += subGridCol * gridSub * opacitySub;
-        finalColor += mainGridCol * gridMain * opacityMain;
-        finalColor += dotCol * gridDot * opacityDot;
+        if(lightCanvas2D) {
+            float coverage=clamp(gridSub*opacitySub+gridMain*opacityMain+gridDot*opacityDot,0.0,1.0);
+            finalColor=mix(finalColor,vec3(0.28,0.34,0.37),coverage);
+        } else {
+            finalColor += subGridCol * gridSub * opacitySub;
+            finalColor += mainGridCol * gridMain * opacityMain;
+            finalColor += dotCol * gridDot * opacityDot;
+        }
         finalColor = clamp(finalColor, 0.0, 1.0);
     }
 
-    // 8. »æÖÆ PML ÎüÊÕ±ß½çÓ«¹âÏß (²ÉÓÃ×îÍâ²ã 1D ÏßĞÔ¾àÀëËã·¨£¬³¹µ×½â¾öËõ·ÅÉÁË¸)
+    // 8. ç»˜åˆ¶ PML å¸æ”¶è¾¹ç•Œè§å…‰çº¿ (é‡‡ç”¨æœ€å¤–å±‚ 1D çº¿æ€§è·ç¦»ç®—æ³•ï¼Œå½»åº•è§£å†³ç¼©æ”¾é—ªçƒ)
     if (npml > 0.0) {
         float dPmlLeft = abs(cellPos.x - npml), dPmlRight = abs(cellPos.x - (simSize.x - npml));
         float dPmlBottom = abs(cellPos.y - (simSize.y - npml)), dPmlTop = abs(cellPos.y - npml);
@@ -395,12 +401,12 @@ void main() {
         }
         float pmlLineThickness = 1.5, pmlAA = fwidth(distToPml);
         float pmlBorder = smoothstep(pmlAA * pmlLineThickness, 0.0, distToPml - 0.05);
-        vec3 pmlLineColor = vec3(0.5, 1.0, 0.5); 
+        vec3 pmlLineColor = lightCanvas2D ? vec3(0.22, 0.47, 0.39) : vec3(0.5, 1.0, 0.5);
         float topFade = smoothstep(0.0, npml + 2.0, cellPos.y);
         finalColor = mix(finalColor, pmlLineColor, pmlBorder * 0.65 * topFade);
     }
 
-    // 9. »æÖÆ×îÍâ²ãÎïÀí±ß½ç¿ò (°×¿ò)
+    // 9. ç»˜åˆ¶æœ€å¤–å±‚ç‰©ç†è¾¹ç•Œæ¡† (ç™½æ¡†)
     float dOuterLeft = abs(cellPos.x - 1.0), dOuterRight = abs(cellPos.x - (simSize.x - 1.0));
     float dOuterBottom = abs(cellPos.y - 1.0), dOuterTop = abs(cellPos.y - (simSize.y - 1.0));
     float distToOuter = 1e6;
@@ -416,5 +422,5 @@ void main() {
     float outerBorder = smoothstep(outerAA * 1.5, 0.0, distToOuter - 0.05);
     finalColor = mix(finalColor, vec3(1.0, 1.0, 1.0), outerBorder * 0.4); 
 
-    FragColor = vec4(finalColor, 0.8); 
+    FragColor = vec4(finalColor, 1.0);
 }

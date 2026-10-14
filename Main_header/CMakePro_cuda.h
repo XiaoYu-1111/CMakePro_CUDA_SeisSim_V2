@@ -1,3 +1,4 @@
+#include "AppWidgets.h"
 // CMakePro_gui_intro.h: 标准系统包含文件的包含文件
 // 或项目特定的包含文件。
 
@@ -9,6 +10,13 @@
 
 //自己编写的头文件
 #include "Common.h"
+#include "Cuda_Check.cuh"
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
 #include "ResourcePaths.h"
 #include"Seis_Sim.h"
 #include "Seis3D_Sim.h"
@@ -195,7 +203,8 @@ void Init_Imgui(GLFWwindow* window) {
     // 4. 设置样式
     SetupImGuiStyle();
     AppUi::initializeTheme();
-    uiAccent = AppUi::palette().accent;
+    AppUi::initializeLanguage();
+    Seis2D::setInterfaceAccent2D(AppUi::palette().accent);
 
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
         ImGuiStyle& style = ImGui::GetStyle();
@@ -240,7 +249,7 @@ void RenderIntroScreen1(SimState& state, int winW, int winH, bool& isIntroMode, 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
     ImGui::PushStyleColor(ImGuiCol_WindowBg, bgColor);
 
-    if (ImGui::Begin("IntroFullscreen", nullptr,
+    if (AppUi::Widgets::Begin("IntroFullscreen", nullptr,
         ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
         ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNav)) {
 
@@ -289,8 +298,8 @@ void RenderIntroScreen1(SimState& state, int winW, int winH, bool& isIntroMode, 
         ImGui::BeginGroup();
         {
             ImGui::SetWindowFontScale(4.2f * scale);
-            ImGui::TextColored(ImVec4(0.0f, 0.85f, 1.0f, 1.0f), "ELASTIC WAVE");
-            ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "SIMULATION GPU");
+            AppUi::Widgets::TextColored(ImVec4(0.0f, 0.85f, 1.0f, 1.0f), "ELASTIC WAVE");
+            AppUi::Widgets::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "SIMULATION GPU");
 
             ImGui::Spacing();
             ImGui::PushStyleColor(ImGuiCol_Separator, ImVec4(0.0f, 0.85f, 1.0f, 0.5f));
@@ -299,7 +308,7 @@ void RenderIntroScreen1(SimState& state, int winW, int winH, bool& isIntroMode, 
 
             ImGui::Spacing();
             ImGui::SetWindowFontScale(1.5f * scale);
-            ImGui::TextColored(ImVec4(0.6f, 0.7f, 0.8f, 1.0f), "High-Performance Finite-Difference Solver v3.0");
+            AppUi::Widgets::TextColored(ImVec4(0.6f, 0.7f, 0.8f, 1.0f), "High-Performance Finite-Difference Solver v3.0");
         }
         ImGui::EndGroup();
 
@@ -309,7 +318,7 @@ void RenderIntroScreen1(SimState& state, int winW, int winH, bool& isIntroMode, 
         ImGui::BeginGroup();
         {
             ImGui::SetWindowFontScale(1.8f * scale);
-            ImGui::TextColored(ImVec4(0.4f, 1.0f, 0.6f, 1.0f), "// SYSTEM SPECS");
+            AppUi::Widgets::TextColored(ImVec4(0.4f, 1.0f, 0.6f, 1.0f), "// SYSTEM SPECS");
 
             ImGui::SetWindowFontScale(1.0f * scale);
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.85f, 0.9f, 1.0f));
@@ -318,9 +327,9 @@ void RenderIntroScreen1(SimState& state, int winW, int winH, bool& isIntroMode, 
 
             float lineSpacing = 8.0f * scale;
             auto DrawSpec = [&](const char* label, const char* value, bool isColored = false, ImVec4 color = ImVec4(1, 1, 1, 1)) {
-                ImGui::Text("%s", label); ImGui::NextColumn();
-                if (isColored) ImGui::TextColored(color, "%s", value);
-                else ImGui::Text("%s", value);
+                AppUi::Widgets::Text("%s", label); ImGui::NextColumn();
+                if (isColored) AppUi::Widgets::TextColored(color, "%s", value);
+                else AppUi::Widgets::Text("%s", value);
                 ImGui::NextColumn();
                 ImGui::Dummy(ImVec2(0, lineSpacing)); ImGui::NextColumn(); ImGui::Dummy(ImVec2(0, lineSpacing)); ImGui::NextColumn();
                 };
@@ -344,7 +353,7 @@ void RenderIntroScreen1(SimState& state, int winW, int winH, bool& isIntroMode, 
         ImGui::BeginGroup();
         {
             ImGui::SetWindowFontScale(1.8f * scale);
-            ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.4f, 1.0f), "// CORE FEATURES");
+            AppUi::Widgets::TextColored(ImVec4(1.0f, 0.8f, 0.4f, 1.0f), "// CORE FEATURES");
             ImGui::SetWindowFontScale(1.0f * scale);
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.95f, 1.0f, 1.0f));
 
@@ -352,7 +361,7 @@ void RenderIntroScreen1(SimState& state, int winW, int winH, bool& isIntroMode, 
             const char* features[] = { "GPU-Accelerated Compute Shader Kernel", "High-Order Staggered Grid FDM (L8)", "CPML Absorbing Boundary Conditions", "Heterogeneous Media (Solid / Fluid / Vacuum)", "Real-time Multi-Component Wavefield Rendering", "Dynamic Source Injection & Seismic Recording" };
 
             for (const char* f : features) {
-                ImGui::Bullet(); ImGui::Text("%s", f);
+                ImGui::Bullet(); AppUi::Widgets::Text("%s", f);
                 ImGui::Dummy(ImVec2(0, itemH));
             }
             ImGui::PopStyleColor();
@@ -417,11 +426,11 @@ void RenderIntroScreen1(SimState& state, int winW, int winH, bool& isIntroMode, 
             ImGui::BeginGroup();
             {
                 ImGui::SetWindowFontScale(3.8f * scale);
-                ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "%s", timeBuf);
+                AppUi::Widgets::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "%s", timeBuf);
 
                 ImGui::SetWindowFontScale(1.2f * scale);
                 float blinkAlpha = 0.3f + 0.7f * (0.5f * (1.0f + sin(ImGui::GetTime() * 4.0f)));
-                ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.2f, blinkAlpha), "SYSTEM ONLINE");
+                AppUi::Widgets::TextColored(ImVec4(0.2f, 1.0f, 0.2f, blinkAlpha), "SYSTEM ONLINE");
             }
             ImGui::EndGroup();
         }
@@ -450,12 +459,12 @@ void RenderIntroScreen1(SimState& state, int winW, int winH, bool& isIntroMode, 
 
                 if (loader.isLoading || loader.isDataReady) {
                     ImGui::BeginDisabled();
-                    ImGui::Button("LOADING...", ImVec2(btnWidth, btnHeight));
+                    AppUi::Widgets::Button("LOADING...", ImVec2(btnWidth, btnHeight));
                     ImGui::EndDisabled();
                 }
                 else {
-                    //if (ImGui::Button("LAUNCH SIMULATION", ImVec2(btnWidth, btnHeight)))
-                    if (ImGui::Button((const char*)u8"运行模拟/返回", ImVec2(btnWidth, btnHeight)))
+                    //if (AppUi::Widgets::Button("LAUNCH SIMULATION", ImVec2(btnWidth, btnHeight)))
+                    if (AppUi::Widgets::Button((const char*)u8"运行模拟/返回", ImVec2(btnWidth, btnHeight)))
                     {
                         state.currentScreen = AppScreen::Intro0; isIntroMode = false;
                     }
@@ -466,10 +475,10 @@ void RenderIntroScreen1(SimState& state, int winW, int winH, bool& isIntroMode, 
                 // 提示文字
                 ImGui::Dummy(ImVec2(0, 8 * scale));
                 std::string hint = "PRESS [SPACE] TO INITIALIZE";
-                float textWidth = ImGui::CalcTextSize(hint.c_str()).x;
+                float textWidth = AppUi::Widgets::CalcTextSize(hint.c_str()).x;
                 ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (btnWidth - textWidth * 0.8f) * 0.5f);
                 ImGui::SetWindowFontScale(0.9f * scale);
-                ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "%s", hint.c_str());
+                AppUi::Widgets::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "%s", hint.c_str());
             }
             ImGui::EndGroup();
         }
@@ -730,21 +739,21 @@ void RenderLifeGameScreen_GPU(SimState& state, int winW, int winH, GLHandles& gl
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10 * scale, 0));
 
-    ImGui::Begin("TopBar", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar);
+    AppUi::Widgets::Begin("TopBar", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar);
     {
         float centerY = 14.0f * scale; // 统一垂直居中对齐线
 
         // --- A. 左侧：硬件标识 ---
         ImGui::SetCursorPos({ 20 * scale, centerY });
         if (info.success) {
-            ImGui::TextDisabled("HOST:"); ImGui::SameLine();
-            ImGui::TextColored(coreColor, "%s", info.name);
+            AppUi::Widgets::TextDisabled("HOST:"); ImGui::SameLine();
+            AppUi::Widgets::TextColored(coreColor, "%s", info.name);
             ImGui::SameLine();
-            ImGui::TextDisabled("| CC:"); ImGui::SameLine();
-            ImGui::TextColored(coreColor, "%d.%d", info.computeCapabilityMajor, info.computeCapabilityMinor);
+            AppUi::Widgets::TextDisabled("| CC:"); ImGui::SameLine();
+            AppUi::Widgets::TextColored(coreColor, "%d.%d", info.computeCapabilityMajor, info.computeCapabilityMinor);
         }
         else {
-            ImGui::TextColored({ 1, 0, 0, 1 }, "CORE_OFFLINE // NO_CUDA_DETECTED");
+            AppUi::Widgets::TextColored({ 1, 0, 0, 1 }, "CORE_OFFLINE // NO_CUDA_DETECTED");
         }
 
         // --- B. 中间：模拟状态 (自动居中) ---
@@ -752,9 +761,9 @@ void RenderLifeGameScreen_GPU(SimState& state, int winW, int winH, GLHandles& gl
         char statusStr[128];
         sprintf_s(statusStr, "RUNTIME: %02d:%02d:%02d  >>  GEN: %d  >>  UNITS: %d", h, m, s, generation, population);
 
-        float textWidth = ImGui::CalcTextSize(statusStr).x;
+        float textWidth = AppUi::Widgets::CalcTextSize(statusStr).x;
         ImGui::SetCursorPos({ (winW - textWidth) * 0.5f, centerY });
-        ImGui::TextColored(coreColor, "%s", statusStr);
+        AppUi::Widgets::TextColored(coreColor, "%s", statusStr);
 
         // --- C. 右侧：性能与控制 ---
         float rightSectionWidth = 260.0f * scale;
@@ -766,7 +775,7 @@ void RenderLifeGameScreen_GPU(SimState& state, int winW, int winH, GLHandles& gl
 
         // 根据性能动态变色
         ImVec4 fpsColor = (displayFPS < 30.0f) ? ImVec4(1, 0.4f, 0.4f, 1) : ImVec4(0.4f, 0.8f, 0.6f, 0.8f);
-        ImGui::TextColored(fpsColor, "[ %.0f FPS ]", displayFPS);
+        AppUi::Widgets::TextColored(fpsColor, "[ %.0f FPS ]", displayFPS);
 
         ImGui::SameLine(0, 20 * scale);
 
@@ -775,7 +784,7 @@ void RenderLifeGameScreen_GPU(SimState& state, int winW, int winH, GLHandles& gl
         ImGui::PushStyleColor(ImGuiCol_CheckMark, coreColor);
         // 注意：因为 TopBar 设置了 NoInputs，我们要局部开启或者单独处理 Checkbox
         // 这里建议将 TopBar 的 NoInputs 去掉，或者在 Begin 标记里删除它
-        ImGui::Checkbox("HUD_OSD", &showHUD);
+        AppUi::Widgets::Checkbox("HUD_OSD", &showHUD);
         ImGui::PopStyleColor();
     }
     ImGui::End();
@@ -802,14 +811,14 @@ void RenderLifeGameScreen_GPU(SimState& state, int winW, int winH, GLHandles& gl
         static int inputW = gl.simW;
         static int inputH = gl.simH;
 
-        if (ImGui::Begin("LAB_CONTROLS", &showHUD)) {
+        if (AppUi::Widgets::Begin("LAB_CONTROLS", &showHUD)) {
 
             // A. 规则切换 (Dropdown)
-            ImGui::TextColored(coreColor, "EVOLUTION_PROTOCOL");
-            if (ImGui::BeginCombo("##Rules", rules[currentRuleIdx].name)) {
+            AppUi::Widgets::TextColored(coreColor, "EVOLUTION_PROTOCOL");
+            if (AppUi::Widgets::BeginCombo("##Rules", rules[currentRuleIdx].name)) {
                 for (int i = 0; i < IM_ARRAYSIZE(rules); i++) {
                     bool is_selected = (currentRuleIdx == i);
-                    if (ImGui::Selectable(rules[i].name, is_selected)) {
+                    if (AppUi::Widgets::Selectable(rules[i].name, is_selected)) {
                         currentRuleIdx = i;
                         // 切换规则时通常自动重随机一次
                         seedCudaLife(gl.d_current, gl.simW, gl.simH, 0.2f);
@@ -821,7 +830,7 @@ void RenderLifeGameScreen_GPU(SimState& state, int winW, int winH, GLHandles& gl
 
             // B. 视觉模式切换 (经典 vs 强化)
             static bool classicMode = false;
-            if (ImGui::Checkbox("CLASSIC_VISUAL_MODE", &classicMode)) {
+            if (AppUi::Widgets::Checkbox("CLASSIC_VISUAL_MODE", &classicMode)) {
                 if (classicMode) {
                     trailDecay = 0.0f; // 经典模式无尾迹
                     coreColor = { 0.35f, 0.98f, 0.0f, 1.0f }; // 经典绿
@@ -833,37 +842,37 @@ void RenderLifeGameScreen_GPU(SimState& state, int winW, int winH, GLHandles& gl
                 }
             }
 
-            ImGui::TextColored(coreColor, "SYSTEM_CONFIGURATION");
+            AppUi::Widgets::TextColored(coreColor, "SYSTEM_CONFIGURATION");
             // 分辨率输入
-            ImGui::InputInt("WIDTH", &inputW);
-            ImGui::InputInt("HEIGHT", &inputH);
+            AppUi::Widgets::InputInt("WIDTH", &inputW);
+            AppUi::Widgets::InputInt("HEIGHT", &inputH);
 
             // 限制范围防止崩溃
             if (inputW < 64) inputW = 64; if (inputH < 64) inputH = 64;
             if (inputW > 8192) inputW = 8192; if (inputH > 8192) inputH = 8192;
 
             // --- [新增：常用分辨率预设行] ---
-            ImGui::Text("PRESETS:");
+            AppUi::Widgets::Text("PRESETS:");
             float btnWidth = (ImGui::GetContentRegionAvail().x - (ImGui::GetStyle().ItemSpacing.x * 4)) / 5.0f;
 
-            if (ImGui::Button("720P", { btnWidth, 0 })) { inputW = 1280; inputH = 720; }
+            if (AppUi::Widgets::Button("720P", { btnWidth, 0 })) { inputW = 1280; inputH = 720; }
             ImGui::SameLine();
-            if (ImGui::Button("1080P", { btnWidth, 0 })) { inputW = 1920; inputH = 1080; }
+            if (AppUi::Widgets::Button("1080P", { btnWidth, 0 })) { inputW = 1920; inputH = 1080; }
             ImGui::SameLine();
-            if (ImGui::Button("2K", { btnWidth, 0 })) { inputW = 2560; inputH = 1440; }
+            if (AppUi::Widgets::Button("2K", { btnWidth, 0 })) { inputW = 2560; inputH = 1440; }
             ImGui::SameLine();
-            if (ImGui::Button("4K", { btnWidth, 0 })) { inputW = 3840; inputH = 2160; }
+            if (AppUi::Widgets::Button("4K", { btnWidth, 0 })) { inputW = 3840; inputH = 2160; }
             ImGui::SameLine();
-            if (ImGui::Button("8K", { btnWidth, 0 })) { inputW = 7680; inputH = 4320; }
+            if (AppUi::Widgets::Button("8K", { btnWidth, 0 })) { inputW = 7680; inputH = 4320; }
 
-            if (ImGui::Button("APPLY & REBOOT CORE", { -1, 40 })) {
+            if (AppUi::Widgets::Button("APPLY & REBOOT CORE", { -1, 40 })) {
                 ReallocateSimulation(gl, inputW, inputH);
                 viewZoom = 1.0f; viewOffset = { 0,0 };
                 cudaMemcpy(gl.d_next, gl.d_current, gl.simW * gl.simH, cudaMemcpyDeviceToDevice);
             }
             // 显示当前实际尺寸
-            ImGui::Text("CURRENT_GRID: %d x %d", gl.simW, gl.simH);
-            ImGui::Text("TOTAL_CELLS: %d", gl.simW * gl.simH);
+            AppUi::Widgets::Text("CURRENT_GRID: %d x %d", gl.simW, gl.simH);
+            AppUi::Widgets::Text("TOTAL_CELLS: %d", gl.simW * gl.simH);
             // D. 性能与人口图表
             char overlay[64];
             sprintf_s(overlay, "CUR: %d | MAX: %.0f", population, maxPopFound);
@@ -883,24 +892,24 @@ void RenderLifeGameScreen_GPU(SimState& state, int winW, int winH, GLHandles& gl
 
             ImGui::PopStyleColor(2);
 
-            ImGui::Text("POPULATION: %d Units", population);
+            AppUi::Widgets::Text("POPULATION: %d Units", population);
 
-            ImGui::Text("VIEW_ZOOM: %.2fx", viewZoom);
-            if (ImGui::Button("RESET VIEW")) { viewZoom = 1.0f; viewOffset = { 0,0 }; }
+            AppUi::Widgets::Text("VIEW_ZOOM: %.2fx", viewZoom);
+            if (AppUi::Widgets::Button("RESET VIEW")) { viewZoom = 1.0f; viewOffset = { 0,0 }; }
 
             ImGui::Separator();
             // --- [3. UI 控制部分] ---
 
             // A. 初始化
-            ImGui::TextColored(coreColor, "PRESET_BIOMASS");
-            if (ImGui::Button("RANDOM_SEED", { -1, 35 * scale })) {
+            AppUi::Widgets::TextColored(coreColor, "PRESET_BIOMASS");
+            if (AppUi::Widgets::Button("RANDOM_SEED", { -1, 35 * scale })) {
                 seedCudaLife(gl.d_current, gl.simW, gl.simH, randomDensity);
                 generation = 0;
                 totalSimTime = 0;
             }
-            ImGui::SliderFloat("DENSITY", &randomDensity, 0.01f, 0.5f);
+            AppUi::Widgets::SliderFloat("DENSITY", &randomDensity, 0.01f, 0.5f);
 
-            if (ImGui::Button("RESET WORLD", { -1, 35 * scale })) {
+            if (AppUi::Widgets::Button("RESET WORLD", { -1, 35 * scale })) {
                 seedCudaLife(gl.d_current, gl.simW, gl.simH, 0.0f);
                 generation = 0;
                 totalSimTime = 0;
@@ -910,32 +919,32 @@ void RenderLifeGameScreen_GPU(SimState& state, int winW, int winH, GLHandles& gl
             ImGui::Separator();
 
             // B. 环境参数
-            ImGui::TextColored(coreColor, "ENVIRONMENT");
-            ImGui::ColorEdit3("ACTIVE_CORE", (float*)&coreColor, ImGuiColorEditFlags_NoInputs);
-            ImGui::ColorEdit3("BIOMASS_TRAIL", (float*)&trailColor, ImGuiColorEditFlags_NoInputs);
+            AppUi::Widgets::TextColored(coreColor, "ENVIRONMENT");
+            AppUi::Widgets::ColorEdit3("ACTIVE_CORE", (float*)&coreColor, ImGuiColorEditFlags_NoInputs);
+            AppUi::Widgets::ColorEdit3("BIOMASS_TRAIL", (float*)&trailColor, ImGuiColorEditFlags_NoInputs);
 
-            ImGui::TextColored(coreColor, "VISUAL_EFFECTS");
+            AppUi::Widgets::TextColored(coreColor, "VISUAL_EFFECTS");
             // 滑块范围 0.0 (无轨迹) 到 0.99 (超长轨迹)
-            ImGui::SliderFloat("TRAIL_DECAY", &trailDecay, 0.0f, 0.99f, "%.2f");
+            AppUi::Widgets::SliderFloat("TRAIL_DECAY", &trailDecay, 0.0f, 0.99f, "%.2f");
             if (ImGui::IsItemHovered())
-                ImGui::SetTooltip("Lower = Crisper blinking\nHigher = Longer trails");
+                AppUi::Widgets::SetTooltip("Lower = Crisper blinking\nHigher = Longer trails");
 
-            ImGui::SliderInt("BRUSH_SIZE", &brushRadius, 1, 50);
+            AppUi::Widgets::SliderInt("BRUSH_SIZE", &brushRadius, 1, 50);
 
-            ImGui::SliderFloat("TICK_SPD", &tickRate, 0.001f, 0.2f, "%.3fs");
+            AppUi::Widgets::SliderFloat("TICK_SPD", &tickRate, 0.001f, 0.2f, "%.3fs");
 
-            ImGui::Checkbox("ENABLE_VSYNC", &state.vsyncEnabled);
+            AppUi::Widgets::Checkbox("ENABLE_VSYNC", &state.vsyncEnabled);
             if (ImGui::IsItemDeactivatedAfterEdit()) glfwSwapInterval(state.vsyncEnabled ? 1 : 0);
 
             // C. 运行控制
             bool isPaused = !state.running;
-            if (ImGui::Checkbox("PAUSE_SIMULATION", &isPaused)) state.running = !isPaused;
+            if (AppUi::Widgets::Checkbox("PAUSE_SIMULATION", &isPaused)) state.running = !isPaused;
 
 
             // E. 退出按钮
             ImGui::SetCursorPosY(ImGui::GetWindowHeight() - 55 * scale);
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.1f, 0.1f, 0.6f));
-            if (ImGui::Button("TERMINATE_SESSION", { -1, 35 * scale })) {
+            if (AppUi::Widgets::Button("TERMINATE_SESSION", { -1, 35 * scale })) {
                 state.currentScreen = AppScreen::Intro0;
             }
             ImGui::PopStyleColor();
@@ -1008,14 +1017,14 @@ void RenderHamStationScreen(SimState& state, int winW, int winH) {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
 
-    if (ImGui::Begin("##TopToolbar", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoSavedSettings)) {
+    if (AppUi::Widgets::Begin("##TopToolbar", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoSavedSettings)) {
 
         // 绘制底部的青色装饰细线
         ImDrawList* tDraw = ImGui::GetWindowDrawList();
         tDraw->AddLine({ 0, toolbarH - 1 }, { (float)winW, toolbarH - 1 }, IM_COL32(0, 255, 255, 40), 1.0f);
 
         ImGui::SetCursorPos({ 20 * scale, 10 * scale });
-        ImGui::TextColored(COL_SDR_CYAN, "BI9DIU // CONSOLE_OSD_v2.0");
+        AppUi::Widgets::TextColored(COL_SDR_CYAN, "BI9DIU // CONSOLE_OSD_v2.0");
 
         // --- 居中的控制按钮组 ---
         float btnW = 140.0f * scale;
@@ -1037,7 +1046,7 @@ void RenderHamStationScreen(SimState& state, int winW, int winH) {
                 ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.1f, 0.1f, 0.1f, 0.2f));
             }
 
-            if (ImGui::Button(label, { btnW, 30 * scale })) {
+            if (AppUi::Widgets::Button(label, { btnW, 30 * scale })) {
                 state = !state;
             }
 
@@ -1051,7 +1060,7 @@ void RenderHamStationScreen(SimState& state, int winW, int winH) {
 
         // --- 右侧系统频率显示 ---
         ImGui::SetCursorPos({ winW - 220 * scale, 12 * scale });
-        ImGui::TextColored(COL_AMBER_TUBE, "OSD_FREQ: %.1f FPS", io.Framerate);
+        AppUi::Widgets::TextColored(COL_AMBER_TUBE, "OSD_FREQ: %.1f FPS", io.Framerate);
     }
     ImGui::End();
     ImGui::PopStyleVar(2);
@@ -1133,10 +1142,10 @@ void RenderHamStationScreen(SimState& state, int winW, int winH) {
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 12.0f);
         // 边框呼吸：跟随系统节拍的青色微光
         ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.9f, 1.0f, 0.1f + 0.2f * morsePulse));
-        if (ImGui::Begin("STATION_INFO", nullptr, infoFlags)) {
+        if (AppUi::Widgets::Begin("STATION_INFO", nullptr, infoFlags)) {
             // --- 1. 系统呼吸灯 ---
             ImGui::Spacing();
-            ImGui::TextColored(COL_STATUS_GREEN, "● SYSTEM_OPERATIONAL");
+            AppUi::Widgets::TextColored(COL_STATUS_GREEN, "● SYSTEM_OPERATIONAL");
             ImGui::Separator();
             ImGui::Spacing();
 
@@ -1146,26 +1155,26 @@ void RenderHamStationScreen(SimState& state, int winW, int winH) {
             localtime_s(&ltm, &now);
 
             ImGui::SetWindowFontScale(2.8f * scale); // 进一步加大时间显示
-            ImGui::TextColored(COL_SIGNAL_WHITE, "%02d:%02d:%02d", ltm.tm_hour, ltm.tm_min, ltm.tm_sec);
+            AppUi::Widgets::TextColored(COL_SIGNAL_WHITE, "%02d:%02d:%02d", ltm.tm_hour, ltm.tm_min, ltm.tm_sec);
 
             ImGui::SetWindowFontScale(1.0f * scale);
-            ImGui::TextColored(COL_TECH_GREY, "UTC/LOCAL_STATION_CHRONO");
+            AppUi::Widgets::TextColored(COL_TECH_GREY, "UTC/LOCAL_STATION_CHRONO");
             ImGui::Spacing();
             ImGui::Separator();
             ImGui::Spacing();
 
             // --- 3. UV段频率参考 (SDR Cyan & Amber) ---
-            ImGui::TextColored(COL_SDR_CYAN, "[ RF_SPECTRUM_RANGE ]");
+            AppUi::Widgets::TextColored(COL_SDR_CYAN, "[ RF_SPECTRUM_RANGE ]");
             ImGui::Spacing();
 
             // 标签用灰色，数值用琥珀色，模拟老式仪表感
-            ImGui::TextColored(COL_TECH_GREY, "VHF BAND :");
+            AppUi::Widgets::TextColored(COL_TECH_GREY, "VHF BAND :");
             ImGui::SameLine(140 * scale);
-            ImGui::TextColored(COL_AMBER_TUBE, "144.000 - 148.000 MHz");
+            AppUi::Widgets::TextColored(COL_AMBER_TUBE, "144.000 - 148.000 MHz");
 
-            ImGui::TextColored(COL_TECH_GREY, "UHF BAND :");
+            AppUi::Widgets::TextColored(COL_TECH_GREY, "UHF BAND :");
             ImGui::SameLine(140 * scale);
-            ImGui::TextColored(COL_AMBER_TUBE, "430.000 - 440.000 MHz");
+            AppUi::Widgets::TextColored(COL_AMBER_TUBE, "430.000 - 440.000 MHz");
 
             ImGui::Spacing();
             ImGui::Separator();
@@ -1175,11 +1184,11 @@ void RenderHamStationScreen(SimState& state, int winW, int winH) {
             static float swr = 1.15f;
             swr = 1.12f + 0.04f * sinf((float)t * 4.0f);
 
-            ImGui::TextColored(COL_SDR_CYAN, "ANT_SWR_LOAD :");
+            AppUi::Widgets::TextColored(COL_SDR_CYAN, "ANT_SWR_LOAD :");
             ImGui::SameLine();
             // 数值根据状态变色，但默认保持琥珀色以同步
             ImVec4 currentSwrCol = swr < 1.5f ? COL_AMBER_TUBE : ImVec4(1, 0.2f, 0.2f, 1.0f);
-            ImGui::TextColored(currentSwrCol, "%.2f", swr);
+            AppUi::Widgets::TextColored(currentSwrCol, "%.2f", swr);
 
             // 进度条使用 SDR 青色
             ImGui::PushStyleColor(ImGuiCol_PlotHistogram, COL_SDR_CYAN);
@@ -1188,7 +1197,7 @@ void RenderHamStationScreen(SimState& state, int winW, int winH) {
 
             // --- 5. 底部装饰标签 (与中央面板呼应) ---
             ImGui::SetCursorPosY(ImGui::GetWindowHeight() - 35 * scale);
-            ImGui::TextColored(COL_SIGNAL_WHITE, "OP: BI9DIU // QTH: XIAN_CHINA");
+            AppUi::Widgets::TextColored(COL_SIGNAL_WHITE, "OP: BI9DIU // QTH: XIAN_CHINA");
         }
         ImGui::End();
         ImGui::PopStyleColor(2);
@@ -1209,41 +1218,41 @@ void RenderHamStationScreen(SimState& state, int winW, int winH) {
     ImGui::SetNextWindowPos({ screenCenter.x - callsignWinWidth * 0.5f, screenCenter.y - 180 * scale });
     ImGui::SetNextWindowSize({ callsignWinWidth, 500 * scale });
 
-    if (ImGui::Begin("##CenterCallsign", nullptr, callsignFlags))
+    if (AppUi::Widgets::Begin("##CenterCallsign", nullptr, callsignFlags))
     {
         // 1. 主呼号：高能电子白 (Beacon Layer)
         ImGui::SetWindowFontScale(7.5f * scale);
         const char* callSignText = "BI9DIU";
-        float mainTextWidth = ImGui::CalcTextSize(callSignText).x;
+        float mainTextWidth = AppUi::Widgets::CalcTextSize(callSignText).x;
 
         // 绘制底层辉光 (增强深邃感)
         for (int i = 0; i < 2; i++) {
-            drawList->AddText(NULL, 7.5f * scale * 100.0f / 100.0f,
+            AppUi::Widgets::drawText(drawList,NULL, 7.5f * scale * 100.0f / 100.0f,
                 { screenCenter.x - mainTextWidth * 0.5f + 2.0f * scale, screenCenter.y - 145 * scale },
                 IM_COL32(0, 200, 255, 15), callSignText);
         }
 
         ImGui::SetCursorPosX((callsignWinWidth - mainTextWidth) * 0.5f);
-        ImGui::TextColored(COL_SIGNAL_WHITE, callSignText);
+        AppUi::Widgets::TextColored(COL_SIGNAL_WHITE, callSignText);
 
         // 2. 莫尔斯电码：呼吸琥珀金 (Pulse Layer)
         ImGui::SetWindowFontScale(2.0f * scale);
         const char* morseText = "-...  ..  ----.  -..  ..  ..-";
-        float morseWidth = ImGui::CalcTextSize(morseText).x;
+        float morseWidth = AppUi::Widgets::CalcTextSize(morseText).x;
 
         ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 10.0f * scale);
         ImGui::SetCursorPosX((callsignWinWidth - morseWidth) * 0.5f);
-        ImGui::TextColored(COL_AMBER_TUBE, morseText);
+        AppUi::Widgets::TextColored(COL_AMBER_TUBE, morseText);
 
         // 3. 字母解释法：钛金辅助灰 (Metadata Layer)
         // 采用更理性的灰色，让主信息更突出
         ImGui::SetWindowFontScale(1.15f * scale);
         const char* phoneticBreakdown = "BRAVO  INDIA  NINER  DELTA  INDIA  UNIFORM";
-        float phWidth = ImGui::CalcTextSize(phoneticBreakdown).x;
+        float phWidth = AppUi::Widgets::CalcTextSize(phoneticBreakdown).x;
 
         ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 4.0f * scale);
         ImGui::SetCursorPosX((callsignWinWidth - phWidth) * 0.5f);
-        ImGui::TextColored(COL_TECH_GREY, phoneticBreakdown);
+        AppUi::Widgets::TextColored(COL_TECH_GREY, phoneticBreakdown);
 
         // 4. 装饰分割线 (增加横向延伸感)
         float lineLen = 400.0f * scale;
@@ -1256,11 +1265,11 @@ void RenderHamStationScreen(SimState& state, int winW, int winH) {
         // 5. 副标题：SDR 专用青 (Brand Layer)
         ImGui::SetWindowFontScale(1.8f * scale);
         const char* subText = ">> AMATEUR RADIO STATION DE XIAN";
-        float subTextWidth = ImGui::CalcTextSize(subText).x;
+        float subTextWidth = AppUi::Widgets::CalcTextSize(subText).x;
 
         ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 20.0f * scale);
         ImGui::SetCursorPosX((callsignWinWidth - subTextWidth) * 0.5f);
-        ImGui::TextColored(COL_SDR_CYAN, subText);
+        AppUi::Widgets::TextColored(COL_SDR_CYAN, subText);
     }
     ImGui::End();
     // =====================================================
@@ -1291,12 +1300,12 @@ void RenderHamStationScreen(SimState& state, int winW, int winH) {
         ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.2f);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 12.0f);
         ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 1, 1, 0.2f));
-        if (ImGui::Begin("PHONETIC_REF", nullptr, refFlags)) {
+        if (AppUi::Widgets::Begin("PHONETIC_REF", nullptr, refFlags)) {
             // --- 标题居中 ---
             ImGui::SetWindowFontScale(1.0f * scale);
-            float titleWidth = ImGui::CalcTextSize(" [ NATO PHONETIC REFERENCE ]").x;
+            float titleWidth = AppUi::Widgets::CalcTextSize(" [ NATO PHONETIC REFERENCE ]").x;
             ImGui::SetCursorPosX((panelWidth - titleWidth) * 0.5f);
-            ImGui::TextColored({ 0, 1, 1, 1 }, " [ NATO PHONETIC REFERENCE ]");
+            AppUi::Widgets::TextColored({ 0, 1, 1, 1 }, " [ NATO PHONETIC REFERENCE ]");
             ImGui::Separator();
             ImGui::Spacing();
 
@@ -1309,16 +1318,16 @@ void RenderHamStationScreen(SimState& state, int winW, int winH) {
                 // --- 第一列 (A-M) ---
                 int idx1 = i;
                 ImGui::SetCursorPosX(25.0f * scale);
-                ImGui::TextColored({ 0.0f, 1.0f, 1.0f, 1.0f }, "%c", 'A' + idx1);
+                AppUi::Widgets::TextColored({ 0.0f, 1.0f, 1.0f, 1.0f }, "%c", 'A' + idx1);
                 ImGui::SameLine(70.0f * scale);
-                ImGui::TextColored({ 1.0f, 1.0f, 1.0f, 0.85f }, "%s", phonetic[idx1]);
+                AppUi::Widgets::TextColored({ 1.0f, 1.0f, 1.0f, 0.85f }, "%s", phonetic[idx1]);
 
                 // --- 第二列 (N-Z) ---
                 int idx2 = i + 13;
                 ImGui::SameLine(col2Offset + 20.0f * scale);
-                ImGui::TextColored({ 0.0f, 1.0f, 1.0f, 1.0f }, "%c", 'A' + idx2);
+                AppUi::Widgets::TextColored({ 0.0f, 1.0f, 1.0f, 1.0f }, "%c", 'A' + idx2);
                 ImGui::SameLine(col2Offset + 65.0f * scale);
-                ImGui::TextColored({ 1.0f, 1.0f, 1.0f, 0.85f }, "%s", phonetic[idx2]);
+                AppUi::Widgets::TextColored({ 1.0f, 1.0f, 1.0f, 0.85f }, "%s", phonetic[idx2]);
 
                 // 每行行间距
                 ImGui::Dummy(ImVec2(0, 6.0f * scale));
@@ -1351,7 +1360,7 @@ void RenderHamStationScreen(SimState& state, int winW, int winH) {
     ImGui::SetNextWindowSize({ btnW + 20, btnH + 20 }); // 稍微多给一点点空间
 
     // C. 开启窗口
-    if (ImGui::Begin("##LaunchButtonWindow", nullptr, btnWindowFlags))
+    if (AppUi::Widgets::Begin("##LaunchButtonWindow", nullptr, btnWindowFlags))
     {
         // 在透明窗口内部设置样式
         ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 40.0f * scale);
@@ -1359,7 +1368,7 @@ void RenderHamStationScreen(SimState& state, int winW, int winH) {
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.2f, 0.6f, 0.8f, 0.8f));
 
         // 现在按钮有“家”了，Debug 窗口就会消失
-        if (ImGui::Button("LAUNCH SIMULATION", { btnW, btnH })) {
+        if (AppUi::Widgets::Button("LAUNCH SIMULATION", { btnW, btnH })) {
             state.currentScreen = AppScreen::Intro0;
         }
 
@@ -1377,12 +1386,12 @@ void RenderHamStationScreen(SimState& state, int winW, int winH) {
     // 定义背部辉光颜色 (更透、更柔和)
     ImU32 morseGlow = IM_COL32(0, 255, 100, (int)(60 * morsePulse));
     // 1. 绘制底层辉光 (稍微偏移或重复绘制以增加发光感)
-    drawList->AddText(NULL, 1.2f * scale * 50.0f,
+    AppUi::Widgets::drawText(drawList,NULL, 1.2f * scale * 50.0f,
         { 80 * scale + 1.5f, winH - 60 * scale + 1.5f },
         morseGlow, "-... .. ----. -.. .. ..-");
 
     // 2. 绘制主体呼吸灯文字
-    drawList->AddText(NULL, 1.2f * scale * 50.0f,
+    AppUi::Widgets::drawText(drawList,NULL, 1.2f * scale * 50.0f,
         { 80 * scale, winH - 60 * scale },
         morseColor, "-... .. ----. -.. .. ..-");
 
@@ -1414,14 +1423,14 @@ void RenderCudaDiagnosticsScreen(SimState& state, const GpuInfo& info, int winW,
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.02f, 0.05f, 0.06f, 0.8f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
 
-    ImGui::Begin("DiagTopBar", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoInputs);
+    AppUi::Widgets::Begin("DiagTopBar", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoInputs);
     {
         ImGui::SetCursorPos({ 20 * scale, 15 * scale });
-        ImGui::TextColored({ 0.0f, 1.0f, 0.8f, 1.0f }, "CORE_DIAGNOSTICS // DEVICE_ID: %s", info.success ? "ACTIVE" : "ERROR");
+        AppUi::Widgets::TextColored({ 0.0f, 1.0f, 0.8f, 1.0f }, "CORE_DIAGNOSTICS // DEVICE_ID: %s", info.success ? "ACTIVE" : "ERROR");
 
         float fpsX = (float)winW - 150.0f * scale;
         ImGui::SetCursorPos({ fpsX, 15 * scale });
-        ImGui::TextDisabled("[ %.0f FPS ]", io.Framerate);
+        AppUi::Widgets::TextDisabled("[ %.0f FPS ]", io.Framerate);
     }
     ImGui::End();
 
@@ -1442,7 +1451,7 @@ void RenderCudaDiagnosticsScreen(SimState& state, const GpuInfo& info, int winW,
     ImVec4 neonCyan = ImVec4(0.0f, 1.0f, 0.9f, 1.0f);
     ImVec4 neonGreen = ImVec4(0.4f, 1.0f, 0.4f, 1.0f);
 
-    if (ImGui::Begin("DIAG_PANEL", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove)) {
+    if (AppUi::Widgets::Begin("DIAG_PANEL", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove)) {
 
         ImGui::SetCursorPosY(30 * scale);
         // 安全检查：防止字体列表为空时崩溃
@@ -1453,48 +1462,48 @@ void RenderCudaDiagnosticsScreen(SimState& state, const GpuInfo& info, int winW,
         ImGui::Indent(30 * scale);
 
         // A. 硬件标识块
-        ImGui::TextColored(neonCyan, ">>> HARDWARE_IDENTITY");
+        AppUi::Widgets::TextColored(neonCyan, ">>> HARDWARE_IDENTITY");
         ImGui::Separator();
         ImGui::Spacing();
-        ImGui::Text("GPU_MODEL:"); ImGui::SameLine();
-        ImGui::TextColored(neonGreen, "%s", info.success ? info.name : "N/A");
-        ImGui::Text("ARCH_TYPE:"); ImGui::SameLine();
-        ImGui::TextColored(neonGreen, "NVIDIA (SM %d.%d)", info.computeCapabilityMajor, info.computeCapabilityMinor);
+        AppUi::Widgets::Text("GPU_MODEL:"); ImGui::SameLine();
+        AppUi::Widgets::TextColored(neonGreen, "%s", info.success ? info.name : "N/A");
+        AppUi::Widgets::Text("ARCH_TYPE:"); ImGui::SameLine();
+        AppUi::Widgets::TextColored(neonGreen, "NVIDIA (SM %d.%d)", info.computeCapabilityMajor, info.computeCapabilityMinor);
 
         ImGui::Dummy({ 0, 25 * scale });
 
         // B. 计算核心规格块
-        ImGui::TextColored(neonCyan, ">>> COMPUTE_SPECIFICATIONS");
+        AppUi::Widgets::TextColored(neonCyan, ">>> COMPUTE_SPECIFICATIONS");
         ImGui::Separator();
         ImGui::Spacing();
 
         ImGui::Columns(2, "spec_cols", false);
         ImGui::SetColumnWidth(0, 280 * scale); // 宽度微调
 
-        ImGui::Text("CUDA_CORES:");
-        ImGui::TextColored(neonGreen, "%d Units", info.cudaCores);
+        AppUi::Widgets::Text("CUDA_CORES:");
+        AppUi::Widgets::TextColored(neonGreen, "%d Units", info.cudaCores);
         ImGui::Spacing();
-        ImGui::Text("SM_COUNT:");
-        ImGui::TextColored(neonGreen, "%d SMs", info.multiProcessorCount);
+        AppUi::Widgets::Text("SM_COUNT:");
+        AppUi::Widgets::TextColored(neonGreen, "%d SMs", info.multiProcessorCount);
 
         ImGui::NextColumn();
 
-        ImGui::Text("L2_CACHE_STATUS:");
-        ImGui::TextColored(neonGreen, "DATA_LOCKED");
+        AppUi::Widgets::Text("L2_CACHE_STATUS:");
+        AppUi::Widgets::TextColored(neonGreen, "DATA_LOCKED");
         ImGui::Spacing();
-        ImGui::Text("CLOCK_SPEED:");
-        ImGui::TextColored(neonGreen, "%.1f GHz", (float)info.clockRate / 1000000.0f);
+        AppUi::Widgets::Text("CLOCK_SPEED:");
+        AppUi::Widgets::TextColored(neonGreen, "%.1f GHz", (float)info.clockRate / 1000000.0f);
 
         ImGui::Columns(1);
         ImGui::Dummy({ 0, 25 * scale });
 
         // C. 显存状态块
-        ImGui::TextColored(neonCyan, ">>> VRAM_CAPACITY_ANALYSIS");
+        AppUi::Widgets::TextColored(neonCyan, ">>> VRAM_CAPACITY_ANALYSIS");
         ImGui::Separator();
         ImGui::Spacing();
 
         float vram_gb = (float)info.totalMem / (1024.0f * 1024.0f * 1024.0f);
-        ImGui::Text("DEDICATED_VIDEO_MEMORY:");
+        AppUi::Widgets::Text("DEDICATED_VIDEO_MEMORY:");
 
         ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.0f, 0.8f, 0.7f, 0.8f));
         char vram_label[32]; sprintf_s(vram_label, "%.2f GB TOTAL", vram_gb);
@@ -1506,7 +1515,7 @@ void RenderCudaDiagnosticsScreen(SimState& state, const GpuInfo& info, int winW,
 
         // D. 系统操作区
         ImGui::Separator();
-        if (ImGui::Button("RUN_SIMULATION_STRESS_TEST", { -30 * scale, 45 * scale })) {
+        if (AppUi::Widgets::Button("RUN_SIMULATION_STRESS_TEST", { -30 * scale, 45 * scale })) {
             // Logic for stress test
         }
 
@@ -1515,7 +1524,7 @@ void RenderCudaDiagnosticsScreen(SimState& state, const GpuInfo& info, int winW,
 
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.1f, 0.1f, 0.5f));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.1f, 0.1f, 0.8f));
-        if (ImGui::Button("TERMINATE_DIAGNOSTIC_SESSION", { -30 * scale, 35 * scale })) {
+        if (AppUi::Widgets::Button("TERMINATE_DIAGNOSTIC_SESSION", { -30 * scale, 35 * scale })) {
             state.currentScreen = AppScreen::Intro0;
         }
         ImGui::PopStyleColor(2);
@@ -1539,7 +1548,7 @@ bool IsIntroScreen(AppScreen screen) {
 
 void RenderApp(AppScreen screen, SimState& state, const GpuInfo& info, int winW, int winH, GLHandles& gl, AsyncLoader& loader,
     Seis3D::Seis3D_State& state3D) {
-    AppUi::LegacyContrastScope legacyContrast(screen!=AppScreen::Intro0&&screen!=AppScreen::SeisSim_3D);
+    AppUi::LegacyContrastScope legacyContrast(screen!=AppScreen::Intro0&&screen!=AppScreen::SeisSim_3D&&screen!=AppScreen::UserManual);
 
     switch (screen) {
     case AppScreen::Intro0:
@@ -1557,9 +1566,12 @@ void RenderApp(AppScreen screen, SimState& state, const GpuInfo& info, int winW,
     case AppScreen::CudaDiagno:
         RenderCudaDiagnosticsScreen(state, info, winW, winH);
         break;
+    case AppScreen::UserManual:
+        state.currentScreen=drawOperationManualScreen(winW,winH);
+        break;
     case AppScreen::SeisSim_GPU:
         // 调用我们下面实现的专业地震模拟渲染窗口
-        renderSeisSimScreenGpu(state, winW, winH, gl, info);
+        Seis2D::renderSimulation2D(state, winW, winH, gl, info);
         break;
     case AppScreen::SeisSim_3D:
         if (Seis3D::renderScreen3D(state3D, winW, winH)) state.currentScreen = AppScreen::Intro0;
@@ -1613,40 +1625,15 @@ void CheckIdleStatus(GLFWwindow* window, SimState& state) {
 
 // 冷切换只释放二维工作区，保留主程序的通用渲染资源和着色器。
 void releaseSeismicWorkspace2D(GLHandles& gl, SimState& state) {
-    state.running = false;
-    rec.isRecording = false;
-    g_autoAcq.state = AUTO_ACQ_IDLE;
-    g_replay.clear();
-    g_replay.state = REPLAY_IDLE;
-    releaseGpuSimulation(gpu_data);
-    is_seis_initialized = false;
-    if (gl.cudaSeisRes) cudaGraphicsUnregisterResource(gl.cudaSeisRes);
-    gl.cudaSeisRes = nullptr; gl.cudaSeisArray = nullptr;
-    cudaFree(gl.deviceWavefieldRgba); gl.deviceWavefieldRgba = nullptr; gl.wavefieldRgbaCapacity = 0;
-    if (gl.seisTex) glDeleteTextures(1, &gl.seisTex);
-    gl.seisTex = 0;
-    if (g_modelTex) glDeleteTextures(1, &g_modelTex);
-    g_modelTex = 0;
-    current_it = 0; accumulated_compute_time = 0;
-    g_resetSimRequested = g_resetViewportRequested = false;
+    state.running=false;
+    Seis2D::releaseSimulation2D(gl);
 }
 
 //资源清理
 void cleanup(GLHandles& gl) {
     releaseCudaLife();
-    releaseGpuSimulation(gpu_data);
-    is_seis_initialized = false;
-    if (gl.cudaSeisRes) {
-        cudaGraphicsUnregisterResource(gl.cudaSeisRes);
-        gl.cudaSeisRes = nullptr;
-    }
-    cudaFree(gl.deviceWavefieldRgba);
-    gl.deviceWavefieldRgba = nullptr;
-    gl.wavefieldRgbaCapacity = 0;
-    if (gl.seisTex) { glDeleteTextures(1, &gl.seisTex); gl.seisTex = 0; }
-    if (gl.seisProg) { glDeleteProgram(gl.seisProg); gl.seisProg = 0; }
-    if (g_modelTex) { glDeleteTextures(1, &g_modelTex); g_modelTex = 0; }
-    gl.cudaSeisArray = nullptr;
+    Seis2D::releaseSimulation2D(gl);
+    if(gl.seisProg) {glDeleteProgram(gl.seisProg);gl.seisProg=0;}
     // --- 1. 注销 CUDA 与 OpenGL 的互操作资源 ---
     if (gl.cudaRes) {
         // 在删除 OpenGL 纹理之前，必须先注销注册的资源
@@ -1702,6 +1689,7 @@ void ProcessInput(GLFWwindow* window, SimConfig& cfg, SimState& state, GLHandles
             state.currentScreen = AppScreen::Intro0;
         return;
     }
+    if(ImGui::GetIO().WantTextInput) return;
     // 只有在用户没有在任何 ImGui 文本框/输入框中编辑时，快捷键才起作用 (安全保护)
     if (!ImGui::GetIO().WantTextInput) {
 
@@ -1712,19 +1700,20 @@ void ProcessInput(GLFWwindow* window, SimConfig& cfg, SimState& state, GLHandles
                 : AppScreen::Intro0;
             state.isIntroMode = state.currentScreen == AppScreen::Intro0;
         }
+        if(state.currentScreen!=AppScreen::SeisSim_GPU) return;
 
         // =========================================================
         // 【新增 1】：R 键重置视角信号发射
         // =========================================================
         if (ImGui::IsKeyPressed(ImGuiKey_R, false)) {
-            g_resetViewportRequested = true;
+            Seis2D::requestViewReset2D();
         }
 
         // =========================================================
         // 【新增 2】：C 键重置模拟信号发射
         // =========================================================
         if (ImGui::IsKeyPressed(ImGuiKey_C, false)) {
-            g_resetSimRequested = true;
+            Seis2D::requestFieldReset2D();
         }
     }
 

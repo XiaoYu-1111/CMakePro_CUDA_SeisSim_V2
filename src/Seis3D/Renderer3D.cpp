@@ -121,6 +121,9 @@ void initializeGraphics3D(Seis3D_State& s) {
     // GLEW or the preceding route may leave a diagnostic; isolate our own allocation errors.
     while(glGetError()!=GL_NO_ERROR) {}
     auto& g=s.gl3D; g.layout3D=makeViewLayout3D(s.context3D);
+    GLint textureLimit=0;glGetIntegerv(GL_MAX_TEXTURE_SIZE,&textureLimit);
+    for(int axis=0;axis<3;++axis) if(g.layout3D.domainSize3D[axis]>textureLimit)
+        throw std::runtime_error("Seis3D: an active dimension exceeds this GPU's GL_MAX_TEXTURE_SIZE ("+std::to_string(textureLimit)+").");
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER,0);
     g.sliceProgram3D=createProgram3D("seis3d_slice.frag"); g.volumeProgram3D=createProgram3D("seis3d_volume.frag");
     glGenVertexArrays(1,&g.vao3D);
@@ -160,15 +163,19 @@ void setTransferUniforms3D(GLuint program,const Seis3D_State& s) {
 // Update only scalar slices/volume through CUDA-GL interop, with guaranteed unmapping on failure.
 void updateGraphics3D(Seis3D_State& s) {
     if (!s.ready3D) return;
+    if(s.scaleUnit3D!=(s.component3D==4?1:0)) selectWaveComponent3D(s,s.component3D);
     auto& g=s.gl3D;
-    const bool extract=s.dirty3D || s.step3D<s.displayedStep3D
+    const bool extract=s.dirty3D || s.scaleComponent3D!=s.component3D || s.step3D<s.displayedStep3D
         || s.step3D-s.displayedStep3D>=std::uint64_t((std::clamp)(s.displayStride3D,1,16))
         || (!s.running3D && s.step3D!=s.displayedStep3D);
-    const std::array<float,32> settings={s.gain3D,s.manualScale3D,float(s.autoScale3D),float(s.displayMode3D),
+    const std::array<float,40> settings={s.gain3D,s.manualScale3D,float(s.autoScale3D),float(s.displayMode3D),
         float(s.waveStyle3D),float(s.modelStyle3D),float(s.materialRangeAuto3D),s.manualMaterialRange3D[0],
         s.manualMaterialRange3D[1],s.waveOpacity3D,s.waveThreshold3D,s.modelOpacity3D,s.volumeOpacity3D,
         s.volumeThreshold3D,float(s.showVolume3D),s.camera3D.yaw3D,s.camera3D.pitch3D,s.camera3D.distance3D,
-        s.camera3D.pan3D[0],s.camera3D.pan3D[1],float(s.component3D),s.waveGamma3D,s.materialBrightness3D};
+        s.camera3D.pan3D[0],s.camera3D.pan3D[1],float(s.component3D),s.waveGamma3D,s.materialBrightness3D,
+        float(s.showBoundary3D),s.boundaryOpacity3D,s.volumeSampling3D,s.volumeSharpness3D,
+        float(s.volumeRequestedWidth3D),float(s.volumeRequestedHeight3D),float(s.holdPeakScale3D),
+        s.volumeGain3D,float(s.volumeSizeCompensation3D)};
     if(!extract && g.rendered3D && settings==g.renderedSettings3D) return;
     GLStateScope3D saved;
     if (extract) {
@@ -181,7 +188,11 @@ void updateGraphics3D(Seis3D_State& s) {
         float* output=nullptr; std::size_t capacity=0;
         requireCuda3D(cudaGraphicsResourceGetMappedPointer(reinterpret_cast<void**>(&output),&capacity,g.interop3D),"get Seis3D staging pointer");
         if (capacity<g.layout3D.totalSamples3D*2*sizeof(float)) throw std::runtime_error("Seis3D staging capacity mismatch.");
-        extractViews3D(s.gpu3D,s.context3D,output,g.layout3D,s.slice3D,s.component3D,s.materialComponent3D,s.showVolume3D,s.viewMaximum3D,s.materialRange3D);
+        float velocityMaximum=0;
+        extractViews3D(s.gpu3D,s.context3D,output,g.layout3D,s.slice3D,s.component3D,s.materialComponent3D,s.showVolume3D,s.viewMaximum3D,s.materialRange3D,s.showBoundary3D,&velocityMaximum);
+        s.scaleComponent3D=s.component3D;
+        s.referenceMaximum3D=s.component3D==4?s.viewMaximum3D:velocityMaximum;
+        s.scalePeak3D=(std::max)(s.scalePeak3D,s.referenceMaximum3D);
         requireCuda3D(cudaGraphicsUnmapResources(1,&g.interop3D,s.gpu3D.stream3D),"unmap Seis3D views"); mapping.mapped3D=false;
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER,g.stagingBuffer3D);
         for(int p=0;p<3;++p) {
@@ -197,7 +208,7 @@ void updateGraphics3D(Seis3D_State& s) {
         s.dirty3D=false; s.displayedStep3D=s.step3D;
     }
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER,0); glBindVertexArray(g.vao3D);
-    const float scale=s.autoScale3D ? (std::max)(s.viewMaximum3D,1.0e-12f) : s.manualScale3D;
+    const float scale=(std::max)(displayScale3D(s),1.0e-12f);
     glUseProgram(g.sliceProgram3D);
     setTransferUniforms3D(g.sliceProgram3D,s);
     glUniform1i(glGetUniformLocation(g.sliceProgram3D,"sliceTexture3D"),0);
@@ -210,11 +221,43 @@ void updateGraphics3D(Seis3D_State& s) {
     }
     if(s.showVolume3D) {
         const auto program=g.volumeProgram3D;
-        glUseProgram(program); setTransferUniforms3D(program,s); glBindFramebuffer(GL_FRAMEBUFFER,g.volumeFramebuffer3D); glViewport(0,0,640,640);
+        const int width=(std::clamp)(s.volumeRequestedWidth3D,1,maxVolumeOutput3D);
+        const int height=(std::clamp)(s.volumeRequestedHeight3D,1,maxVolumeOutput3D);
+        if(width!=g.volumeWidth3D||height!=g.volumeHeight3D) {
+            // Preserve the texture ID already referenced by ImGui while resizing its storage.
+            glBindTexture(GL_TEXTURE_2D,g.volumeDisplayTexture3D);
+            glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA8,width,height,0,GL_RGBA,GL_UNSIGNED_BYTE,nullptr);
+            if(glGetError()!=GL_NO_ERROR) throw std::runtime_error("Seis3D: cannot allocate the resized volume target.");
+            glBindFramebuffer(GL_FRAMEBUFFER,g.volumeFramebuffer3D);
+            if(glCheckFramebufferStatus(GL_FRAMEBUFFER)!=GL_FRAMEBUFFER_COMPLETE)
+                throw std::runtime_error("Seis3D: resized volume framebuffer incomplete.");
+            g.volumeWidth3D=width;g.volumeHeight3D=height;
+        }
+        glUseProgram(program); setTransferUniforms3D(program,s); glBindFramebuffer(GL_FRAMEBUFFER,g.volumeFramebuffer3D); glViewport(0,0,width,height);
         glBindTexture(GL_TEXTURE_3D,g.volumeTexture3D);
+        glUniform1f(glGetUniformLocation(program,"aspect3D"),float(width)/height);
+        glUniform1f(glGetUniformLocation(program,"sampling3D"),s.volumeSampling3D);
+        glUniform1f(glGetUniformLocation(program,"sharpness3D"),s.volumeSharpness3D);
         glUniform1i(glGetUniformLocation(program,"volumeTexture3D"),0);
-        const float extent=float((std::max)({s.context3D.nx3D,s.context3D.ny3D,s.context3D.nz3D}));
-        glUniform3f(glGetUniformLocation(program,"extent3D"),s.context3D.nx3D/extent,s.context3D.nz3D/extent,s.context3D.ny3D/extent);
+        const int physical[3]={s.context3D.nx3D,s.context3D.ny3D,s.context3D.nz3D};
+        float visible[3]{},low[3]{},high[3]{},domainLow[3]{},domainHigh[3]{};
+        for(int a=0;a<3;++a) {
+            const float n=float(g.layout3D.domainSize3D[a]),offset=float(-g.layout3D.domainOrigin3D[a]);
+            visible[a]=s.showBoundary3D?n:float(physical[a]);
+            low[a]=offset/n;high[a]=(offset+physical[a])/n;
+            domainLow[a]=s.showBoundary3D?0:low[a];domainHigh[a]=s.showBoundary3D?1:high[a];
+        }
+        const float extent=(std::max)({visible[0],visible[1],visible[2]});
+        glUniform1f(glGetUniformLocation(program,"volumeGain3D"),s.volumeGain3D);
+        // A fixed-width wavefront must retain its optical thickness when the displayed box grows.
+        glUniform1f(glGetUniformLocation(program,"opticalScale3D"),s.volumeSizeCompensation3D?(std::max)(1.0f,extent/96.0f):1.0f);
+        glUniform3f(glGetUniformLocation(program,"extent3D"),visible[0]/extent,visible[2]/extent,visible[1]/extent);
+        glUniform3fv(glGetUniformLocation(program,"domainLow3D"),1,domainLow);
+        glUniform3fv(glGetUniformLocation(program,"domainHigh3D"),1,domainHigh);
+        glUniform3fv(glGetUniformLocation(program,"physicalLow3D"),1,low);
+        glUniform3fv(glGetUniformLocation(program,"physicalHigh3D"),1,high);
+        glUniform1i(glGetUniformLocation(program,"showBoundary3D"),s.showBoundary3D?1:0);
+        glUniform1f(glGetUniformLocation(program,"boundaryOpacity3D"),s.boundaryOpacity3D);
         glUniform2fv(glGetUniformLocation(program,"pan3D"),1,s.camera3D.pan3D);
         glUniform1f(glGetUniformLocation(program,"yaw3D"),s.camera3D.yaw3D);
         glUniform1f(glGetUniformLocation(program,"pitch3D"),s.camera3D.pitch3D);

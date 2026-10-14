@@ -15,6 +15,7 @@ def prepare_screenshots() -> None:
         "home-paper.png": "seis3d-paper-home.png",
         "workspace-overview.png": "seis3d-paper-guide.png",
         "display-overview.png": "seis3d-paper-display.png",
+        "receiver-row-paper.png": "seis3d-paper-receiver-row.png",
     }
     for name, original in full_captures.items():
         shutil.copy2(source / original, output / name)

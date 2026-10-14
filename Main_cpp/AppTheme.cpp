@@ -1,3 +1,4 @@
+#include "AppWidgets.h"
 #include "AppTheme.h"
 #include "ResourcePaths.h"
 #include "implot.h"
@@ -8,7 +9,7 @@ namespace {
 ThemeId selectedTheme=ThemeId::CudaGreen;
 bool savedPreference=true;
 constexpr const char* themeNames[]={"CUDA Green","Ocean Blue","Graphite","Scientific Light",
-    "Midnight Violet","Teal Studio","Amber Lab","Paper Sand"};
+    "Midnight Violet","Teal Studio","Amber Lab","Paper Sand","Arctic Lab","Warm Ivory"};
 const ThemePalette palettes[]={
     {{.035f,.055f,.052f,1},{.065f,.095f,.09f,1},{.09f,.14f,.12f,1},{.10f,.17f,.14f,1},{.91f,.96f,.93f,1},{.55f,.68f,.62f,1},{.46f,.86f,.27f,1},{.22f,.4f,.29f,1},false},
     {{.035f,.052f,.08f,1},{.06f,.09f,.135f,1},{.085f,.14f,.20f,1},{.09f,.16f,.23f,1},{.91f,.95f,.99f,1},{.54f,.66f,.79f,1},{.22f,.68f,.96f,1},{.2f,.36f,.52f,1},false},
@@ -17,7 +18,9 @@ const ThemePalette palettes[]={
     {{.045f,.04f,.08f,1},{.085f,.075f,.135f,1},{.13f,.115f,.20f,1},{.16f,.14f,.245f,1},{.95f,.93f,.99f,1},{.65f,.61f,.77f,1},{.69f,.54f,.97f,1},{.32f,.27f,.45f,1},false},
     {{.025f,.065f,.075f,1},{.045f,.105f,.12f,1},{.065f,.16f,.175f,1},{.08f,.19f,.205f,1},{.91f,.97f,.97f,1},{.54f,.71f,.73f,1},{.16f,.80f,.76f,1},{.18f,.40f,.42f,1},false},
     {{.07f,.055f,.035f,1},{.12f,.095f,.065f,1},{.18f,.145f,.10f,1},{.21f,.17f,.12f,1},{.98f,.95f,.89f,1},{.74f,.67f,.54f,1},{.96f,.68f,.24f,1},{.43f,.34f,.21f,1},false},
-    {{.96f,.945f,.91f,1},{.995f,.985f,.96f,1},{.92f,.895f,.84f,1},{.92f,.905f,.865f,1},{.20f,.23f,.22f,1},{.42f,.46f,.43f,1},{.13f,.43f,.36f,1},{.72f,.73f,.66f,1},true}
+    {{.96f,.945f,.91f,1},{.995f,.985f,.96f,1},{.92f,.895f,.84f,1},{.92f,.905f,.865f,1},{.16f,.20f,.19f,1},{.36f,.41f,.38f,1},{.10f,.40f,.32f,1},{.68f,.70f,.63f,1},true},
+    {{.935f,.955f,.975f,1},{.995f,.998f,1,1},{.88f,.925f,.965f,1},{.91f,.945f,.975f,1},{.10f,.17f,.26f,1},{.34f,.43f,.53f,1},{.13f,.34f,.66f,1},{.65f,.74f,.83f,1},true},
+    {{.97f,.95f,.92f,1},{1,.99f,.97f,1},{.94f,.90f,.84f,1},{.96f,.935f,.89f,1},{.22f,.18f,.15f,1},{.44f,.38f,.32f,1},{.64f,.31f,.12f,1},{.76f,.69f,.59f,1},true}
 };
 static_assert(sizeof(themeNames)/sizeof(*themeNames)==int(ThemeId::Count));
 static_assert(sizeof(palettes)/sizeof(*palettes)==int(ThemeId::Count));
@@ -28,10 +31,13 @@ ImVec4 blend(ImVec4 a,ImVec4 b,float weight) {
 }
 
 // Apply semantic colors while retaining the application's font sizes and spacing configuration.
-void applyTheme() {
+void configureThemeStyle(ImGuiStyle& style) {
     const auto& p=palette();
-    if(p.light) ImGui::StyleColorsLight();else ImGui::StyleColorsDark();
-    auto* c=ImGui::GetStyle().Colors;
+    if(p.light) ImGui::StyleColorsLight(&style);else ImGui::StyleColorsDark(&style);
+    style.FrameRounding=4;style.GrabRounding=3;style.TabRounding=4;
+    style.ChildRounding=5;style.PopupRounding=6;style.ScrollbarRounding=6;
+    style.FrameBorderSize=1;style.ChildBorderSize=1;style.DisabledAlpha=.68f;
+    auto* c=style.Colors;
     c[ImGuiCol_Text]=p.text;c[ImGuiCol_TextDisabled]=p.muted;
     c[ImGuiCol_WindowBg]=p.background;c[ImGuiCol_ChildBg]=p.panel;c[ImGuiCol_PopupBg]=p.panel;
     c[ImGuiCol_Border]=p.border;c[ImGuiCol_BorderShadow]=ImVec4(0,0,0,0);
@@ -55,8 +61,9 @@ void applyTheme() {
     c[ImGuiCol_DockingPreview]=ImVec4(p.accent.x,p.accent.y,p.accent.z,.5f);
     c[ImGuiCol_DockingEmptyBg]=p.background;c[ImGuiCol_NavCursor]=p.accent;
     c[ImGuiCol_TextSelectedBg]=ImVec4(p.accent.x,p.accent.y,p.accent.z,.3f);
-    if(ImPlot::GetCurrentContext()) ImPlot::StyleColorsAuto();
 }
+// Apply the selected presentation style to the application and refresh ImPlot's automatic colors.
+void applyTheme() {configureThemeStyle(ImGui::GetStyle());if(ImPlot::GetCurrentContext()) ImPlot::StyleColorsAuto();}
 } // namespace
 
 // Expose only presentation state; no simulation module owns this preference.
@@ -69,6 +76,45 @@ const ThemePalette& themePalette(ThemeId id) {
 const ThemePalette& palette() {return themePalette(selectedTheme);}
 // Apply opacity consistently for both light and dark draw-list surfaces.
 ImU32 color(ImVec4 value,float opacity) {value.w*=opacity;return ImGui::ColorConvertFloat4ToU32(value);}
+
+// Keep functional colors consistent across themes while retaining readable luminance on each surface.
+ImVec4 functionColor(FunctionRole role) {
+    static const ImVec4 dark[]={{.36f,.83f,.51f,1},{1,.66f,.32f,1},{.37f,.69f,1,1},{.76f,.60f,1,1},
+        {.22f,.80f,.80f,1},{.66f,.73f,.82f,1},{1,.78f,.29f,1},{1,.43f,.43f,1}};
+    static const ImVec4 light[]={{.09f,.43f,.25f,1},{.70f,.32f,.07f,1},{.12f,.36f,.67f,1},{.49f,.29f,.68f,1},
+        {.04f,.43f,.47f,1},{.34f,.40f,.49f,1},{.60f,.40f,.05f,1},{.72f,.20f,.21f,1}};
+    const int i=static_cast<int>(role);
+    return (palette().light?light:dark)[i>=0&&i<8?i:5];
+}
+
+// Scope all purpose-dependent widget colors; labels retain the theme's high-contrast foreground.
+FunctionStyleScope::FunctionStyleScope(FunctionRole role,bool prominent) {
+    themeOnEntry=currentTheme();
+    const auto& p=palette();const auto accent=functionColor(role);
+    const auto push=[&](ImGuiCol slot,ImVec4 value){ImGui::PushStyleColor(slot,value);++colorCount;};
+    push(ImGuiCol_Button,blend(p.raised,accent,prominent?.28f:.14f));
+    push(ImGuiCol_ButtonHovered,blend(p.raised,accent,.32f));
+    push(ImGuiCol_ButtonActive,blend(p.raised,accent,.43f));
+    push(ImGuiCol_Border,blend(p.border,accent,.38f));
+    push(ImGuiCol_Header,blend(p.panel,accent,.14f));
+    push(ImGuiCol_HeaderHovered,blend(p.panel,accent,.24f));
+    push(ImGuiCol_HeaderActive,blend(p.panel,accent,.33f));
+    push(ImGuiCol_Tab,blend(p.raised,accent,.10f));
+    push(ImGuiCol_TabHovered,blend(p.panel,accent,.25f));
+    push(ImGuiCol_TabSelected,blend(p.panel,accent,.19f));
+    push(ImGuiCol_TabSelectedOverline,accent);
+    push(ImGuiCol_TabDimmedSelectedOverline,blend(p.border,accent,.6f));
+    push(ImGuiCol_CheckMark,accent);push(ImGuiCol_SliderGrab,accent);
+    push(ImGuiCol_SliderGrabActive,blend(accent,p.text,.15f));
+    push(ImGuiCol_FrameBgHovered,blend(p.input,accent,.12f));
+    push(ImGuiCol_FrameBgActive,blend(p.input,accent,.20f));
+}
+
+// Return every pushed color even when a panel exits early or an operation throws.
+FunctionStyleScope::~FunctionStyleScope() {
+    ImGui::PopStyleColor(colorCount);
+    if(currentTheme()!=themeOnEntry) applyTheme();
+}
 
 // Load only a known version and bounded theme index; missing or malformed files retain CUDA Green.
 void initializeTheme() {
@@ -89,20 +135,28 @@ void setTheme(ThemeId id,bool persist) {
 // Offer the same theme collection in the home screen and workspace display settings.
 bool drawThemeSelector(const char* label,float width) {
     int index=int(currentTheme());ImGui::SetNextItemWidth(width);
-    const bool changed=ImGui::Combo(label,&index,themeNames,int(ThemeId::Count));
+    const bool changed=AppUi::Widgets::Combo(label,&index,themeNames,int(ThemeId::Count));
     if(changed) setTheme(ThemeId(index));
-    if(!savedPreference&&ImGui::IsItemHovered()) ImGui::SetTooltip("Theme applied. Could not save ui_theme.ini beside the executable.");
+    if(!savedPreference&&ImGui::IsItemHovered()) AppUi::Widgets::SetTooltip("Theme applied. Could not save ui_theme.ini beside the executable.");
     return changed;
 }
 // Reuse the selector choices in compact workspace menus.
 void drawThemeMenu() {
-    if(ImGui::BeginMenu("Interface theme")) {
-        for(int i=0;i<int(ThemeId::Count);++i) if(ImGui::MenuItem(themeNames[i],nullptr,currentTheme()==ThemeId(i))) setTheme(ThemeId(i));
+    if(AppUi::Widgets::BeginMenu("Interface theme")) {
+        for(int i=0;i<int(ThemeId::Count);++i) if(AppUi::Widgets::MenuItem(themeNames[i],nullptr,currentTheme()==ThemeId(i))) setTheme(ThemeId(i));
         ImGui::EndMenu();
     }
 }
 // Legacy routes draw translucent panels over dark GL canvases; retain their text contrast locally.
+ThemePanelScope::ThemePanelScope() {
+    ImGuiStyle desired=ImGui::GetStyle();configureThemeStyle(desired);
+    for(int i=0;i<ImGuiCol_COUNT;++i) ImGui::PushStyleColor(ImGuiCol(i),desired.Colors[i]);
+}
+// Restore the enclosing legacy canvas colors after drawing a modern themed tool window.
+ThemePanelScope::~ThemePanelScope() {ImGui::PopStyleColor(ImGuiCol_COUNT);}
+
 LegacyContrastScope::LegacyContrastScope(bool legacyCanvas) {
+    themeOnEntry=currentTheme();
     if(!legacyCanvas||!palette().light) return;
     ImGuiStyle fallback=ImGui::GetStyle();ImGui::StyleColorsDark(&fallback);
     fallback.Colors[ImGuiCol_CheckMark]=palette().accent;
@@ -111,5 +165,8 @@ LegacyContrastScope::LegacyContrastScope(bool legacyCanvas) {
     colorCount=ImGuiCol_COUNT;
 }
 // Restore the outer application theme without changing its persisted selection.
-LegacyContrastScope::~LegacyContrastScope() {if(colorCount) ImGui::PopStyleColor(colorCount);}
+LegacyContrastScope::~LegacyContrastScope() {
+    if(colorCount) ImGui::PopStyleColor(colorCount);
+    if(currentTheme()!=themeOnEntry) applyTheme();
+}
 } // namespace AppUi

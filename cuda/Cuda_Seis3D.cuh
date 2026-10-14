@@ -3,11 +3,11 @@
 
 namespace Seis3D {
 
-// Validate physical parameters, derive padded dimensions and quantize the safe dt to microseconds.
+// Derive dimensions/CFL ceiling and select automatic or validated manual dt in integer microseconds.
 void validateContext3D(SimulationContext3D& context3D);
 // Compute all persistent solver, CPML, CUDA/GL staging and texture allocations before allocation.
 MemoryBudget3D estimateMemory3D(const SimulationContext3D& context3D);
-// Describe packed XZ, YZ, XY slices and a bounded auxiliary raymarching volume.
+// Describe packed XZ/YZ/XY slices and a bounded volume, including CPML and excluding ghosts.
 ViewLayout3D makeViewLayout3D(const SimulationContext3D& context3D);
 // Allocate an isolated nonblocking stream and generate materials without full-volume host copies.
 void initializeGpu3D(GPUSimData3D& gpu3D, const SimulationContext3D& context3D);
@@ -15,13 +15,15 @@ void initializeGpu3D(GPUSimData3D& gpu3D, const SimulationContext3D& context3D);
 void releaseGpu3D(GPUSimData3D& gpu3D) noexcept;
 // Reset nine fields and CPML memories without reallocating materials or receiver geometry.
 void resetGpu3D(GPUSimData3D& gpu3D, const SimulationContext3D& context3D);
+// Replace frequency-dependent CPML coefficients transactionally without changing model or receiver buffers.
+void refreshCpmlCoefficients3D(GPUSimData3D& gpu3D, const SimulationContext3D& context3D);
 // Advance the leapfrog velocity-stress system by one dt, with a compact spatial source.
 void runStep3D(GPUSimData3D& gpu3D, const SimulationContext3D& context3D,
     const Source3D& source3D, std::uint64_t step3D);
-// Extract physical-domain slices and optionally a downsampled volume into a mapped GL buffer.
+// Extract active-domain slices/volume; optionally include visible CPML in the wave color maximum.
 void extractViews3D(GPUSimData3D& gpu3D, const SimulationContext3D& context3D,
     float* output3D, const ViewLayout3D& layout3D, const int slice3D[3], int component3D, int materialComponent3D,
-    bool volumeEnabled3D, float& maximum3D, float materialRange3D[2]);
+    bool volumeEnabled3D, float& maximum3D, float materialRange3D[2], bool includeBoundary3D = false,float* velocityMaximum3D=nullptr);
 // Replace receiver geometry using physical grid coordinates and strong allocation rollback.
 void setReceivers3D(GPUSimData3D& gpu3D, const SimulationContext3D& context3D,
     const Receiver3D* receivers3D, int count3D);

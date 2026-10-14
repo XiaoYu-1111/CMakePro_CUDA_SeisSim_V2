@@ -8,6 +8,8 @@
 
 constexpr int kStencilRadius = 4;
 constexpr int kMaximumActiveSources = 200;
+// Legacy numerical source scale; archive it explicitly rather than interpreting the UI multiplier as SI force.
+constexpr float kSourceInjectionScale2D = 1e7f;
 
 // 八阶交错网格一阶导数权重；依次作用于距半网格点 1/2、3/2、5/2、7/2 的样本。
 constexpr std::array<double, 4> kStaggeredDerivativeWeights = {

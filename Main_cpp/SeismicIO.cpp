@@ -1,5 +1,6 @@
 #include "SeismicIO.h"
 #include <limits>
+#include <stdexcept>
 
 namespace SeismicIO {
 
@@ -288,10 +289,25 @@ namespace SeismicIO {
         const std::vector<TraceMetadata>& metadata,
         const std::string& outputfile,
         float                                  dt) {
+        writeSegyCaptureFile2D(dataArray,metadata,std::filesystem::path(outputfile),dt);
+    }
+
+    // Write validated velocity records through the native filesystem path without encoding loss.
+    void writeSegyCaptureFile2D(const std::vector<std::vector<float>>& dataArray,
+        const std::vector<TraceMetadata>& metadata,const std::filesystem::path& outputfile,float dt) {
+        if(dataArray.empty()||dataArray.front().empty()||!std::isfinite(dt)||dt<=0)
+            throw std::invalid_argument("SEG-Y export requires samples and a positive interval.");
+        const auto sampleCount=dataArray.front().size();
+        const auto interval=std::llround(double(dt)*1000000);
+        if(sampleCount>32767||interval<1||interval>32767||metadata.size()!=dataArray.size())
+            throw std::invalid_argument("SEG-Y sample count/interval must fit 1..32767 and geometry must match.");
+        for(const auto& trace:dataArray) {
+            if(trace.size()!=sampleCount) throw std::invalid_argument("SEG-Y export traces have different lengths.");
+            for(float value:trace) if(!std::isfinite(value)) throw std::invalid_argument("SEG-Y export contains invalid amplitudes.");
+        }
         std::ofstream fileout(outputfile, std::ios::binary);
         if (!fileout.is_open()) {
-            std::cerr << "Error: Cannot create file " << outputfile << std::endl;
-            return;
+            throw std::runtime_error("Cannot create SEG-Y capture file.");
         }
 
         int num_traces = dataArray.size();
@@ -306,7 +322,7 @@ namespace SeismicIO {
 
         // 2. Binary Header (400 bytes)
         std::vector<char> binHeader(400, 0);
-        int16_t           interval_us = static_cast<int16_t>(dt * 1000000);
+        int16_t           interval_us = static_cast<int16_t>(interval);
         int16_t           be_interval = swap2byte(interval_us);
         std::memcpy(&binHeader[16], &be_interval, 2);
 
@@ -365,6 +381,9 @@ namespace SeismicIO {
             // Bytes 85-88: 检波点物理 Y 坐标 (Group Y) [2]
             int32_t grp_y = swap4byte(meta.groupY);
             std::memcpy(&traceHeader[84], &grp_y, 4);
+            const int16_t scalar=swap2byte(meta.coordinateScalar),coordinateUnits=swap2byte(1);
+            std::memcpy(&traceHeader[70],&scalar,2);
+            std::memcpy(&traceHeader[88],&coordinateUnits,2);
 
             // Bytes 115-116: 单道采样点数
             std::memcpy(&traceHeader[114], &be_samples, 2);
@@ -373,6 +392,8 @@ namespace SeismicIO {
             std::memcpy(&traceHeader[116], &be_interval, 2);
 
             // 写入 240 字节 Trace Header [2]
+            const int16_t velocityUnits=swap2byte(6); // SEG-Y trace-value measurement unit: m/s.
+            std::memcpy(&traceHeader[202],&velocityUnits,2);
             fileout.write(traceHeader.data(), 240);
 
             // -------------------------------------------------------------
@@ -390,7 +411,9 @@ namespace SeismicIO {
         }
 
         fileout.close();
-        std::cout << "[Acquisition IO] SEGY Record Gather Saved: " << outputfile
+        if(!fileout) throw std::runtime_error("Cannot finalize SEG-Y capture file; check disk space.");
+        const auto encoded=outputfile.u8string();
+        std::cout << "[Acquisition IO] SEGY Record Gather Saved: " << std::string(reinterpret_cast<const char*>(encoded.data()),encoded.size())
             << " (" << num_traces << " traces x " << num_samples << " samples)" << std::endl;
     }
 

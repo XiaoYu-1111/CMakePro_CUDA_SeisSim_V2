@@ -1,13 +1,12 @@
-﻿/**
- * @file      CMakePro_CUDA_SeisSim_V1
+/**
+ * @file      CMakePro_cuda.cpp
  * @author    XIAO YU (1269466423@qq.com)
- * @brief     GPU-Accelerated Real-Time 2D Elastic Wavefield Simulation, Acquisition & Analysis Sandbox
- * @version   1.0.0
- * @date      2026-09-10
+ * @brief     SeisWave Lab: CUDA elastic wave simulation, visualization and acquisition.
+ * @date      2026-10-13
  *
  * @details
- * CMakePro_CUDA_SeisSim_V1 is a high-performance, interactive scientific simulation and seismic
- * data acquisition platform developed with C++17, NVIDIA CUDA, OpenGL 4.3, and Dear ImGui/ImPlot.
+ * SeisWave Lab is an interactive 2D/3D scientific simulation and seismic data acquisition platform
+ * developed with C++20, NVIDIA CUDA, OpenGL 4.3, and Dear ImGui/ImPlot. Version metadata comes from CMake.
  * It provides real-time, zero-copy physical wavefield propagation and industrial-grade seismic survey tools.
  *
  * Key System Capabilities & Architecture:
@@ -95,6 +94,7 @@
 // 5. 本项目自定义头文件 (Project Specific Headers)
 // =================================================================================
 #include "CMakePro_cuda.h" // 包含启动界面逻辑、系统结构体及核心计算单元
+#include "AppInfo.h"
 #include "../src/Seis3D/Internal3D.h"
 
 // =================================================================================
@@ -155,7 +155,7 @@ static void saveApplicationScreenshot(GLFWwindow* window,const char* filename) {
 }
 
 // Run normal interaction or an isolated screenshot session without saving user layout preferences.
-static int runApplication(bool displayCheck3D=false,bool paperCapture3D=false) {
+static int runApplication(bool displayCheck3D=false,bool paperCapture3D=false,bool chineseCapture3D=false,bool capture2D=false) {
     // 启动前确认必要着色器可读，避免将空源码交给 OpenGL 并继续初始化。
     const std::string vsSrc = loadShaderFromFile(resolveResourcePath("shader/vs_code.vert"));
     const std::string fsSrc = loadShaderFromFile(resolveResourcePath("shader/fs_code.frag"));
@@ -189,6 +189,7 @@ static int runApplication(bool displayCheck3D=false,bool paperCapture3D=false) {
     // 系统与配置对象初始化
     SimState state;         // 状态管理
     SimConfig config;       // 程序配置
+    if(capture2D) {config.winWidth=1600;config.winHeight=1000;}
     GLHandles gl;           // OpenGL 资源句柄
     AsyncLoader g_loader;   // 后台加载器
     Seis3D::Seis3D_State state3D; // CPU-only until the 3-D sandbox is initialized.
@@ -200,7 +201,7 @@ static int runApplication(bool displayCheck3D=false,bool paperCapture3D=false) {
         Seis3D::Seis3D_State& sandbox3D;
         ~ApplicationCleanup() {
             Seis3D::releaseSandbox3D(sandbox3D);
-            g_nvml.Unload();
+            Seis2D::shutdownDeviceMonitor2D();
             cleanup(handles);
             if (ImGui::GetCurrentContext()) {
                 if (ImGui::GetIO().BackendRendererUserData) ImGui_ImplOpenGL3_Shutdown();
@@ -230,13 +231,14 @@ static int runApplication(bool displayCheck3D=false,bool paperCapture3D=false) {
     // 隐藏窗口直到 CUDA/OpenGL/ImGui 初始化完成并提交首帧，避免系统先显示白色未绘制客户区。
     glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
 
-    window = glfwCreateWindow(config.winWidth, config.winHeight, "CMakePro_CUDA_SeisSim_V2", nullptr, nullptr);
+    const auto windowTitle=AppUi::applicationWindowTitle();
+    window = glfwCreateWindow(config.winWidth, config.winHeight, windowTitle.c_str(), nullptr, nullptr);
     if (!window) {
         glfwTerminate();
         return -1;
     }
 
-    glfwMaximizeWindow(window);
+    if(!capture2D) glfwMaximizeWindow(window);
     glfwGetWindowSize(window, &config.winWidth, &config.winHeight);
     glfwMakeContextCurrent(window);
     glfwSetWindowUserPointer(window, &gl); // 将 GL 句柄绑定到窗口以便后续回调
@@ -271,12 +273,23 @@ static int runApplication(bool displayCheck3D=false,bool paperCapture3D=false) {
 
     // 可选演示资源在进入对应页面时才分配，主程序仅初始化地震工作区所需资源。
     Init_Imgui(window);
+    if(capture2D) {
+        ImGui::GetIO().IniFilename=nullptr;
+        AppUi::setTheme(AppUi::ThemeId::PaperSand,false);AppUi::setLanguage(AppUi::Language::Chinese,false);
+        Seis2D::setInterfaceAccent2D(AppUi::palette().accent);
+        state.currentScreen=AppScreen::SeisSim_GPU;
+        Seis2D::prepareDocumentation2D(gl,state);
+    }
     if(displayCheck3D) {
         // Exercise real startup with all four views visible, without changing saved user preferences.
         ImGui::LoadIniSettingsFromDisk(pathToUtf8(getExecutableDirectory()/"imgui.ini").c_str());
         ImGui::GetIO().IniFilename=nullptr;
         if(paperCapture3D) AppUi::setTheme(AppUi::ThemeId::PaperSand,false);
+        AppUi::setLanguage(chineseCapture3D?AppUi::Language::Chinese:AppUi::Language::English,false);
         state.currentScreen=paperCapture3D?AppScreen::Intro0:AppScreen::SeisSim_3D;
+        // Documentation/check workloads remain explicit small fixtures rather than UI defaults.
+        state3D.editContext3D.nx3D=state3D.editContext3D.ny3D=state3D.editContext3D.nz3D=96;
+        state3D.survey3D.receiverCountX3D=state3D.survey3D.receiverCountY3D=10;
         state3D.targetSamples3D=256;state3D.stepsPerFrame3D=8;
         state3D.resetLayout3D=true;
         if(!paperCapture3D) {
@@ -291,6 +304,7 @@ static int runApplication(bool displayCheck3D=false,bool paperCapture3D=false) {
     bool firstFramePresented = false;
     AppScreen lastRenderedScreen = state.currentScreen;
     int displayCheckFrames3D=0;
+    int documentationFrames2D=0;
 
     // =============================================================================
     // 主渲染循环
@@ -319,13 +333,14 @@ static int runApplication(bool displayCheck3D=false,bool paperCapture3D=false) {
         // 4. GUI 准备新帧数据
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
+        if(capture2D) ImGui::GetIO().AddMousePosEvent(-100,-100);
         ImGui::NewFrame();
 
         // 5. 事件响应与输入控制处理
         ProcessInput(window, config, state, gl);
         static auto lastUiTheme=AppUi::currentTheme();
         if(lastUiTheme!=AppUi::currentTheme()) {
-            uiAccent=AppUi::palette().accent;lastUiTheme=AppUi::currentTheme();
+            Seis2D::setInterfaceAccent2D(AppUi::palette().accent);lastUiTheme=AppUi::currentTheme();
         }
 
         // 6. 场景渲染分发 (包含启动页与核心模拟页面)
@@ -344,12 +359,32 @@ static int runApplication(bool displayCheck3D=false,bool paperCapture3D=false) {
         // 7. GUI 指令集提交
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        if(capture2D) {
+            ++documentationFrames2D;
+            if(documentationFrames2D==28) saveApplicationScreenshot(window,"seis2d-wavefield-paper.png");
+            if(documentationFrames2D==50) {state.running=false;Seis2D::openCapturedRecord2D();Seis2D::selectDocumentationView2D(0);}
+            if(documentationFrames2D==54) saveApplicationScreenshot(window,"seis2d-record-raw.png");
+            if(documentationFrames2D==56) Seis2D::selectDocumentationView2D(1);
+            if(documentationFrames2D==60) saveApplicationScreenshot(window,"seis2d-record-agc.png");
+            if(documentationFrames2D==64) Seis2D::selectDocumentationView2D(2);
+            if(documentationFrames2D==68) saveApplicationScreenshot(window,"seis2d-single-vz.png");
+            if(documentationFrames2D==70) Seis2D::selectDocumentationView2D(3);
+            if(documentationFrames2D==74) saveApplicationScreenshot(window,"seis2d-section-vx.png");
+            if(documentationFrames2D==76) Seis2D::configureDocumentationWorkspace2D(0);
+            if(documentationFrames2D==82) saveApplicationScreenshot(window,"seis2d-docking-analysis.png");
+            if(documentationFrames2D==84) Seis2D::configureDocumentationWorkspace2D(1);
+            if(documentationFrames2D==88) saveApplicationScreenshot(window,"seis2d-docking-record-focus.png");
+            if(documentationFrames2D==90) Seis2D::configureDocumentationWorkspace2D(2);
+            if(documentationFrames2D==96) saveApplicationScreenshot(window,"seis2d-export-package.png");
+            if(documentationFrames2D>=100) {Seis2D::checkRecordingTimeline2D(state,gl);glfwSetWindowShouldClose(window,GLFW_TRUE);}
+        }
         if(displayCheck3D) {
             if(state3D.messageIsError3D) throw std::runtime_error(state3D.message3D);
             ++displayCheckFrames3D;
             if(paperCapture3D&&state.currentScreen==AppScreen::Intro0&&displayCheckFrames3D==2) {
-                saveApplicationScreenshot(window,"seis3d-paper-home.png");
+                saveApplicationScreenshot(window,(chineseCapture3D?"seis3d-chinese-home.png":"seis3d-paper-home.png"));
                 Seis3D::Detail3D::applyVisualPreset3D(state3D,4);
+                Seis3D::Detail3D::resetDisplayParameters3D(state3D);
                 Seis3D::Detail3D::initializeSession3D(state3D,false);
                 Seis3D::Detail3D::startGather3D(state3D,1);
                 state.currentScreen=AppScreen::SeisSim_3D;displayCheckFrames3D=0;
@@ -369,14 +404,19 @@ static int runApplication(bool displayCheck3D=false,bool paperCapture3D=false) {
                                 submitted3D=true;
                     if(!submitted3D) throw std::runtime_error("Seis3D slice texture never reached the application UI.");
                 }
-                saveApplicationScreenshot(window,paperCapture3D?"seis3d-paper-guide.png":"seis3d-app-display-check.png");
+                saveApplicationScreenshot(window,paperCapture3D?(chineseCapture3D?"seis3d-chinese-guide.png":"seis3d-paper-guide.png"):"seis3d-app-display-check.png");
             }
             if(paperCapture3D&&displayCheckFrames3D==24) ImGui::SetWindowFocus("Display / materials###Seis3D.Display");
-            if(paperCapture3D&&displayCheckFrames3D==28) saveApplicationScreenshot(window,"seis3d-paper-display.png");
+            if(paperCapture3D&&displayCheckFrames3D==28) saveApplicationScreenshot(window,(chineseCapture3D?"seis3d-chinese-display.png":"seis3d-paper-display.png"));
+            if(paperCapture3D&&displayCheckFrames3D==48) {
+                state3D.layoutPreset3D=3;state3D.resetLayout3D=true;
+                state3D.traceView3D=2;state3D.traceDisplay3D=2;state3D.traceRow3D=4;
+            }
             if(glGetError()!=GL_NO_ERROR) throw std::runtime_error("OpenGL error during real application display check.");
             if(displayCheckFrames3D>=64) {
                 if(state3D.gather3D.sampleCount3D!=256||state3D.gather3D.receivers3D.size()!=100)
                     throw std::runtime_error("Real application 100-channel capture did not complete.");
+                if(paperCapture3D) saveApplicationScreenshot(window,(chineseCapture3D?"seis3d-chinese-receiver-row.png":"seis3d-paper-receiver-row.png"));
                 std::cout<<"PASS: real application 96 cubed, opaque slice targets, 100-channel capture and full-size UI.\n";
                 return 0;
             }
@@ -391,7 +431,7 @@ static int runApplication(bool displayCheck3D=false,bool paperCapture3D=false) {
         }
 
         glfwSwapBuffers(window);
-        if (!firstFramePresented&&!displayCheck3D) {
+        if (!firstFramePresented&&!displayCheck3D&&!capture2D) {
             // 首帧已在隐藏状态完成渲染并交换到前缓冲，再显示窗口。
             glfwShowWindow(window);
             firstFramePresented = true;
@@ -407,9 +447,11 @@ static int runApplication(bool displayCheck3D=false,bool paperCapture3D=false) {
 // 将输入验证和 CUDA 异常转换为明确诊断，避免失败后继续计算损坏的波场。
 int main(int argc,char** argv) {
     try {
-        const bool paperCapture3D=argc==2&&std::string(argv[1])=="--capture-seis3d-paper";
+        const bool chineseCapture3D=argc==2&&std::string(argv[1])=="--capture-seis3d-chinese";
+        const bool paperCapture3D=chineseCapture3D||(argc==2&&std::string(argv[1])=="--capture-seis3d-paper");
         const bool displayCheck3D=paperCapture3D||(argc==2&&std::string(argv[1])=="--check-seis3d-display");
-        return runApplication(displayCheck3D,paperCapture3D);
+        const bool capture2D=argc==2&&std::string(argv[1])=="--capture-seis2d-paper";
+        return runApplication(displayCheck3D,paperCapture3D,chineseCapture3D,capture2D);
     }
     catch (const std::exception& error) {
         std::cerr << "Application stopped safely: " << error.what() << std::endl;

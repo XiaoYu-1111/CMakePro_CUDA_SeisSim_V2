@@ -157,12 +157,19 @@ void writeSegyComponent3D(const Gather3D& gather,const std::filesystem::path& pa
 void exportGather3D(Seis3D_State& s,const std::filesystem::path& directory) {
     auto& gather=s.gather3D;
     if(gather.sampleCount3D<1) throw std::runtime_error("No 3D receiver samples to export.");
-    std::filesystem::create_directories(directory);
-    std::ostringstream shotName; shotName<<"shot_"<<std::setw(4)<<std::setfill('0')<<gather.shotId3D;
+    std::ostringstream shotName; shotName<<validatedExportPrefix3D(s.exportPrefix3D)<<'_'<<std::setw(4)<<std::setfill('0')<<gather.shotId3D;
     const auto base=shotName.str();
     const char* suffix[3]={"_vx.sgy","_vy.sgy","_vz.sgy"};
-    for(int component=0;component<3;++component) writeSegyComponent3D(gather,directory/(base+suffix[component]),component);
-    std::ofstream csv(directory/(base+"_geometry.csv"));
+    const char* outputs[4]={"_vx.sgy","_vy.sgy","_vz.sgy","_geometry.csv"};
+    // Reject all name collisions before writing a component, including stale temporary files.
+    for(const auto ending:outputs) {
+        const auto destination=directory/uiPath3D((base+ending).c_str());
+        if(std::filesystem::exists(destination)||std::filesystem::exists(std::filesystem::path(destination.wstring()+L".part")))
+            throw std::runtime_error("Export files already exist; choose another prefix or enable a session subfolder.");
+    }
+    std::filesystem::create_directories(directory);
+    for(int component=0;component<3;++component) writeSegyComponent3D(gather,directory/uiPath3D((base+suffix[component]).c_str()),component);
+    std::ofstream csv(directory/uiPath3D((base+"_geometry.csv").c_str()));
     if(!csv) throw std::runtime_error("Cannot write geometry manifest.");
     csv<<"shot,receiver,sx_m,sy_m,sz_depth_m,gx_m,gy_m,gz_depth_m,cmp_inline,cmp_crossline,first_sample_s,sample_interval_s,samples\n"<<std::setprecision(12);
     const double h=gather.context3D.spacing3D;
@@ -195,6 +202,7 @@ void startGather3D(Seis3D_State& s,int shotId) {
     if(interval>maxSegyIntervalUs3D) throw std::runtime_error("SEG-Y rev1 sample interval must not exceed 32767 us.");
     const std::size_t values=std::size_t(s.targetSamples3D)*s.receivers3D.size()*3;
     if(values*sizeof(float)>std::size_t(512)*1024*1024) throw std::runtime_error("Shot gather exceeds the 512 MiB CPU budget.");
+    applySourceFrequency3D(s);
     Gather3D gather; gather.context3D=s.context3D; gather.source3D=s.source3D; gather.survey3D=s.survey3D;
     gather.receivers3D=s.receivers3D; gather.targetSamples3D=s.targetSamples3D; gather.stride3D=s.samplingStride3D;
     gather.shotId3D=shotId; gather.sampleIntervalUs3D=int(interval);
@@ -217,6 +225,7 @@ void startGather3D(Seis3D_State& s,int shotId) {
     gather.coordinateScalar3D=coordinateFactor==1?1:-coordinateFactor;
     gather.samples3D.resize(values);
     restartSimulation3D(s,false);s.gather3D=std::move(gather);
+    s.tracePreviewCache3D.entries3D.clear();
     s.recording3D=true; s.running3D=true; s.dirty3D=true; s.message3D="Capturing frozen-geometry 3D shot gather.";
 }
 

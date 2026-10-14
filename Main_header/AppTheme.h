@@ -4,7 +4,9 @@
 // Application presentation service; contains no simulation state, GPU handles or solver parameters.
 namespace AppUi {
 // Append new themes so existing saved theme indices retain their meaning.
-enum class ThemeId { CudaGreen, OceanBlue, Graphite, ScientificLight, MidnightViolet, TealStudio, AmberLab, PaperSand, Count };
+enum class ThemeId { CudaGreen, OceanBlue, Graphite, ScientificLight, MidnightViolet, TealStudio, AmberLab, PaperSand,
+    ArcticLab, WarmIvory, Count };
+enum class FunctionRole { Simulation, Source, Model, Acquisition, Display, Navigation, Warning, Danger };
 struct ThemePalette {
     ImVec4 background, panel, raised, input, text, muted, accent, border;
     bool light = false;
@@ -25,7 +27,29 @@ bool drawThemeSelector(const char* label,float width=200.0f);
 void drawThemeMenu();
 // Convert a semantic color to a draw-list color with an optional opacity multiplier.
 ImU32 color(ImVec4 value,float opacity=1.0f);
+// Return a stable functional accent, with a darker variant for readable light-theme labels.
+ImVec4 functionColor(FunctionRole role);
+// Tint local controls and tabs by purpose without modifying the saved theme or simulation state.
+class FunctionStyleScope {
+public:
+    explicit FunctionStyleScope(FunctionRole role,bool prominent=false);
+    ~FunctionStyleScope();
+    FunctionStyleScope(const FunctionStyleScope&)=delete;
+    FunctionStyleScope& operator=(const FunctionStyleScope&)=delete;
+private:
+    int colorCount=0;
+    ThemeId themeOnEntry=ThemeId::CudaGreen;
+};
 // Preserve readable text over legacy dark simulation canvases while the selected theme is light.
+class ThemePanelScope {
+public:
+    // Restore active theme colors locally inside an enclosing legacy contrast scope.
+    ThemePanelScope();
+    // Balance all local color overrides without changing the selected theme.
+    ~ThemePanelScope();
+    ThemePanelScope(const ThemePanelScope&)=delete;
+    ThemePanelScope& operator=(const ThemePanelScope&)=delete;
+};
 class LegacyContrastScope {
 public:
     // Scope only presentation colors; selected preference and simulation state remain application owned.
@@ -36,5 +60,6 @@ public:
     LegacyContrastScope& operator=(const LegacyContrastScope&)=delete;
 private:
     int colorCount=0;
+    ThemeId themeOnEntry=ThemeId::CudaGreen;
 };
 } // namespace AppUi

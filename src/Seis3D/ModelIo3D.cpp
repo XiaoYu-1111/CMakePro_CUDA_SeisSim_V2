@@ -36,14 +36,18 @@ SimulationContext3D inspectModel3D(const std::filesystem::path& path, Simulation
     std::ifstream input(path,std::ios::binary);
     if(!input) throw std::runtime_error("Cannot open Seis3D model.");
     char magic[8]{}; input.read(magic,8);
-    if(std::memcmp(magic,"S3DMOD1",8)!=0 || readU32Le3D(input)!=1) throw std::runtime_error("Not a supported .s3dm model.");
+    const auto version=readU32Le3D(input);
+    if(std::memcmp(magic,"S3DMOD1",8)!=0 || (version!=1 && version!=2)) throw std::runtime_error("Not a supported .s3dm model.");
     c.nx3D=int(readU32Le3D(input)); c.ny3D=int(readU32Le3D(input)); c.nz3D=int(readU32Le3D(input));
     c.pml3D=int(readU32Le3D(input)); const auto freeSurface=readU32Le3D(input);
-    if(freeSurface>1) throw std::runtime_error("Invalid model surface flag.");
-    c.freeSurface3D=freeSurface!=0;
+    // Version 1 used a boolean. Version 2 adds code 2 for six reflecting slip walls.
+    if(freeSurface>(version==1?1u:2u)) throw std::runtime_error("Invalid model boundary flag.");
+    c.freeSurface3D=freeSurface==1;c.reflecting3D=freeSurface==2;
     const auto spacingBits=readU32Le3D(input); std::memcpy(&c.spacing3D,&spacingBits,4);
-    c.modelKind3D=ModelKind3D::Imported; validateContext3D(c);
-    if(estimateMemory3D(c).totalBytes3D>memoryLimit3D) throw std::runtime_error("Imported model exceeds the 4 GiB sandbox budget.");
+    c.modelKind3D=ModelKind3D::Imported;
+    // Check shape/budget first; only the payload scan establishes the imported model's actual CFL ceiling.
+    auto layout=c;layout.manualTimeStep3D=false;validateContext3D(layout);
+    if(estimateMemory3D(layout).totalBytes3D>memoryLimit3D) throw std::runtime_error("Imported model exceeds the 4 GiB sandbox budget.");
     const std::size_t planeSize=std::size_t(c.nx3D)*c.ny3D*3;
     if(std::filesystem::file_size(path)!=36+planeSize*c.nz3D*sizeof(float)) throw std::runtime_error("Model payload size does not match dimensions.");
     std::vector<float> plane(planeSize); c.maxVp3D=0;
@@ -74,17 +78,17 @@ void importModel3D(Seis3D_State& s,const std::filesystem::path& path) {
 
 // Write a streaming .s3dm model to a new file, preserving an existing file on failed writes.
 void exportModel3D(Seis3D_State& s) {
-    const auto path=uiPath3D(s.modelPath3D);
+    const auto path=uiPath3D(s.modelExportPath3D);
     if(path.empty()||std::filesystem::exists(path)) throw std::runtime_error("Choose a new model filename; the destination already exists or is empty.");
     if(!path.parent_path().empty()) std::filesystem::create_directories(path.parent_path());
     const auto temporary=std::filesystem::path(path.wstring()+L".part");
     try {
         std::ofstream output(temporary,std::ios::binary|std::ios::trunc);
         if(!output) throw std::runtime_error("Cannot create Seis3D model file.");
-        output.write("S3DMOD1",8); writeU32Le3D(output,1);
+        output.write("S3DMOD1",8); writeU32Le3D(output,s.context3D.reflecting3D?2:1);
         const auto& c=s.context3D;
         writeU32Le3D(output,c.nx3D); writeU32Le3D(output,c.ny3D); writeU32Le3D(output,c.nz3D);
-        writeU32Le3D(output,c.pml3D); writeU32Le3D(output,c.freeSurface3D?1:0);
+        writeU32Le3D(output,c.pml3D); writeU32Le3D(output,c.reflecting3D?2:c.freeSurface3D?1:0);
         std::uint32_t spacing=0; std::memcpy(&spacing,&c.spacing3D,4); writeU32Le3D(output,spacing);
         std::vector<float> plane(std::size_t(c.nx3D)*c.ny3D*3);
         for(int z=0;z<c.nz3D;++z) {

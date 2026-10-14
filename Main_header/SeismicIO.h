@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstring>
 #include <algorithm>
+#include <filesystem>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -24,6 +25,7 @@ namespace SeismicIO {
         int32_t sourceY = 0; // 震源/炮点物理 Y 坐标 (第 77-80 字节, Source Coordinate Y)
         int32_t groupX = 0; // 接收器/检波点物理 X 坐标 (第 81-84 字节, Group Coordinate X)
         int32_t groupY = 0; // 接收器/检波点物理 Y 坐标 (第 85-88 字节, Group Coordinate Y)
+        int16_t coordinateScalar = 1;
     };
 
     // =============================================================================
@@ -48,6 +50,9 @@ namespace SeismicIO {
         const std::vector<TraceMetadata>& metadata,
         const std::string& outputfile,
         float                                  dt);
+    // Use a native path for Unicode capture output; legacy string callers remain supported.
+    void writeSegyCaptureFile2D(const std::vector<std::vector<float>>& dataArray,
+        const std::vector<TraceMetadata>& metadata,const std::filesystem::path& outputfile,float dt);
 
     // =============================================================================
     // 4. 辅助文本导出接口

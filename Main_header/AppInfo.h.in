@@ -1,0 +1,14 @@
+#pragma once
+#include <string>
+
+namespace AppUi {
+inline constexpr char productName[]="SeisWave Lab";
+inline constexpr char productDescription[]="CUDA Elastic Wave Simulation";
+inline constexpr char productVersion[]="@PROJECT_VERSION@";
+inline constexpr char moduleName3D[]="Seis3D";
+
+// Compose the UTF-8 window caption from the same version metadata used in Windows file properties.
+inline std::string applicationWindowTitle() {
+    return std::string(productName)+" — "+productDescription+" | v"+productVersion;
+}
+} // namespace AppUi

@@ -46,9 +46,14 @@ void fitSurvey3D(Seis3D_State& s) {
         (std::min)(maxReceivers3D/survey.receiverCountX3D,c.ny3D-2));
     survey.shotCountX3D=(std::clamp)(survey.shotCountX3D,1,100);
     survey.shotCountY3D=(std::clamp)(survey.shotCountY3D,1,100);
-    survey.receiverOrigin3D[0]=survey.receiverOrigin3D[1]=1; survey.receiverOrigin3D[2]=0;
+    survey.receiverOrigin3D[2]=0;
     survey.receiverSpacing3D[0]=(std::max)(1,(c.nx3D-3)/(std::max)(1,survey.receiverCountX3D-1));
     survey.receiverSpacing3D[1]=(std::max)(1,(c.ny3D-3)/(std::max)(1,survey.receiverCountY3D-1));
+    // Center a single line on the other axis; center multi-line spreads after integer spacing fits.
+    survey.receiverOrigin3D[0]=survey.receiverCountX3D==1?c.nx3D/2:
+        (c.nx3D-1-(survey.receiverCountX3D-1)*survey.receiverSpacing3D[0])/2;
+    survey.receiverOrigin3D[1]=survey.receiverCountY3D==1?c.ny3D/2:
+        (c.ny3D-1-(survey.receiverCountY3D-1)*survey.receiverSpacing3D[1])/2;
     survey.shotOrigin3D[0]=c.nx3D/4; survey.shotOrigin3D[1]=c.ny3D/4; survey.shotOrigin3D[2]=(std::max)(2,c.nz3D/8);
     survey.shotSpacing3D[0]=(std::max)(1,(c.nx3D-2-survey.shotOrigin3D[0])/(std::max)(1,survey.shotCountX3D-1));
     survey.shotSpacing3D[1]=(std::max)(1,(c.ny3D-2-survey.shotOrigin3D[1])/(std::max)(1,survey.shotCountY3D-1));
@@ -56,6 +61,7 @@ void fitSurvey3D(Seis3D_State& s) {
 
 // Replace the complete session only after CPU validation, and roll back GPU/GL partial failures.
 void initializeSession3D(Seis3D_State& s,bool imported) {
+    if(s.recording3D||s.sequence3D) throw std::logic_error("Stop acquisition before rebuilding the 3D session.");
     auto candidate=s.editContext3D;
     const auto path=uiPath3D(s.modelPath3D);
     if(imported) candidate=inspectModel3D(path,candidate);
@@ -69,7 +75,8 @@ void initializeSession3D(Seis3D_State& s,bool imported) {
         s.source3D.x3D=candidate.nx3D/2; s.source3D.y3D=candidate.ny3D/2; s.source3D.z3D=(std::max)(2,candidate.nz3D/4);
         s.slice3D[0]=s.source3D.x3D; s.slice3D[1]=s.source3D.y3D; s.slice3D[2]=s.source3D.z3D;
         resetSliceViews3D(s);s.camera3D=VolumeCamera3D{};
-        fitSurvey3D(s);configureReceivers3D(s);s.step3D=0;s.viewMaximum3D=0;s.hoverValid3D=false;
+        fitSurvey3D(s);configureReceivers3D(s);s.step3D=0;s.viewMaximum3D=0;s.scalePeak3D=0;s.scaleComponent3D=-1;s.hoverValid3D=false;
+        s.referenceMaximum3D=0;s.unitScalePeaks3D={};s.scaleUnit3D=s.component3D==4?1:0;
         // Start the live preview near the source, reducing unnecessary travel time on large spreads.
         std::int64_t nearestDistance=std::numeric_limits<std::int64_t>::max();
         for(int i=0;i<int(s.receivers3D.size());++i) {
@@ -81,9 +88,22 @@ void initializeSession3D(Seis3D_State& s,bool imported) {
     } catch(...) { releaseSandbox3D(s); throw; }
 }
 
-// Reset the physical field and monitor together, preserving material, geometry and exported data.
+// Validate against the live model, leaving unrelated model edits pending until an explicit rebuild.
+void applySourceFrequency3D(Seis3D_State& s) {
+    if(!s.ready3D) throw std::logic_error("Initialize the 3D model before applying source frequency.");
+    if(s.context3D.frequency3D==s.editContext3D.frequency3D) return;
+    if(s.recording3D||s.sequence3D) throw std::logic_error("Stop acquisition before changing source frequency.");
+    auto candidate=s.context3D;candidate.frequency3D=s.editContext3D.frequency3D;
+    validateContext3D(candidate);
+    refreshCpmlCoefficients3D(s.gpu3D,candidate);
+    s.context3D=candidate;
+}
+
+// Reset the physical field and monitor together, applying frequency while preserving material and display settings.
 void restartSimulation3D(Seis3D_State& s,bool running) {
-    resetGpu3D(s.gpu3D,s.context3D);s.step3D=0;s.running3D=running;s.singleStep3D=false;s.dirty3D=true;
+    applySourceFrequency3D(s);
+    resetGpu3D(s.gpu3D,s.context3D);s.step3D=0;s.viewMaximum3D=0;s.scalePeak3D=0;s.scaleComponent3D=-1;s.running3D=running;s.singleStep3D=false;s.dirty3D=true;
+    s.referenceMaximum3D=0;s.unitScalePeaks3D={};s.scaleUnit3D=s.component3D==4?1:0;
     s.liveTrace3D.count3D=s.liveTrace3D.next3D=0;
     s.message3D=running?"New source wavelet started; live receiver monitoring active.":"Wavefield reset. Run to emit a new source wavelet.";
 }
@@ -135,10 +155,14 @@ using namespace Detail3D;
 
 // Initialize CPU-only state and default paths next to the deployed program, inside outer out.
 Seis3D_State::Seis3D_State() {
+    source3D.x3D=context3D.nx3D/2;source3D.y3D=context3D.ny3D/2;source3D.z3D=context3D.nz3D/4;
     const auto directory=getExecutableDirectory()/"data_Seis3D";
     const auto model=pathToUtf8(directory/"model.s3dm"); const auto output=pathToUtf8(directory);
     std::snprintf(modelPath3D,sizeof(modelPath3D),"%s",model.c_str());
+    const auto modelOutput=pathToUtf8(directory/"model_export.s3dm");
+    std::snprintf(modelExportPath3D,sizeof(modelExportPath3D),"%s",modelOutput.c_str());
     std::snprintf(exportDirectory3D,sizeof(exportDirectory3D),"%s",output.c_str());
+    fitSurvey3D(*this);
 }
 
 // Release owned resources while the owning application still has its GL context current.

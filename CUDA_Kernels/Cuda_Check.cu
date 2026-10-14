@@ -829,7 +829,7 @@ __global__ void injectMultipleSourcesKernel(GPUSimData g, const GPUSource* d_sou
         float x = M_PI * src.f_peak * (src.t - t_peak);
         float val = src.amp * (1.0f - 2.0f * x * x) * expf(-x * x);
 
-        applyPointSource(g, val * 1e7f, src.idx);
+        applyPointSource(g, val * kSourceInjectionScale2D, src.idx);
     }
 }
 
@@ -1069,7 +1069,7 @@ void runGpuSimulationStep(GPUSimData& gpu, int current_it, const SimulationConte
     else {
         if (current_it < ctx.nt && current_it < static_cast<int>(ctx.wavelet.size())) {
             // 在注入时，直接将基础子波值乘以幅值增益系数 ctx.src_amp，实现零时延实时调控
-            float wavelet_val = ctx.wavelet[current_it] * ctx.src_amp * 1e7f;
+            float wavelet_val = ctx.wavelet[current_it] * ctx.src_amp * kSourceInjectionScale2D;
 
             int safe_src_z = (gpu.flag_type == 3 && gpu.upFlag) ? std::max(ctx.src_z_idx, gpu.fs_idx + 1) : ctx.src_z_idx;
             int src_idx = safe_src_z * gpu.NX + (ctx.src_idx % gpu.NX);
